@@ -121,7 +121,7 @@ class TemplateCopyHandler(handlers_base.ConfigHandler):
 
         # ファイル書き込み
         output_path.write_text(new_content)
-        logger.info("%s を%sしました: %s", self.name, "作成" if is_new else "更新", output_path)
+        logger.debug("%s を%sしました: %s", self.name, "作成" if is_new else "更新", output_path)
 
         return handlers_base.ApplyResult(status="created" if is_new else "updated")
 

@@ -138,7 +138,7 @@ class MyPyLibHandler(handlers_base.ConfigHandler):
         # ファイル更新
         new_content = self.update_dependency(content, latest_hash)
         output_path.write_text(new_content)
-        logger.info(
+        logger.debug(
             "my-py-lib を更新しました: %s (%s -> %s)",
             output_path,
             current_hash[:8],

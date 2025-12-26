@@ -24,6 +24,17 @@ PRESERVE_SECTIONS = [
 ]
 
 
+def _normalize_toml(content: str) -> str:
+    """TOML 内容を正規化（空行の重複を除去）"""
+    import re
+
+    # 3つ以上の連続した空行を2つに正規化
+    content = re.sub(r"\n{3,}", "\n\n", content)
+    # 末尾の空白を除去
+    content = content.rstrip() + "\n"
+    return content
+
+
 class PyprojectHandler(handlers_base.ConfigHandler):
     """pyproject.toml 共通設定ハンドラ"""
 
@@ -204,6 +215,8 @@ class PyprojectHandler(handlers_base.ConfigHandler):
         if new_content is None:
             return "マージに失敗しました"
 
+        # 正規化して比較
+        new_content = _normalize_toml(new_content)
         current_content = output_path.read_text()
 
         if current_content == new_content:
@@ -241,6 +254,8 @@ class PyprojectHandler(handlers_base.ConfigHandler):
         if new_content is None:
             return handlers_base.ApplyResult(status="error", message="マージに失敗しました")
 
+        # 正規化して比較
+        new_content = _normalize_toml(new_content)
         current_content = output_path.read_text()
 
         if current_content == new_content:
@@ -255,6 +270,6 @@ class PyprojectHandler(handlers_base.ConfigHandler):
 
         # ファイル書き込み
         output_path.write_text(new_content)
-        logger.info("pyproject.toml を更新しました: %s", output_path)
+        logger.debug("pyproject.toml を更新しました: %s", output_path)
 
         return handlers_base.ApplyResult(status="updated")
