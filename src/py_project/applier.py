@@ -3,6 +3,7 @@
 import dataclasses
 import logging
 import pathlib
+import subprocess
 import typing
 
 import rich.console
@@ -41,6 +42,7 @@ def apply_configs(
     dry_run: bool = True,
     backup: bool = False,
     show_diff: bool = False,
+    run_sync: bool = True,
     console: rich.console.Console | None = None,
 ) -> ApplySummary:
     """設定を適用
@@ -52,6 +54,7 @@ def apply_configs(
         dry_run: ドライランモード
         backup: バックアップ作成フラグ
         show_diff: 差分表示フラグ
+        run_sync: pyproject.toml 更新後に uv sync を実行するかどうか
         console: Rich Console インスタンス
 
     Returns:
@@ -105,6 +108,9 @@ def apply_configs(
         # 適用する設定タイプを取得
         project_configs = get_project_configs(project, defaults)
 
+        # pyproject が更新されたかどうかを追跡
+        pyproject_updated = False
+
         # 各設定タイプを処理
         for config_type in project_configs:
             # 設定タイプフィルタ
@@ -133,6 +139,14 @@ def apply_configs(
             result = handler.apply(project, context)
             _print_result(console, config_type, result)
             _update_summary(summary, result, project_name, config_type)
+
+            # pyproject または my-py-lib が更新されたかチェック
+            if config_type in ("pyproject", "my-py-lib") and result.status == "updated":
+                pyproject_updated = True
+
+        # pyproject.toml が更新された場合は uv sync を実行
+        if pyproject_updated and not dry_run and run_sync:
+            _run_uv_sync(project_path, console)
 
         console.print()
 
@@ -183,6 +197,30 @@ def _update_summary(
         summary.errors += 1
         if result.message:
             summary.error_messages.append(f"{project_name}/{config_type}: {result.message}")
+
+
+def _run_uv_sync(project_path: pathlib.Path, console: rich.console.Console) -> None:
+    """uv sync を実行"""
+    console.print("  [dim]Running uv sync...[/dim]")
+    try:
+        result = subprocess.run(
+            ["uv", "sync"],
+            cwd=project_path,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if result.returncode == 0:
+            console.print("  [green]✓ uv sync completed[/green]")
+        else:
+            console.print(f"  [red]! uv sync failed[/red]")
+            if result.stderr:
+                for line in result.stderr.strip().split("\n")[:5]:
+                    console.print(f"    {line}")
+    except subprocess.TimeoutExpired:
+        console.print("  [red]! uv sync timed out[/red]")
+    except FileNotFoundError:
+        console.print("  [yellow]! uv command not found[/yellow]")
 
 
 def _print_summary(console: rich.console.Console, summary: ApplySummary, dry_run: bool) -> None:

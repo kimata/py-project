@@ -6,14 +6,11 @@ readme = "DESIGN.md"
 requires-python = ">=3.11"
 dependencies = [
     "my-lib @ git+https://github.com/kimata/my-py-lib",
+    "docopt>=0.6",
     "jinja2>=3.0",
-    "typer>=0.12",
     "rich>=13.0",
     "tomlkit>=0.12",
 ]
-
-[project.scripts]
-py-project = "py_project.app:main"
 
 [build-system]
 requires = ["hatchling"]

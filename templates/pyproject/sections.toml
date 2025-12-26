@@ -7,7 +7,7 @@ requires-python = ">= 3.10"
 
 [dependency-groups]
 dev = [
-    "pre-commit>=4.0.0",
+    "pre-commit>=4.2.0",
     "flaky>=3.8.1",
     "playwright>=1.49.0",
     "pytest>=8.3.0",
@@ -16,9 +16,11 @@ dev = [
     "pytest-mock>=3.14.0",
     "pytest-playwright>=0.6.0",
     "pytest-xdist>=3.6.1",
-    "pytest-timeout>=2.3.0",
+    "pytest-timeout>=2.4.0",
     "time-machine>=2.16.0",
     "mypy>=1.14.0",
+    "types-pytz>=2024.1.0",
+    "types-paramiko>=3.4.0",
 ]
 
 [tool.uv]
