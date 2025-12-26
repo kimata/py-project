@@ -81,9 +81,9 @@ def apply_configs(
 
     # モード表示
     if dry_run:
-        console.print("[yellow]Dry run mode[/yellow] (use --apply to apply changes)\n")
+        console.print("[yellow]🔍 Dry run mode[/yellow] (use --apply to apply changes)\n")
     else:
-        console.print("[green]Applying configurations...[/green]\n")
+        console.print("[green]🚀 Applying configurations...[/green]\n")
 
     # 各プロジェクトを処理
     for project in config.get("projects", []):
@@ -137,7 +137,7 @@ def apply_configs(
 
             # 適用
             result = handler.apply(project, context)
-            _print_result(console, config_type, result)
+            _print_result(console, config_type, result, dry_run)
             _update_summary(summary, result, project_name, config_type)
 
             # pyproject または my-py-lib が更新されたかチェック
@@ -160,11 +160,12 @@ def _print_result(
     console: rich.console.Console,
     config_type: str,
     result: py_project.handlers.base.ApplyResult,
+    dry_run: bool,
 ) -> None:
     """適用結果を表示"""
     status_display = {
-        "created": ("[green]+[/green]", "will be created" if True else "created"),
-        "updated": ("[cyan]~[/cyan]", "will be updated" if True else "updated"),
+        "created": ("[green]+[/green]", "will be created" if dry_run else "created"),
+        "updated": ("[cyan]~[/cyan]", "will be updated" if dry_run else "updated"),
         "unchanged": ("[green]✓[/green]", "up to date"),
         "skipped": ("[yellow]-[/yellow]", "skipped"),
         "error": ("[red]![/red]", "error"),
@@ -213,7 +214,7 @@ def _run_uv_sync(project_path: pathlib.Path, console: rich.console.Console) -> N
         if result.returncode == 0:
             console.print("  [green]✓ uv sync completed[/green]")
         else:
-            console.print(f"  [red]! uv sync failed[/red]")
+            console.print("  [red]! uv sync failed[/red]")
             if result.stderr:
                 for line in result.stderr.strip().split("\n")[:5]:
                     console.print(f"    {line}")
@@ -251,4 +252,4 @@ def _print_summary(console: rich.console.Console, summary: ApplySummary, dry_run
     if dry_run and (summary.created > 0 or summary.updated > 0):
         console.print("\n[yellow]Run with --apply to apply these changes[/yellow]")
     elif not dry_run and summary.errors == 0:
-        console.print("\n[green]Done![/green]")
+        console.print("\n[green]✨ Done![/green]")
