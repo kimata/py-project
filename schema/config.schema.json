@@ -1,0 +1,122 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "py-project Configuration",
+  "description": "複数Pythonプロジェクトへの設定適用ツールの設定ファイル",
+  "type": "object",
+  "required": ["projects"],
+  "properties": {
+    "defaults": {
+      "type": "object",
+      "description": "全プロジェクト共通のデフォルト設定",
+      "properties": {
+        "python_version": {
+          "type": "string",
+          "description": "デフォルトの Python バージョン",
+          "pattern": "^3\\.[0-9]+$",
+          "default": "3.12"
+        },
+        "configs": {
+          "type": "array",
+          "description": "デフォルトで適用する設定タイプ",
+          "items": {
+            "$ref": "#/$defs/configType"
+          },
+          "default": []
+        }
+      },
+      "additionalProperties": false
+    },
+    "template_dir": {
+      "type": "string",
+      "description": "テンプレートディレクトリのパス",
+      "default": "./templates"
+    },
+    "projects": {
+      "type": "array",
+      "description": "管理対象プロジェクト一覧",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/project"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "configType": {
+      "type": "string",
+      "enum": [
+        "pre-commit",
+        "ruff",
+        "yamllint",
+        "prettier",
+        "python-version",
+        "dockerignore",
+        "gitignore",
+        "pyproject",
+        "my-py-lib"
+      ],
+      "description": "設定タイプ"
+    },
+    "project": {
+      "type": "object",
+      "required": ["name", "path"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "プロジェクト名（識別用）",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "description": "プロジェクトのパス（絶対パスまたは ~/ 形式）",
+          "minLength": 1
+        },
+        "configs": {
+          "type": "array",
+          "description": "適用する設定タイプ（省略時は defaults.configs を使用）",
+          "items": {
+            "$ref": "#/$defs/configType"
+          }
+        },
+        "vars": {
+          "type": "object",
+          "description": "テンプレート変数",
+          "properties": {
+            "python_version": {
+              "type": "string",
+              "pattern": "^3\\.[0-9]+$"
+            }
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "template_overrides": {
+          "type": "object",
+          "description": "設定タイプ別のテンプレート上書き",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "pyproject": {
+          "type": "object",
+          "description": "pyproject.toml 設定タイプのオプション",
+          "properties": {
+            "preserve_sections": {
+              "type": "array",
+              "description": "追加で保持するセクション",
+              "items": { "type": "string" }
+            },
+            "extra_dev_deps": {
+              "type": "array",
+              "description": "追加の開発依存",
+              "items": { "type": "string" }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

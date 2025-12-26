@@ -1,0 +1,1 @@
+{{ vars.python_version | default(defaults.python_version) | default("3.12") }}

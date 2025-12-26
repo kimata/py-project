@@ -1,0 +1,32 @@
+[project]
+name = "py-project"
+version = "0.1.0"
+description = "複数の Python プロジェクトに標準的な設定を一括適用するツール"
+readme = "DESIGN.md"
+requires-python = ">=3.11"
+dependencies = [
+    "my-lib @ git+https://github.com/kimata/my-py-lib",
+    "jinja2>=3.0",
+    "typer>=0.12",
+    "rich>=13.0",
+    "tomlkit>=0.12",
+]
+
+[project.scripts]
+py-project = "app:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.ruff]
+line-length = 110
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]

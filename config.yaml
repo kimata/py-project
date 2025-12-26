@@ -1,0 +1,65 @@
+# py-project 設定ファイル
+# 複数の Python プロジェクトに標準的な設定を一括適用します
+
+# グローバル設定（全プロジェクト共通のデフォルト）
+defaults:
+  python_version: "3.12"
+  configs:
+    - pyproject
+    - pre-commit
+    - ruff
+    - gitignore
+    - my-py-lib
+
+# テンプレートディレクトリ
+template_dir: ./templates
+
+# プロジェクト一覧
+projects:
+  - name: rasp-water
+    path: ~/github/rasp-water
+    configs:
+      - pyproject
+      - pre-commit
+      - gitignore
+      - my-py-lib
+
+  - name: mercari-bot
+    path: ~/github/mercari-bot
+    configs:
+      - pyproject
+      - pre-commit
+      - gitignore
+      - my-py-lib
+
+  - name: amazon-bot
+    path: ~/github/amazon-bot
+    configs:
+      - pyproject
+      - pre-commit
+      - gitignore
+      - my-py-lib
+
+  - name: eink-weather-panel
+    path: ~/github/eink-weather-panel
+    configs:
+      - pyproject
+      - pre-commit
+      - gitignore
+      - my-py-lib
+
+  - name: unit-cooler
+    path: ~/github/unit-cooler
+    configs:
+      - pyproject
+      - pre-commit
+      - gitignore
+      - my-py-lib
+
+  - name: rasp-shutter
+    path: ~/github/rasp-shutter
+    configs:
+      - pyproject
+      - pre-commit
+      - gitignore
+      - my-py-lib

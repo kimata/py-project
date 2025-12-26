@@ -1,0 +1,81 @@
+[project]
+authors = [
+    { name = "KIMATA Tetsuya", email = "kimata@green-rabbit.net" }
+]
+readme = "README.md"
+requires-python = ">= 3.10"
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.0.0",
+    "flaky>=3.8.1",
+    "playwright>=1.49.0",
+    "pytest>=8.3.0",
+    "pytest-cov>=6.0.0",
+    "pytest-html>=4.1.1",
+    "pytest-mock>=3.14.0",
+    "pytest-playwright>=0.6.0",
+    "pytest-xdist>=3.6.1",
+    "pytest-timeout>=2.3.0",
+    "time-machine>=2.16.0",
+    "mypy>=1.14.0",
+]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "--verbose --timeout=300 --durations=10 --log-file-level=DEBUG --log-format=\"%(asctime)s %(levelname)s [%(filename)s:%(lineno)s %(funcName)s] %(message)s\" --capture=sys --html=tests/evidence/index.htm --self-contained-html --cov=src --cov-report=html"
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore:datetime\\.datetime\\.utcfromtimestamp\\(\\) is deprecated:DeprecationWarning",
+    "ignore::DeprecationWarning:multiprocessing\\.popen_fork",
+    "ignore:unclosed database.*:ResourceWarning:rich.*",
+    "ignore:unclosed database.*:ResourceWarning:influxdb_client.*",
+    "ignore:unclosed database.*:ResourceWarning:coverage.*",
+    "ignore:unclosed database.*:ResourceWarning:time_machine.*",
+    "ignore:unclosed database.*:ResourceWarning:werkzeug.*",
+    "ignore:unclosed database.*:ResourceWarning:_pytest.*",
+    "ignore:unclosed database.*:ResourceWarning:typing.*",
+    "ignore:unclosed database.*:ResourceWarning:multiprocessing.*",
+    "ignore:unclosed database.*:ResourceWarning:logging.*",
+    "ignore::ResourceWarning:_pytest.unraisableexception",
+    "ignore::ResourceWarning:coverage.sqldata",
+    "ignore::ResourceWarning:coverage.collector",
+]
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+]
+
+[tool.coverage.html]
+directory = "tests/evidence/coverage"
+
+[tool.mypy]
+warn_return_any = false
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+
+[tool.ruff]
+line-length = 110
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
