@@ -1,11 +1,11 @@
 """エントリーポイント"""
 
-from .cli import app
+import py_project.cli
 
 
 def main() -> None:
     """メイン関数"""
-    app()
+    py_project.cli.app()
 
 
 if __name__ == "__main__":

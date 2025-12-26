@@ -2,13 +2,12 @@
 
 import difflib
 import logging
-from pathlib import Path
-from typing import Any
+import pathlib
+import typing
 
 import tomlkit
-from tomlkit import TOMLDocument
 
-from .base import ApplyContext, ApplyResult, ConfigHandler
+import py_project.handlers.base as handlers_base
 
 logger = logging.getLogger(__name__)
 
@@ -25,26 +24,26 @@ PRESERVE_SECTIONS = [
 ]
 
 
-class PyprojectHandler(ConfigHandler):
+class PyprojectHandler(handlers_base.ConfigHandler):
     """pyproject.toml 共通設定ハンドラ"""
 
     @property
     def name(self) -> str:
         return "pyproject"
 
-    def get_template_path(self, context: ApplyContext) -> Path:
+    def get_template_path(self, context: handlers_base.ApplyContext) -> pathlib.Path:
         """テンプレートファイルのパスを取得"""
         return context.template_dir / "pyproject" / "sections.toml"
 
-    def get_output_path(self, project: dict[str, Any]) -> Path:
+    def get_output_path(self, project: dict[str, typing.Any]) -> pathlib.Path:
         """出力ファイルのパスを取得"""
         return self.get_project_path(project) / "pyproject.toml"
 
-    def load_toml(self, path: Path) -> TOMLDocument:
+    def load_toml(self, path: pathlib.Path) -> tomlkit.TOMLDocument:
         """TOML ファイルを読み込み"""
         return tomlkit.parse(path.read_text())
 
-    def get_nested_value(self, doc: TOMLDocument, key_path: str) -> Any:
+    def get_nested_value(self, doc: tomlkit.TOMLDocument, key_path: str) -> typing.Any:
         """ドット区切りのキーパスで値を取得"""
         keys = key_path.split(".")
         current = doc
@@ -55,7 +54,9 @@ class PyprojectHandler(ConfigHandler):
                 return None
         return current
 
-    def set_nested_value(self, doc: TOMLDocument, key_path: str, value: Any) -> None:
+    def set_nested_value(
+        self, doc: tomlkit.TOMLDocument, key_path: str, value: typing.Any
+    ) -> None:
         """ドット区切りのキーパスで値を設定"""
         keys = key_path.split(".")
         current = doc
@@ -65,7 +66,7 @@ class PyprojectHandler(ConfigHandler):
             current = current[key]
         current[keys[-1]] = value
 
-    def delete_nested_key(self, doc: TOMLDocument, key_path: str) -> bool:
+    def delete_nested_key(self, doc: tomlkit.TOMLDocument, key_path: str) -> bool:
         """ドット区切りのキーパスでキーを削除"""
         keys = key_path.split(".")
         current = doc
@@ -81,10 +82,10 @@ class PyprojectHandler(ConfigHandler):
 
     def merge_pyproject(
         self,
-        current: TOMLDocument,
-        template: TOMLDocument,
-        project: dict[str, Any],
-    ) -> TOMLDocument:
+        current: tomlkit.TOMLDocument,
+        template: tomlkit.TOMLDocument,
+        project: dict[str, typing.Any],
+    ) -> tomlkit.TOMLDocument:
         """pyproject.toml をマージ
 
         元のファイルをベースにして、テンプレートの内容で共通セクションを上書きする。
@@ -139,8 +140,8 @@ class PyprojectHandler(ConfigHandler):
 
     def _merge_section(
         self,
-        result: TOMLDocument | dict,
-        template: TOMLDocument | dict,
+        result: tomlkit.TOMLDocument | dict,
+        template: tomlkit.TOMLDocument | dict,
         section: str,
         preserve_fields: list[str],
     ) -> None:
@@ -167,7 +168,9 @@ class PyprojectHandler(ConfigHandler):
         for field, value in preserved.items():
             result[section][field] = value
 
-    def generate_merged_content(self, project: dict[str, Any], context: ApplyContext) -> str | None:
+    def generate_merged_content(
+        self, project: dict[str, typing.Any], context: handlers_base.ApplyContext
+    ) -> str | None:
         """マージされた内容を生成"""
         template_path = self.get_template_path(context)
         output_path = self.get_output_path(project)
@@ -184,7 +187,9 @@ class PyprojectHandler(ConfigHandler):
         merged = self.merge_pyproject(current, template, project)
         return tomlkit.dumps(merged)
 
-    def diff(self, project: dict[str, Any], context: ApplyContext) -> str | None:
+    def diff(
+        self, project: dict[str, typing.Any], context: handlers_base.ApplyContext
+    ) -> str | None:
         """差分を取得"""
         template_path = self.get_template_path(context)
         output_path = self.get_output_path(project)
@@ -213,34 +218,36 @@ class PyprojectHandler(ConfigHandler):
         )
         return "".join(diff)
 
-    def apply(self, project: dict[str, Any], context: ApplyContext) -> ApplyResult:
+    def apply(
+        self, project: dict[str, typing.Any], context: handlers_base.ApplyContext
+    ) -> handlers_base.ApplyResult:
         """設定を適用"""
         template_path = self.get_template_path(context)
         output_path = self.get_output_path(project)
 
         if not template_path.exists():
-            return ApplyResult(
+            return handlers_base.ApplyResult(
                 status="error",
                 message=f"テンプレートが見つかりません: {template_path}",
             )
 
         if not output_path.exists():
-            return ApplyResult(
+            return handlers_base.ApplyResult(
                 status="skipped",
                 message=f"pyproject.toml が見つかりません: {output_path}",
             )
 
         new_content = self.generate_merged_content(project, context)
         if new_content is None:
-            return ApplyResult(status="error", message="マージに失敗しました")
+            return handlers_base.ApplyResult(status="error", message="マージに失敗しました")
 
         current_content = output_path.read_text()
 
         if current_content == new_content:
-            return ApplyResult(status="unchanged")
+            return handlers_base.ApplyResult(status="unchanged")
 
         if context.dry_run:
-            return ApplyResult(status="updated")
+            return handlers_base.ApplyResult(status="updated")
 
         # バックアップ作成
         if context.backup:
@@ -250,4 +257,4 @@ class PyprojectHandler(ConfigHandler):
         output_path.write_text(new_content)
         logger.info("pyproject.toml を更新しました: %s", output_path)
 
-        return ApplyResult(status="updated")
+        return handlers_base.ApplyResult(status="updated")

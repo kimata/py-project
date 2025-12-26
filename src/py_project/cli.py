@@ -1,19 +1,17 @@
 """CLI 定義"""
 
 import logging
-import sys
-from pathlib import Path
-from typing import Annotated, Optional
+import pathlib
+import typing
 
-import typer
-from rich.console import Console
-from rich.table import Table
-
-import my_lib.config as config
+import my_lib.config
 import my_lib.logger
+import rich.console
+import rich.table
+import typer
 
-from .applier import apply_configs
-from .handlers import HANDLERS
+import py_project.applier
+import py_project.handlers
 
 app = typer.Typer(
     name="py-project",
@@ -21,10 +19,10 @@ app = typer.Typer(
     no_args_is_help=False,
 )
 
-console = Console()
+console = rich.console.Console()
 
 # スキーマファイルのパス
-SCHEMA_PATH = Path(__file__).parent.parent / "schema" / "config.schema.json"
+SCHEMA_PATH = pathlib.Path(__file__).parent.parent.parent / "schema" / "config.schema.json"
 
 
 def init_logger(verbose: bool) -> None:
@@ -33,33 +31,33 @@ def init_logger(verbose: bool) -> None:
     my_lib.logger.init(name="py-project", level=level)
 
 
-def load_config(config_file: Path) -> dict | None:
+def load_config(config_file: pathlib.Path) -> dict | None:
     """設定ファイルを読み込み"""
     try:
-        return config.load(str(config_file), str(SCHEMA_PATH))
-    except config.ConfigFileNotFoundError as e:
+        return my_lib.config.load(str(config_file), str(SCHEMA_PATH))
+    except my_lib.config.ConfigFileNotFoundError as e:
         console.print(f"[red]設定ファイルが見つかりません: {e}[/red]")
         return None
-    except config.ConfigParseError as e:
+    except my_lib.config.ConfigParseError as e:
         console.print(f"[red]設定ファイルの形式が不正です:[/red]\n{e.details}")
         return None
-    except config.ConfigValidationError as e:
+    except my_lib.config.ConfigValidationError as e:
         console.print(f"[red]設定ファイルの検証に失敗しました:[/red]\n{e.details}")
         return None
 
 
 @app.command()
 def main(
-    config_file: Annotated[
-        Path,
+    config_file: typing.Annotated[
+        pathlib.Path,
         typer.Option(
             "-c",
             "--config-file",
             help="設定ファイルのパス",
             exists=False,
         ),
-    ] = Path("config.yaml"),
-    apply: Annotated[
+    ] = pathlib.Path("config.yaml"),
+    apply: typing.Annotated[
         bool,
         typer.Option(
             "-a",
@@ -67,23 +65,23 @@ def main(
             help="実際に変更を適用（指定しないとドライラン）",
         ),
     ] = False,
-    project: Annotated[
-        Optional[list[str]],
+    project: typing.Annotated[
+        typing.Optional[list[str]],
         typer.Option(
             "-p",
             "--project",
             help="対象プロジェクトを限定（複数指定可）",
         ),
     ] = None,
-    config_type: Annotated[
-        Optional[list[str]],
+    config_type: typing.Annotated[
+        typing.Optional[list[str]],
         typer.Option(
             "-t",
             "--config",
             help="対象設定タイプを限定（複数指定可）",
         ),
     ] = None,
-    diff: Annotated[
+    diff: typing.Annotated[
         bool,
         typer.Option(
             "-d",
@@ -91,7 +89,7 @@ def main(
             help="差分を詳細表示",
         ),
     ] = False,
-    backup: Annotated[
+    backup: typing.Annotated[
         bool,
         typer.Option(
             "-b",
@@ -99,7 +97,7 @@ def main(
             help="適用前にバックアップを作成",
         ),
     ] = False,
-    verbose: Annotated[
+    verbose: typing.Annotated[
         bool,
         typer.Option(
             "-v",
@@ -107,21 +105,21 @@ def main(
             help="詳細ログ出力",
         ),
     ] = False,
-    validate: Annotated[
+    validate: typing.Annotated[
         bool,
         typer.Option(
             "--validate",
             help="設定ファイルの検証のみ",
         ),
     ] = False,
-    list_projects: Annotated[
+    list_projects: typing.Annotated[
         bool,
         typer.Option(
             "--list-projects",
             help="プロジェクト一覧を表示",
         ),
     ] = False,
-    list_configs: Annotated[
+    list_configs: typing.Annotated[
         bool,
         typer.Option(
             "--list-configs",
@@ -154,7 +152,7 @@ def main(
 
     # 設定適用
     dry_run = not apply
-    summary = apply_configs(
+    summary = py_project.applier.apply_configs(
         config=app_config,
         projects=project,
         config_types=config_type,
@@ -171,7 +169,7 @@ def main(
 
 def _show_config_types() -> None:
     """設定タイプ一覧を表示"""
-    table = Table(title="Available Config Types")
+    table = rich.table.Table(title="Available Config Types")
     table.add_column("Name", style="cyan")
     table.add_column("Description")
 
@@ -187,7 +185,7 @@ def _show_config_types() -> None:
         "my-py-lib": "my-py-lib 依存関係の更新",
     }
 
-    for name in HANDLERS:
+    for name in py_project.handlers.HANDLERS:
         table.add_row(name, descriptions.get(name, ""))
 
     console.print(table)
@@ -195,7 +193,7 @@ def _show_config_types() -> None:
 
 def _show_projects(app_config: dict) -> None:
     """プロジェクト一覧を表示"""
-    table = Table(title="Configured Projects")
+    table = rich.table.Table(title="Configured Projects")
     table.add_column("Name", style="cyan")
     table.add_column("Path")
     table.add_column("Configs")
@@ -203,10 +201,10 @@ def _show_projects(app_config: dict) -> None:
     defaults = app_config.get("defaults", {})
     default_configs = defaults.get("configs", [])
 
-    for project in app_config.get("projects", []):
-        name = project["name"]
-        path = project["path"]
-        configs = project.get("configs", default_configs)
+    for proj in app_config.get("projects", []):
+        name = proj["name"]
+        path = proj["path"]
+        configs = proj.get("configs", default_configs)
         configs_str = ", ".join(configs) if configs else "(defaults)"
 
         table.add_row(name, path, configs_str)

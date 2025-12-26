@@ -2,14 +2,12 @@
 
 import difflib
 import logging
+import pathlib
 import re
 import subprocess
-from pathlib import Path
-from typing import Any
+import typing
 
-import tomlkit
-
-from .base import ApplyContext, ApplyResult, ConfigHandler
+import py_project.handlers.base as handlers_base
 
 logger = logging.getLogger(__name__)
 
@@ -19,14 +17,14 @@ MY_PY_LIB_PATTERN = re.compile(
 )
 
 
-class MyPyLibHandler(ConfigHandler):
+class MyPyLibHandler(handlers_base.ConfigHandler):
     """my-py-lib 依存関係更新ハンドラ"""
 
     @property
     def name(self) -> str:
         return "my-py-lib"
 
-    def get_output_path(self, project: dict[str, Any]) -> Path:
+    def get_output_path(self, project: dict[str, typing.Any]) -> pathlib.Path:
         """出力ファイルのパスを取得"""
         return self.get_project_path(project) / "pyproject.toml"
 
@@ -63,7 +61,9 @@ class MyPyLibHandler(ConfigHandler):
         new_dep = f"my-lib @ git+https://github.com/kimata/my-py-lib@{new_hash}"
         return MY_PY_LIB_PATTERN.sub(new_dep, content)
 
-    def diff(self, project: dict[str, Any], context: ApplyContext) -> str | None:
+    def diff(
+        self, project: dict[str, typing.Any], context: handlers_base.ApplyContext
+    ) -> str | None:
         """差分を取得"""
         output_path = self.get_output_path(project)
 
@@ -94,12 +94,14 @@ class MyPyLibHandler(ConfigHandler):
         )
         return "".join(diff)
 
-    def apply(self, project: dict[str, Any], context: ApplyContext) -> ApplyResult:
+    def apply(
+        self, project: dict[str, typing.Any], context: handlers_base.ApplyContext
+    ) -> handlers_base.ApplyResult:
         """設定を適用"""
         output_path = self.get_output_path(project)
 
         if not output_path.exists():
-            return ApplyResult(
+            return handlers_base.ApplyResult(
                 status="skipped",
                 message=f"pyproject.toml が見つかりません: {output_path}",
             )
@@ -108,23 +110,23 @@ class MyPyLibHandler(ConfigHandler):
         current_hash, _, _ = self.find_my_py_lib_dependency(content)
 
         if current_hash is None:
-            return ApplyResult(
+            return handlers_base.ApplyResult(
                 status="skipped",
                 message="my-py-lib の依存関係が見つかりません",
             )
 
         latest_hash = self.get_latest_commit_hash()
         if latest_hash is None:
-            return ApplyResult(
+            return handlers_base.ApplyResult(
                 status="error",
                 message="最新コミットハッシュの取得に失敗",
             )
 
         if current_hash == latest_hash:
-            return ApplyResult(status="unchanged")
+            return handlers_base.ApplyResult(status="unchanged")
 
         if context.dry_run:
-            return ApplyResult(
+            return handlers_base.ApplyResult(
                 status="updated",
                 message=f"{current_hash[:8]} -> {latest_hash[:8]}",
             )
@@ -143,7 +145,7 @@ class MyPyLibHandler(ConfigHandler):
             latest_hash[:8],
         )
 
-        return ApplyResult(
+        return handlers_base.ApplyResult(
             status="updated",
             message=f"{current_hash[:8]} -> {latest_hash[:8]}",
         )

@@ -2,17 +2,17 @@
 
 import difflib
 import logging
-from pathlib import Path
-from typing import Any
+import pathlib
+import typing
 
-from jinja2 import Environment, FileSystemLoader
+import jinja2
 
-from .base import ApplyContext, ApplyResult, ConfigHandler
+import py_project.handlers.base as handlers_base
 
 logger = logging.getLogger(__name__)
 
 
-class TemplateCopyHandler(ConfigHandler):
+class TemplateCopyHandler(handlers_base.ConfigHandler):
     """テンプレートファイルをコピーするハンドラの基底クラス"""
 
     # サブクラスでオーバーライド
@@ -24,26 +24,30 @@ class TemplateCopyHandler(ConfigHandler):
     def name(self) -> str:
         return self.template_subdir
 
-    def get_template_path(self, project: dict[str, Any], context: ApplyContext) -> Path:
+    def get_template_path(
+        self, project: dict[str, typing.Any], context: handlers_base.ApplyContext
+    ) -> pathlib.Path:
         """テンプレートファイルのパスを取得"""
         # template_overrides でオーバーライドされているかチェック
         overrides = project.get("template_overrides", {})
         if self.name in overrides:
-            return Path(overrides[self.name]).expanduser()
+            return pathlib.Path(overrides[self.name]).expanduser()
 
         return context.template_dir / self.template_subdir / self.template_file
 
-    def get_output_path(self, project: dict[str, Any]) -> Path:
+    def get_output_path(self, project: dict[str, typing.Any]) -> pathlib.Path:
         """出力ファイルのパスを取得"""
         return self.get_project_path(project) / self.output_file
 
-    def render_template(self, project: dict[str, Any], context: ApplyContext) -> str:
+    def render_template(
+        self, project: dict[str, typing.Any], context: handlers_base.ApplyContext
+    ) -> str:
         """テンプレートをレンダリング"""
         template_path = self.get_template_path(project, context)
 
         # Jinja2 環境を設定
-        env = Environment(
-            loader=FileSystemLoader(template_path.parent),
+        env = jinja2.Environment(
+            loader=jinja2.FileSystemLoader(template_path.parent),
             keep_trailing_newline=True,
         )
         template = env.get_template(template_path.name)
@@ -58,7 +62,9 @@ class TemplateCopyHandler(ConfigHandler):
             vars=vars_,
         )
 
-    def diff(self, project: dict[str, Any], context: ApplyContext) -> str | None:
+    def diff(
+        self, project: dict[str, typing.Any], context: handlers_base.ApplyContext
+    ) -> str | None:
         """差分を取得"""
         template_path = self.get_template_path(project, context)
         output_path = self.get_output_path(project)
@@ -85,13 +91,15 @@ class TemplateCopyHandler(ConfigHandler):
         )
         return "".join(diff)
 
-    def apply(self, project: dict[str, Any], context: ApplyContext) -> ApplyResult:
+    def apply(
+        self, project: dict[str, typing.Any], context: handlers_base.ApplyContext
+    ) -> handlers_base.ApplyResult:
         """設定を適用"""
         template_path = self.get_template_path(project, context)
         output_path = self.get_output_path(project)
 
         if not template_path.exists():
-            return ApplyResult(
+            return handlers_base.ApplyResult(
                 status="error",
                 message=f"テンプレートが見つかりません: {template_path}",
             )
@@ -102,10 +110,10 @@ class TemplateCopyHandler(ConfigHandler):
         if not is_new:
             current_content = output_path.read_text()
             if current_content == new_content:
-                return ApplyResult(status="unchanged")
+                return handlers_base.ApplyResult(status="unchanged")
 
         if context.dry_run:
-            return ApplyResult(status="created" if is_new else "updated")
+            return handlers_base.ApplyResult(status="created" if is_new else "updated")
 
         # バックアップ作成
         if context.backup and not is_new:
@@ -115,7 +123,7 @@ class TemplateCopyHandler(ConfigHandler):
         output_path.write_text(new_content)
         logger.info("%s を%sしました: %s", self.name, "作成" if is_new else "更新", output_path)
 
-        return ApplyResult(status="created" if is_new else "updated")
+        return handlers_base.ApplyResult(status="created" if is_new else "updated")
 
 
 class PreCommitHandler(TemplateCopyHandler):

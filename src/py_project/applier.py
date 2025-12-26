@@ -1,20 +1,20 @@
 """設定適用ロジック"""
 
+import dataclasses
 import logging
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any
+import pathlib
+import typing
 
-from rich.console import Console
-from rich.table import Table
+import rich.console
+import rich.table
 
-from .differ import print_diff
-from .handlers import HANDLERS, ApplyContext, ApplyResult
+import py_project.differ
+import py_project.handlers
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclasses.dataclass
 class ApplySummary:
     """適用結果サマリ"""
 
@@ -24,10 +24,10 @@ class ApplySummary:
     skipped: int = 0
     errors: int = 0
     projects_processed: int = 0
-    error_messages: list[str] = field(default_factory=list)
+    error_messages: list[str] = dataclasses.field(default_factory=list)
 
 
-def get_project_configs(project: dict[str, Any], defaults: dict[str, Any]) -> list[str]:
+def get_project_configs(project: dict[str, typing.Any], defaults: dict[str, typing.Any]) -> list[str]:
     """プロジェクトに適用する設定タイプのリストを取得"""
     if "configs" in project:
         return project["configs"]
@@ -35,13 +35,13 @@ def get_project_configs(project: dict[str, Any], defaults: dict[str, Any]) -> li
 
 
 def apply_configs(
-    config: dict[str, Any],
+    config: dict[str, typing.Any],
     projects: list[str] | None = None,
     config_types: list[str] | None = None,
     dry_run: bool = True,
     backup: bool = False,
     show_diff: bool = False,
-    console: Console | None = None,
+    console: rich.console.Console | None = None,
 ) -> ApplySummary:
     """設定を適用
 
@@ -58,18 +58,18 @@ def apply_configs(
         適用結果サマリ
     """
     if console is None:
-        console = Console()
+        console = rich.console.Console()
 
     summary = ApplySummary()
 
     # テンプレートディレクトリ
-    template_dir = Path(config.get("template_dir", "./templates")).expanduser()
+    template_dir = pathlib.Path(config.get("template_dir", "./templates")).expanduser()
 
     # デフォルト設定
     defaults = config.get("defaults", {})
 
     # コンテキスト作成
-    context = ApplyContext(
+    context = py_project.handlers.base.ApplyContext(
         config=config,
         template_dir=template_dir,
         dry_run=dry_run,
@@ -90,12 +90,12 @@ def apply_configs(
         if projects and project_name not in projects:
             continue
 
-        project_path = Path(project["path"]).expanduser()
+        project_path = pathlib.Path(project["path"]).expanduser()
         console.print(f"[bold blue]{project_name}[/bold blue] ({project_path})")
 
         # プロジェクトディレクトリの存在確認
         if not project_path.exists():
-            console.print(f"  [red]! プロジェクトディレクトリが見つかりません[/red]")
+            console.print("  [red]! プロジェクトディレクトリが見つかりません[/red]")
             summary.errors += 1
             summary.error_messages.append(f"{project_name}: ディレクトリが見つかりません")
             continue
@@ -111,7 +111,7 @@ def apply_configs(
             if config_types and config_type not in config_types:
                 continue
 
-            handler_class = HANDLERS.get(config_type)
+            handler_class = py_project.handlers.HANDLERS.get(config_type)
             if handler_class is None:
                 console.print(f"  [red]! {config_type:15} : 未知の設定タイプ[/red]")
                 summary.errors += 1
@@ -124,7 +124,7 @@ def apply_configs(
                 diff_text = handler.diff(project, context)
                 if diff_text:
                     console.print(f"  [cyan]~ {config_type:15}[/cyan]")
-                    print_diff(diff_text, console)
+                    py_project.differ.print_diff(diff_text, console)
                 else:
                     console.print(f"  [green]✓ {config_type:15} : up to date[/green]")
                 continue
@@ -142,7 +142,11 @@ def apply_configs(
     return summary
 
 
-def _print_result(console: Console, config_type: str, result: ApplyResult) -> None:
+def _print_result(
+    console: rich.console.Console,
+    config_type: str,
+    result: py_project.handlers.base.ApplyResult,
+) -> None:
     """適用結果を表示"""
     status_display = {
         "created": ("[green]+[/green]", "will be created" if True else "created"),
@@ -162,7 +166,7 @@ def _print_result(console: Console, config_type: str, result: ApplyResult) -> No
 
 def _update_summary(
     summary: ApplySummary,
-    result: ApplyResult,
+    result: py_project.handlers.base.ApplyResult,
     project_name: str,
     config_type: str,
 ) -> None:
@@ -181,9 +185,9 @@ def _update_summary(
             summary.error_messages.append(f"{project_name}/{config_type}: {result.message}")
 
 
-def _print_summary(console: Console, summary: ApplySummary, dry_run: bool) -> None:
+def _print_summary(console: rich.console.Console, summary: ApplySummary, dry_run: bool) -> None:
     """サマリを表示"""
-    table = Table(show_header=False, box=None)
+    table = rich.table.Table(show_header=False, box=None)
     table.add_column("Key", style="dim")
     table.add_column("Value")
 
