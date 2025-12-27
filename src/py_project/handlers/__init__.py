@@ -13,6 +13,7 @@ HANDLERS: dict[str, type[handlers_base.ConfigHandler]] = {
     "python-version": handlers_template_copy.PythonVersionHandler,
     "dockerignore": handlers_template_copy.DockerignoreHandler,
     "gitignore": handlers_template_copy.GitignoreHandler,
+    "renovate": handlers_template_copy.RenovateHandler,
     "pyproject": handlers_pyproject.PyprojectHandler,
     "my-py-lib": handlers_my_py_lib.MyPyLibHandler,
 }

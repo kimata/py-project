@@ -9,6 +9,7 @@ defaults:
     - pre-commit
     - ruff
     - gitignore
+    - renovate
     - my-py-lib
 
 # テンプレートディレクトリ
@@ -22,6 +23,7 @@ projects:
       - pyproject
       - pre-commit
       - gitignore
+      - renovate
       - my-py-lib
 
   - name: mercari-bot
@@ -30,6 +32,7 @@ projects:
       - pyproject
       - pre-commit
       - gitignore
+      - renovate
       - my-py-lib
 
   - name: amazon-bot
@@ -38,6 +41,7 @@ projects:
       - pyproject
       - pre-commit
       - gitignore
+      - renovate
       - my-py-lib
 
   - name: eink-weather-panel
@@ -46,6 +50,7 @@ projects:
       - pyproject
       - pre-commit
       - gitignore
+      - renovate
       - my-py-lib
 
   - name: unit-cooler
@@ -54,6 +59,7 @@ projects:
       - pyproject
       - pre-commit
       - gitignore
+      - renovate
       - my-py-lib
 
   - name: rasp-shutter
@@ -62,6 +68,7 @@ projects:
       - pyproject
       - pre-commit
       - gitignore
+      - renovate
       - my-py-lib
 
   - name: py-project
@@ -70,4 +77,5 @@ projects:
       - pyproject
       - pre-commit
       - gitignore
+      - renovate
       - my-py-lib

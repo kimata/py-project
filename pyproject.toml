@@ -77,6 +77,11 @@ ignore_missing_imports = true
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
+# tomlkit の型定義が不完全なため、一部のエラーを無視
+reportArgumentType = "warning"
+reportOperatorIssue = "warning"
+reportIndexIssue = "warning"
+reportGeneralTypeIssues = "warning"
 
 [dependency-groups]
 dev = [

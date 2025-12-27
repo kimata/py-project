@@ -1,0 +1,99 @@
+image: gitlab.green-rabbit.net:5050/kimata/local-ubuntu:250706_043ea01d
+
+variables:
+    UV_LINK_MODE: copy
+    UV_CACHE_DIR: .uv-cache
+    PYRIGHT_PYTHON_FORCE_VERSION: latest
+
+stages:
+    - pre-test
+    - test
+    - renovate
+
+test-prepare:
+    stage: pre-test
+
+    script:
+        - uv sync --locked --no-editable
+
+    cache:
+        - key:
+              files:
+                  - uv.lock
+          paths:
+              - $UV_CACHE_DIR
+
+test-typecheck:
+    stage: test
+
+    needs:
+        - test-prepare
+
+    script:
+        - uv run pyright src/
+        - uv run mypy src/
+
+    cache:
+        - key:
+              files:
+                  - uv.lock
+          paths:
+              - ${UV_CACHE_DIR}
+
+test-pytest:
+    stage: test
+
+    needs:
+        - test-prepare
+
+    script:
+        - uv run pytest --numprocesses=auto --junit-xml=reports/junit-report.xml --html=reports/report.html --self-contained-html --cov-report=term-missing --cov-report=xml:reports/coverage.xml tests/
+
+    coverage: '/TOTAL.*\s+(\d+%)/'
+
+    cache:
+        - key:
+              files:
+                  - uv.lock
+          paths:
+              - ${UV_CACHE_DIR}
+
+    artifacts:
+        when: always
+        paths:
+            - reports/**
+            - htmlcov/**
+        reports:
+            junit: reports/junit-report.xml
+            coverage_report:
+                coverage_format: cobertura
+                path: reports/coverage.xml
+
+renovate:
+    stage: renovate
+
+    dependencies: []
+
+    resource_group: renovate
+
+    image:
+        name: gitlab.green-rabbit.net:5050/kimata/local-renovate:250715_3b8866ff
+
+    variables:
+        RENOVATE_CACHE_DIR: .renovate-cache
+        LOG_LEVEL: info
+
+    script:
+        - renovate --platform gitlab --token ${RENOVATE_TOKEN} --endpoint ${CI_SERVER_URL}/api/v4 ${CI_PROJECT_PATH}
+
+    cache:
+        key: renovate-cache
+        paths:
+            - ${RENOVATE_CACHE_DIR}
+
+    rules:
+        - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+          when: never
+        - if: $CI_PIPELINE_SOURCE == "schedule"
+        - changes:
+              - renovate.json

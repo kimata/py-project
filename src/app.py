@@ -80,6 +80,7 @@ def show_config_types() -> None:
         "python-version": ".python-version ファイル",
         "dockerignore": ".dockerignore ファイル",
         "gitignore": ".gitignore ファイル",
+        "renovate": "renovate 設定ファイル",
         "pyproject": "pyproject.toml 共通セクション",
         "my-py-lib": "my-py-lib 依存関係の更新",
     }
@@ -116,7 +117,7 @@ def show_projects(config: dict[str, typing.Any]) -> None:
 if __name__ == "__main__":
     import docopt
 
-    args = docopt.docopt(__doc__)
+    args = docopt.docopt(__doc__)  # type: ignore[arg-type]
 
     config_file: str = args["--config"]
     apply_mode: bool = args["--apply"]

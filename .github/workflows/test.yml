@@ -1,0 +1,56 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --locked --no-editable
+
+      - name: Run type check (pyright)
+        run: uv run pyright src/
+
+      - name: Run type check (mypy)
+        run: uv run mypy src/
+
+      - name: Run tests
+        run: |
+          uv run pytest \
+            --numprocesses=auto \
+            --junit-xml=reports/junit-report.xml \
+            --html=reports/report.html \
+            --self-contained-html \
+            --cov-report=term-missing \
+            --cov-report=xml:reports/coverage.xml \
+            tests/
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: reports/
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: htmlcov/

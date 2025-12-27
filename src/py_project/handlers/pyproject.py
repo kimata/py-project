@@ -1,4 +1,6 @@
 """pyproject.toml 共通設定ハンドラ"""
+# mypy: disable-error-code="assignment,union-attr,operator,arg-type,index"
+# NOTE: tomlkit の型定義が不完全なため、一部の型エラーを無視
 
 import difflib
 import logging

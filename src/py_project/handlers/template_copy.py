@@ -180,3 +180,11 @@ class GitignoreHandler(TemplateCopyHandler):
     template_subdir = "gitignore"
     template_file = ".gitignore"
     output_file = ".gitignore"
+
+
+class RenovateHandler(TemplateCopyHandler):
+    """renovate 設定ハンドラ"""
+
+    template_subdir = "renovate"
+    template_file = "renovate.json"
+    output_file = "renovate.json"
