@@ -93,7 +93,13 @@ import py_project.handlers.base as handlers_base
 
 ### プロジェクト管理ファイル
 
-`pyproject.toml` をはじめとする一般的なプロジェクト管理ファイルは、このツール自身（py-project）で管理しています。修正したい場合は `templates/` 配下のテンプレートを更新し、ツールを実行して適用してください。
+`pyproject.toml` をはじめとする一般的なプロジェクト管理ファイルは、このツール自身（py-project）で管理しています。
+
+**重要**: 本プロジェクトの `pyproject.toml` 等を直接編集しないこと。以下の手順で修正すること：
+
+1. `templates/` 配下のテンプレートを更新
+2. `uv run src/app.py -p py-project --apply` で適用
+3. `uv sync` で依存関係を更新
 
 **重要**: テンプレートを修正する際は、何を変更したいのかを説明し、確認を取ること。
 
