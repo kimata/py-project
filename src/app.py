@@ -37,7 +37,7 @@ import rich.table
 import py_project.applier
 import py_project.handlers
 
-SCHEMA_PATH = pathlib.Path(__file__).parent.parent / "schema" / "config.schema.json"
+SCHEMA_PATH = pathlib.Path(__file__).parent.parent / "schema" / "config.schema"
 
 
 def execute(

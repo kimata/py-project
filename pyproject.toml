@@ -2,7 +2,7 @@
 name = "py-project"
 version = "0.1.0"
 description = "複数の Python プロジェクトに標準的な設定を一括適用するツール"
-readme = "DESIGN.md"
+readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "my-lib @ git+https://github.com/kimata/my-py-lib",
