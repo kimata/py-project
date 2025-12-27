@@ -859,44 +859,6 @@ class TestApplyErrors:
         assert (tmp_project / "pyproject.toml.bak").read_text() == original_content
 
 
-class TestGenerateMergedContent:
-    """generate_merged_content のテスト"""
-
-    def test_missing_template(self, tmp_path, tmp_project):
-        """テンプレートが存在しない場合"""
-        handler = pyproject_handler.PyprojectHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
-
-        context = handlers_base.ApplyContext(
-            config={},
-            template_dir=tmp_path / "nonexistent",
-            dry_run=False,
-            backup=False,
-        )
-
-        result = handler.generate_merged_content(project, context)
-
-        assert result is None
-
-    def test_missing_output(self, tmp_templates, tmp_path):
-        """出力ファイルが存在しない場合"""
-        handler = pyproject_handler.PyprojectHandler()
-        empty_project = tmp_path / "empty"
-        empty_project.mkdir()
-        project = {"name": "empty", "path": str(empty_project)}
-
-        context = handlers_base.ApplyContext(
-            config={},
-            template_dir=tmp_templates,
-            dry_run=False,
-            backup=False,
-        )
-
-        result = handler.generate_merged_content(project, context)
-
-        assert result is None
-
-
 class TestFormatType:
     """format_type のテスト"""
 

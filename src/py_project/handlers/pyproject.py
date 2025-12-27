@@ -137,6 +137,10 @@ class PyprojectHandler(handlers_base.ConfigHandler):
                 for dep in extra_dev_deps:
                     if dep not in dev_deps:
                         dev_deps.append(dep)
+            else:
+                logger.warning(
+                    "extra_dev_deps が指定されていますが、dependency-groups.dev が存在しません"
+                )
 
         return result
 
@@ -172,16 +176,13 @@ class PyprojectHandler(handlers_base.ConfigHandler):
 
     def generate_merged_content(
         self, project: dict[str, typing.Any], context: handlers_base.ApplyContext
-    ) -> str | None:
-        """マージされた内容を生成"""
+    ) -> str:
+        """マージされた内容を生成
+
+        Note: 呼び出し元でファイルの存在チェックを行うこと
+        """
         template_path = self.get_template_path(context)
         output_path = self.get_output_path(project)
-
-        if not template_path.exists():
-            return None
-
-        if not output_path.exists():
-            return None
 
         template = self.load_toml(template_path)
         current = self.load_toml(output_path)
@@ -203,8 +204,6 @@ class PyprojectHandler(handlers_base.ConfigHandler):
             return f"pyproject.toml が見つかりません: {output_path}"
 
         new_content = self.generate_merged_content(project, context)
-        if new_content is None:  # pragma: no cover
-            return "マージに失敗しました"
 
         # 正規化して比較
         new_content = _normalize_toml(new_content)
@@ -242,8 +241,6 @@ class PyprojectHandler(handlers_base.ConfigHandler):
             )
 
         new_content = self.generate_merged_content(project, context)
-        if new_content is None:  # pragma: no cover
-            return handlers_base.ApplyResult(status="error", message="マージに失敗しました")
 
         # 正規化して比較
         new_content = _normalize_toml(new_content)
