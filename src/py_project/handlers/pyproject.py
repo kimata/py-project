@@ -10,6 +10,7 @@ import typing
 import tomlkit
 
 import py_project.handlers.base as handlers_base
+from py_project.handlers.base import FormatType
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,8 @@ def _normalize_toml(content: str) -> str:
 
 class PyprojectHandler(handlers_base.ConfigHandler):
     """pyproject.toml 共通設定ハンドラ"""
+
+    format_type = FormatType.TOML
 
     @property
     def name(self) -> str:
@@ -244,6 +247,16 @@ class PyprojectHandler(handlers_base.ConfigHandler):
 
         # 正規化して比較
         new_content = _normalize_toml(new_content)
+
+        # バリデーション
+        # NOTE: tomlkit が生成する TOML は常に有効なため、このパスは通常到達しない
+        is_valid, error_msg = self.validate(new_content)
+        if not is_valid:  # pragma: no cover
+            return handlers_base.ApplyResult(
+                status="error",
+                message=f"バリデーション失敗: {error_msg}",
+            )
+
         current_content = output_path.read_text()
 
         if current_content == new_content:

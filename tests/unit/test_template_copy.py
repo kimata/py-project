@@ -215,6 +215,28 @@ class TestTemplateCopyErrors:
         assert result.status == "error"
         assert "テンプレートが見つかりません" in result.message
 
+    def test_apply_validation_failure(self, tmp_path, tmp_project):
+        """バリデーション失敗時の apply"""
+        handler = template_copy.PreCommitHandler()
+        project = {"name": "test-project", "path": str(tmp_project)}
+
+        # 無効な YAML を含むテンプレートを作成
+        template_dir = tmp_path / "templates" / "pre-commit"
+        template_dir.mkdir(parents=True)
+        (template_dir / ".pre-commit-config.yaml").write_text("invalid: [unclosed")
+
+        context = handlers_base.ApplyContext(
+            config={},
+            template_dir=tmp_path / "templates",
+            dry_run=False,
+            backup=False,
+        )
+
+        result = handler.apply(project, context)
+
+        assert result.status == "error"
+        assert "バリデーション失敗" in result.message
+
 
 class TestAllHandlers:
     """全ハンドラのテスト"""
@@ -253,3 +275,63 @@ class TestAllHandlers:
         """RenovateHandler の name プロパティ"""
         handler = template_copy.RenovateHandler()
         assert handler.name == "renovate"
+
+
+class TestFormatTypes:
+    """format_type のテスト"""
+
+    def test_precommit_format_type(self):
+        """PreCommitHandler の format_type"""
+        from py_project.handlers.base import FormatType
+
+        handler = template_copy.PreCommitHandler()
+        assert handler.format_type == FormatType.YAML
+
+    def test_ruff_format_type(self):
+        """RuffHandler の format_type"""
+        from py_project.handlers.base import FormatType
+
+        handler = template_copy.RuffHandler()
+        assert handler.format_type == FormatType.TOML
+
+    def test_yamllint_format_type(self):
+        """YamllintHandler の format_type"""
+        from py_project.handlers.base import FormatType
+
+        handler = template_copy.YamllintHandler()
+        assert handler.format_type == FormatType.YAML
+
+    def test_prettier_format_type(self):
+        """PrettierHandler の format_type"""
+        from py_project.handlers.base import FormatType
+
+        handler = template_copy.PrettierHandler()
+        assert handler.format_type == FormatType.JSON
+
+    def test_python_version_format_type(self):
+        """PythonVersionHandler の format_type"""
+        from py_project.handlers.base import FormatType
+
+        handler = template_copy.PythonVersionHandler()
+        assert handler.format_type == FormatType.TEXT
+
+    def test_gitignore_format_type(self):
+        """GitignoreHandler の format_type"""
+        from py_project.handlers.base import FormatType
+
+        handler = template_copy.GitignoreHandler()
+        assert handler.format_type == FormatType.TEXT
+
+    def test_dockerignore_format_type(self):
+        """DockerignoreHandler の format_type"""
+        from py_project.handlers.base import FormatType
+
+        handler = template_copy.DockerignoreHandler()
+        assert handler.format_type == FormatType.TEXT
+
+    def test_renovate_format_type(self):
+        """RenovateHandler の format_type"""
+        from py_project.handlers.base import FormatType
+
+        handler = template_copy.RenovateHandler()
+        assert handler.format_type == FormatType.JSON

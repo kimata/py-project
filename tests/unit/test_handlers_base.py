@@ -5,9 +5,33 @@ handlers/base.py のテスト
 """
 import pathlib
 
-import pytest
-
 import py_project.handlers.base as handlers_base
+from py_project.handlers.base import FormatType
+
+
+class DummyHandler(handlers_base.ConfigHandler):
+    """テスト用のダミーハンドラ"""
+
+    @property
+    def name(self):
+        return "dummy"
+
+    def apply(self, project, context):
+        return handlers_base.ApplyResult(status="unchanged")
+
+    def diff(self, project, context):
+        return None
+
+
+class TestFormatType:
+    """FormatType のテスト"""
+
+    def test_format_type_values(self):
+        """FormatType の値"""
+        assert FormatType.YAML.value == "yaml"
+        assert FormatType.TOML.value == "toml"
+        assert FormatType.JSON.value == "json"
+        assert FormatType.TEXT.value == "text"
 
 
 class TestApplyResult:
@@ -57,18 +81,6 @@ class TestConfigHandler:
 
     def test_get_project_path_expands_tilde(self, tmp_path):
         """~ が展開されることを確認"""
-        # 具象クラスを作成してテスト
-        class DummyHandler(handlers_base.ConfigHandler):
-            @property
-            def name(self):
-                return "dummy"
-
-            def apply(self, project, context):
-                return handlers_base.ApplyResult(status="unchanged")
-
-            def diff(self, project, context):
-                return None
-
         handler = DummyHandler()
         project = {"path": "~/test-project"}
 
@@ -79,18 +91,6 @@ class TestConfigHandler:
 
     def test_create_backup(self, tmp_path):
         """バックアップ作成"""
-
-        class DummyHandler(handlers_base.ConfigHandler):
-            @property
-            def name(self):
-                return "dummy"
-
-            def apply(self, project, context):
-                return handlers_base.ApplyResult(status="unchanged")
-
-            def diff(self, project, context):
-                return None
-
         handler = DummyHandler()
 
         # テストファイル作成
@@ -106,21 +106,83 @@ class TestConfigHandler:
 
     def test_create_backup_nonexistent_file(self, tmp_path):
         """存在しないファイルのバックアップ"""
-
-        class DummyHandler(handlers_base.ConfigHandler):
-            @property
-            def name(self):
-                return "dummy"
-
-            def apply(self, project, context):
-                return handlers_base.ApplyResult(status="unchanged")
-
-            def diff(self, project, context):
-                return None
-
         handler = DummyHandler()
         nonexistent_file = tmp_path / "nonexistent.txt"
 
         result = handler.create_backup(nonexistent_file)
 
         assert result is None
+
+
+class TestValidate:
+    """validate のテスト"""
+
+    def test_validate_text_always_valid(self):
+        """TEXT 形式は常に有効"""
+        handler = DummyHandler()
+        handler.format_type = FormatType.TEXT
+
+        is_valid, error = handler.validate("any content")
+
+        assert is_valid is True
+        assert error is None
+
+    def test_validate_yaml_valid(self):
+        """有効な YAML"""
+        handler = DummyHandler()
+        handler.format_type = FormatType.YAML
+
+        is_valid, error = handler.validate("key: value\nlist:\n  - item1\n  - item2\n")
+
+        assert is_valid is True
+        assert error is None
+
+    def test_validate_yaml_invalid(self):
+        """無効な YAML"""
+        handler = DummyHandler()
+        handler.format_type = FormatType.YAML
+
+        is_valid, error = handler.validate("key: [unclosed bracket")
+
+        assert is_valid is False
+        assert error is not None
+
+    def test_validate_toml_valid(self):
+        """有効な TOML"""
+        handler = DummyHandler()
+        handler.format_type = FormatType.TOML
+
+        is_valid, error = handler.validate('[section]\nkey = "value"\n')
+
+        assert is_valid is True
+        assert error is None
+
+    def test_validate_toml_invalid(self):
+        """無効な TOML"""
+        handler = DummyHandler()
+        handler.format_type = FormatType.TOML
+
+        is_valid, error = handler.validate('[section\nkey = "value"')
+
+        assert is_valid is False
+        assert error is not None
+
+    def test_validate_json_valid(self):
+        """有効な JSON"""
+        handler = DummyHandler()
+        handler.format_type = FormatType.JSON
+
+        is_valid, error = handler.validate('{"key": "value", "list": [1, 2, 3]}')
+
+        assert is_valid is True
+        assert error is None
+
+    def test_validate_json_invalid(self):
+        """無効な JSON"""
+        handler = DummyHandler()
+        handler.format_type = FormatType.JSON
+
+        is_valid, error = handler.validate('{"key": "value",}')  # trailing comma
+
+        assert is_valid is False
+        assert error is not None

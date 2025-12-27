@@ -1,9 +1,23 @@
 """設定タイプハンドラの基底クラス"""
 
+import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Any
+
+import tomlkit
+import yaml
+
+
+class FormatType(Enum):
+    """テンプレートの書式タイプ"""
+
+    YAML = "yaml"
+    TOML = "toml"
+    JSON = "json"
+    TEXT = "text"
 
 
 @dataclass
@@ -26,6 +40,8 @@ class ApplyResult:
 
 class ConfigHandler(ABC):
     """設定タイプのハンドラ基底クラス"""
+
+    format_type: FormatType = FormatType.TEXT  # デフォルトはプレーンテキスト
 
     @property
     @abstractmethod
@@ -55,3 +71,27 @@ class ConfigHandler(ABC):
         backup_path = file_path.with_suffix(file_path.suffix + ".bak")
         backup_path.write_text(file_path.read_text())
         return backup_path
+
+    def validate(self, content: str) -> tuple[bool, str | None]:
+        """コンテンツのシンタックスを検証
+
+        Args:
+            content: 検証するコンテンツ
+
+        Returns:
+            (True, None) - 有効
+            (False, error_message) - 無効
+        """
+        if self.format_type == FormatType.TEXT:
+            return (True, None)
+
+        try:
+            if self.format_type == FormatType.YAML:
+                yaml.safe_load(content)
+            elif self.format_type == FormatType.TOML:
+                tomlkit.parse(content)
+            elif self.format_type == FormatType.JSON:
+                json.loads(content)
+            return (True, None)
+        except Exception as e:
+            return (False, str(e))

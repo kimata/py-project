@@ -8,6 +8,7 @@ import typing
 import jinja2
 
 import py_project.handlers.base as handlers_base
+from py_project.handlers.base import FormatType
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ class TemplateCopyHandler(handlers_base.ConfigHandler):
     template_subdir: str = ""  # テンプレートのサブディレクトリ
     template_file: str = ""  # テンプレートファイル名
     output_file: str = ""  # 出力ファイル名
+    format_type: FormatType = FormatType.TEXT  # 書式タイプ
 
     @property
     def name(self) -> str:
@@ -105,6 +107,15 @@ class TemplateCopyHandler(handlers_base.ConfigHandler):
             )
 
         new_content = self.render_template(project, context)
+
+        # バリデーション
+        is_valid, error_msg = self.validate(new_content)
+        if not is_valid:
+            return handlers_base.ApplyResult(
+                status="error",
+                message=f"バリデーション失敗: {error_msg}",
+            )
+
         is_new = not output_path.exists()
 
         if not is_new:
@@ -132,6 +143,7 @@ class PreCommitHandler(TemplateCopyHandler):
     template_subdir = "pre-commit"
     template_file = ".pre-commit-config.yaml"
     output_file = ".pre-commit-config.yaml"
+    format_type = FormatType.YAML
 
 
 class RuffHandler(TemplateCopyHandler):
@@ -140,6 +152,7 @@ class RuffHandler(TemplateCopyHandler):
     template_subdir = "ruff"
     template_file = "ruff.toml"
     output_file = "ruff.toml"
+    format_type = FormatType.TOML
 
 
 class YamllintHandler(TemplateCopyHandler):
@@ -148,6 +161,7 @@ class YamllintHandler(TemplateCopyHandler):
     template_subdir = "yamllint"
     template_file = ".yamllint.yaml"
     output_file = ".yamllint.yaml"
+    format_type = FormatType.YAML
 
 
 class PrettierHandler(TemplateCopyHandler):
@@ -156,6 +170,7 @@ class PrettierHandler(TemplateCopyHandler):
     template_subdir = "prettier"
     template_file = ".prettierrc"
     output_file = ".prettierrc"
+    format_type = FormatType.JSON
 
 
 class PythonVersionHandler(TemplateCopyHandler):
@@ -188,3 +203,4 @@ class RenovateHandler(TemplateCopyHandler):
     template_subdir = "renovate"
     template_file = "renovate.json"
     output_file = "renovate.json"
+    format_type = FormatType.JSON

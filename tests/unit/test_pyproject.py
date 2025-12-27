@@ -895,3 +895,14 @@ class TestGenerateMergedContent:
         result = handler.generate_merged_content(project, context)
 
         assert result is None
+
+
+class TestFormatType:
+    """format_type のテスト"""
+
+    def test_pyproject_format_type(self):
+        """PyprojectHandler の format_type"""
+        from py_project.handlers.base import FormatType
+
+        handler = pyproject_handler.PyprojectHandler()
+        assert handler.format_type == FormatType.TOML
