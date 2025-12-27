@@ -17,6 +17,30 @@ template_dir: ./templates
 
 # プロジェクト一覧
 projects:
+  - name: my-py-lib
+    path: ~/github/my-py-lib
+    configs:
+      - pyproject
+      - pre-commit
+      - gitignore
+      - renovate
+    pyproject:
+      extra_dev_deps:
+        - amazon-paapi5>=1.1.2
+        - flask-cors>=4.0.1
+        - flask>=3.0.3
+        - openpyxl>=3.1.5
+        - pillow>=10.4.0
+        - rpi-lgpio>=0.6
+        - selenium>=4.23.1
+        - spidev>=3.6
+        - speechrecognition>=3.11.0
+        - pydub>=0.25.1
+        - pytest-forked>=1.6.0
+        - pytest-rerunfailures>=15.1
+        - undetected-chromedriver>=3.5.5
+        - types-requests>=2.32.0
+
   - name: rasp-water
     path: ~/github/rasp-water
     configs:
