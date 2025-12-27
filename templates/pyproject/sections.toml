@@ -65,10 +65,11 @@ branch = true
 exclude_lines = [
     "pragma: no cover",
     "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
 ]
 
 [tool.coverage.html]
-directory = "tests/evidence/coverage"
+directory = "reports/coverage"
 
 [tool.mypy]
 warn_return_any = false
@@ -78,6 +79,7 @@ ignore_missing_imports = true
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
+include = ["src", "tests"]
 
 [tool.ruff]
 line-length = 110
