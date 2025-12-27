@@ -115,6 +115,9 @@ uv run src/app.py --apply --backup
 # pyproject.toml 更新後の uv sync をスキップ
 uv run src/app.py --apply --no-sync
 
+# 更新したファイルを git add
+uv run src/app.py --apply --git-add
+
 # 詳細ログ出力
 uv run src/app.py -v
 
