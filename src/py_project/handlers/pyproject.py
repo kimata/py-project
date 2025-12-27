@@ -79,20 +79,6 @@ class PyprojectHandler(handlers_base.ConfigHandler):
             current = current[key]
         current[keys[-1]] = value
 
-    def delete_nested_key(self, doc: tomlkit.TOMLDocument, key_path: str) -> bool:
-        """ドット区切りのキーパスでキーを削除"""
-        keys = key_path.split(".")
-        current = doc
-        for key in keys[:-1]:
-            if isinstance(current, dict) and key in current:
-                current = current[key]
-            else:
-                return False
-        if keys[-1] in current:
-            del current[keys[-1]]
-            return True
-        return False
-
     def merge_pyproject(
         self,
         current: tomlkit.TOMLDocument,
@@ -214,7 +200,7 @@ class PyprojectHandler(handlers_base.ConfigHandler):
             return f"pyproject.toml が見つかりません: {output_path}"
 
         new_content = self.generate_merged_content(project, context)
-        if new_content is None:
+        if new_content is None:  # pragma: no cover
             return "マージに失敗しました"
 
         # 正規化して比較
@@ -253,7 +239,7 @@ class PyprojectHandler(handlers_base.ConfigHandler):
             )
 
         new_content = self.generate_merged_content(project, context)
-        if new_content is None:
+        if new_content is None:  # pragma: no cover
             return handlers_base.ApplyResult(status="error", message="マージに失敗しました")
 
         # 正規化して比較

@@ -114,7 +114,7 @@ def show_projects(config: dict[str, typing.Any]) -> None:
 
 
 ######################################################################
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     import docopt
 
     args = docopt.docopt(__doc__)  # type: ignore[arg-type]

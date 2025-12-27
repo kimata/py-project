@@ -144,3 +144,112 @@ class TestGitignoreHandler:
         assert result.status == "created"
         content = (tmp_project / ".gitignore").read_text()
         assert "__pycache__/" in content
+
+
+class TestTemplateOverrides:
+    """template_overrides のテスト"""
+
+    def test_template_override(self, tmp_path, tmp_project):
+        """テンプレートオーバーライド"""
+        # カスタムテンプレートを作成
+        custom_template = tmp_path / "custom" / ".pre-commit-config.yaml"
+        custom_template.parent.mkdir(parents=True)
+        custom_template.write_text("custom: template\n")
+
+        handler = template_copy.PreCommitHandler()
+        project = {
+            "name": "test-project",
+            "path": str(tmp_project),
+            "template_overrides": {
+                "pre-commit": str(custom_template),
+            },
+        }
+
+        context = handlers_base.ApplyContext(
+            config={},
+            template_dir=tmp_path / "templates",  # 存在しなくてもオーバーライドで上書き
+            dry_run=False,
+            backup=False,
+        )
+
+        result = handler.apply(project, context)
+
+        assert result.status == "created"
+        content = (tmp_project / ".pre-commit-config.yaml").read_text()
+        assert "custom: template" in content
+
+
+class TestTemplateCopyErrors:
+    """エラーケースのテスト"""
+
+    def test_diff_missing_template(self, tmp_path, tmp_project):
+        """テンプレートが存在しない場合の diff"""
+        handler = template_copy.PreCommitHandler()
+        project = {"name": "test-project", "path": str(tmp_project)}
+
+        context = handlers_base.ApplyContext(
+            config={},
+            template_dir=tmp_path / "nonexistent",
+            dry_run=False,
+            backup=False,
+        )
+
+        diff = handler.diff(project, context)
+
+        assert "テンプレートが見つかりません" in diff
+
+    def test_apply_missing_template(self, tmp_path, tmp_project):
+        """テンプレートが存在しない場合の apply"""
+        handler = template_copy.PreCommitHandler()
+        project = {"name": "test-project", "path": str(tmp_project)}
+
+        context = handlers_base.ApplyContext(
+            config={},
+            template_dir=tmp_path / "nonexistent",
+            dry_run=False,
+            backup=False,
+        )
+
+        result = handler.apply(project, context)
+
+        assert result.status == "error"
+        assert "テンプレートが見つかりません" in result.message
+
+
+class TestAllHandlers:
+    """全ハンドラのテスト"""
+
+    def test_ruff_handler_name(self):
+        """RuffHandler の name プロパティ"""
+        handler = template_copy.RuffHandler()
+        assert handler.name == "ruff"
+
+    def test_yamllint_handler_name(self):
+        """YamllintHandler の name プロパティ"""
+        handler = template_copy.YamllintHandler()
+        assert handler.name == "yamllint"
+
+    def test_prettier_handler_name(self):
+        """PrettierHandler の name プロパティ"""
+        handler = template_copy.PrettierHandler()
+        assert handler.name == "prettier"
+
+    def test_python_version_handler_name(self):
+        """PythonVersionHandler の name プロパティ"""
+        handler = template_copy.PythonVersionHandler()
+        assert handler.name == "python-version"
+
+    def test_dockerignore_handler_name(self):
+        """DockerignoreHandler の name プロパティ"""
+        handler = template_copy.DockerignoreHandler()
+        assert handler.name == "dockerignore"
+
+    def test_gitignore_handler_name(self):
+        """GitignoreHandler の name プロパティ"""
+        handler = template_copy.GitignoreHandler()
+        assert handler.name == "gitignore"
+
+    def test_renovate_handler_name(self):
+        """RenovateHandler の name プロパティ"""
+        handler = template_copy.RenovateHandler()
+        assert handler.name == "renovate"

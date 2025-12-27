@@ -218,3 +218,116 @@ class TestMyPyLibHandler:
         assert result.status == "updated"
         # ドライランなのでファイルは変更されない
         assert (tmp_project_with_my_lib / "pyproject.toml").read_text() == original_content
+
+
+class TestMyPyLibHandlerName:
+    """name プロパティのテスト"""
+
+    def test_name(self):
+        """name プロパティ"""
+        handler = my_py_lib_handler.MyPyLibHandler()
+        assert handler.name == "my-py-lib"
+
+
+class TestMyPyLibHandlerErrors:
+    """エラーケースのテスト"""
+
+    def test_diff_missing_pyproject(self, tmp_path, apply_context):
+        """pyproject.toml が存在しない場合の diff"""
+        handler = my_py_lib_handler.MyPyLibHandler()
+        empty_project = tmp_path / "empty"
+        empty_project.mkdir()
+        project = {"name": "empty", "path": str(empty_project)}
+
+        diff = handler.diff(project, apply_context)
+
+        assert "pyproject.toml が見つかりません" in diff
+
+    def test_diff_hash_fetch_failure(self, tmp_project_with_my_lib, apply_context, mocker):
+        """ハッシュ取得失敗時の diff"""
+        handler = my_py_lib_handler.MyPyLibHandler()
+        project = {"name": "test-project", "path": str(tmp_project_with_my_lib)}
+
+        import subprocess
+
+        mocker.patch("subprocess.run", side_effect=subprocess.CalledProcessError(1, "git"))
+
+        diff = handler.diff(project, apply_context)
+
+        assert "最新コミットハッシュの取得に失敗" in diff
+
+    def test_apply_missing_pyproject(self, tmp_path, apply_context):
+        """pyproject.toml が存在しない場合の apply"""
+        handler = my_py_lib_handler.MyPyLibHandler()
+        empty_project = tmp_path / "empty"
+        empty_project.mkdir()
+        project = {"name": "empty", "path": str(empty_project)}
+
+        result = handler.apply(project, apply_context)
+
+        assert result.status == "skipped"
+        assert "pyproject.toml が見つかりません" in result.message
+
+    def test_apply_hash_fetch_failure(self, tmp_project_with_my_lib, apply_context, mocker):
+        """ハッシュ取得失敗時の apply"""
+        handler = my_py_lib_handler.MyPyLibHandler()
+        project = {"name": "test-project", "path": str(tmp_project_with_my_lib)}
+
+        import subprocess
+
+        mocker.patch("subprocess.run", side_effect=subprocess.CalledProcessError(1, "git"))
+
+        result = handler.apply(project, apply_context)
+
+        assert result.status == "error"
+        assert "最新コミットハッシュの取得に失敗" in result.message
+
+    def test_apply_with_backup(self, tmp_project_with_my_lib, mocker):
+        """バックアップ付き適用"""
+        handler = my_py_lib_handler.MyPyLibHandler()
+        project = {"name": "test-project", "path": str(tmp_project_with_my_lib)}
+
+        original_content = (tmp_project_with_my_lib / "pyproject.toml").read_text()
+
+        new_hash = "newhash567890abcdef1234567890abcdef12345678"
+        mock_result = mocker.MagicMock()
+        mock_result.stdout = f"{new_hash}\tHEAD\n"
+        mocker.patch("subprocess.run", return_value=mock_result)
+
+        context = handlers_base.ApplyContext(
+            config={},
+            template_dir=tmp_project_with_my_lib.parent,
+            dry_run=False,
+            backup=True,
+        )
+
+        result = handler.apply(project, context)
+
+        assert result.status == "updated"
+        # バックアップが作成されている
+        assert (tmp_project_with_my_lib / "pyproject.toml.bak").exists()
+        assert (tmp_project_with_my_lib / "pyproject.toml.bak").read_text() == original_content
+
+    def test_get_latest_commit_hash_timeout(self, mocker):
+        """タイムアウト時"""
+        handler = my_py_lib_handler.MyPyLibHandler()
+
+        import subprocess
+
+        mocker.patch("subprocess.run", side_effect=subprocess.TimeoutExpired("git", 30))
+
+        result = handler.get_latest_commit_hash()
+
+        assert result is None
+
+    def test_get_latest_commit_hash_empty_output(self, mocker):
+        """空の出力時"""
+        handler = my_py_lib_handler.MyPyLibHandler()
+
+        mock_result = mocker.MagicMock()
+        mock_result.stdout = ""
+        mocker.patch("subprocess.run", return_value=mock_result)
+
+        result = handler.get_latest_commit_hash()
+
+        assert result is None

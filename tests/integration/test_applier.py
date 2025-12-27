@@ -224,3 +224,345 @@ class TestShowDiff:
         result = output.getvalue()
         # 何らかの出力がある
         assert len(result) > 0
+
+    def test_show_diff_no_changes(self, tmp_project, tmp_templates):
+        """差分なしの場合の表示"""
+        # gitignore をテンプレートと同じ内容で作成
+        import py_project.handlers.base as handlers_base
+        import py_project.handlers.template_copy as template_copy
+
+        handler = template_copy.GitignoreHandler()
+        context = handlers_base.ApplyContext(
+            config={},
+            template_dir=tmp_templates,
+            dry_run=False,
+            backup=False,
+        )
+        project = {"name": "test-project", "path": str(tmp_project)}
+        content = handler.render_template(project, context)
+        (tmp_project / ".gitignore").write_text(content)
+
+        config = {
+            "template_dir": str(tmp_templates),
+            "defaults": {"configs": ["gitignore"]},
+            "projects": [project],
+        }
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        applier.apply_configs(
+            config=config,
+            show_diff=True,
+            console=console,
+        )
+
+        result = output.getvalue()
+        # up to date が表示される
+        assert "up to date" in result
+
+
+class TestGetProjectConfigs:
+    """get_project_configs のテスト"""
+
+    def test_project_specific_configs(self):
+        """プロジェクト固有の設定"""
+        project = {"name": "test", "path": "/tmp/test", "configs": ["ruff", "pre-commit"]}
+        defaults = {"configs": ["pyproject"]}
+
+        result = applier.get_project_configs(project, defaults)
+
+        assert result == ["ruff", "pre-commit"]
+
+    def test_default_configs(self):
+        """デフォルト設定の使用"""
+        project = {"name": "test", "path": "/tmp/test"}
+        defaults = {"configs": ["pyproject", "gitignore"]}
+
+        result = applier.get_project_configs(project, defaults)
+
+        assert result == ["pyproject", "gitignore"]
+
+    def test_empty_defaults(self):
+        """デフォルト設定が空の場合"""
+        project = {"name": "test", "path": "/tmp/test"}
+        defaults = {}
+
+        result = applier.get_project_configs(project, defaults)
+
+        assert result == []
+
+
+class TestApplyWithoutConsole:
+    """console 引数なしのテスト"""
+
+    def test_apply_without_console(self, sample_config):
+        """console を渡さない場合"""
+        # console=None の場合、内部で Console が作成される
+        summary = applier.apply_configs(
+            config=sample_config,
+            dry_run=True,
+            console=None,
+        )
+
+        assert summary.projects_processed == 1
+
+
+class TestUpdateSummary:
+    """_update_summary のテスト"""
+
+    def test_update_summary_created(self):
+        """created ステータス"""
+        import py_project.handlers.base as handlers_base
+
+        summary = applier.ApplySummary()
+        result = handlers_base.ApplyResult(status="created")
+
+        applier._update_summary(summary, result, "test-project", "pyproject")
+
+        assert summary.created == 1
+
+    def test_update_summary_updated(self):
+        """updated ステータス"""
+        import py_project.handlers.base as handlers_base
+
+        summary = applier.ApplySummary()
+        result = handlers_base.ApplyResult(status="updated")
+
+        applier._update_summary(summary, result, "test-project", "pyproject")
+
+        assert summary.updated == 1
+
+    def test_update_summary_unchanged(self):
+        """unchanged ステータス"""
+        import py_project.handlers.base as handlers_base
+
+        summary = applier.ApplySummary()
+        result = handlers_base.ApplyResult(status="unchanged")
+
+        applier._update_summary(summary, result, "test-project", "pyproject")
+
+        assert summary.unchanged == 1
+
+    def test_update_summary_skipped(self):
+        """skipped ステータス"""
+        import py_project.handlers.base as handlers_base
+
+        summary = applier.ApplySummary()
+        result = handlers_base.ApplyResult(status="skipped")
+
+        applier._update_summary(summary, result, "test-project", "pyproject")
+
+        assert summary.skipped == 1
+
+    def test_update_summary_error_with_message(self):
+        """エラーメッセージ付きのエラー"""
+        import py_project.handlers.base as handlers_base
+
+        summary = applier.ApplySummary()
+        result = handlers_base.ApplyResult(status="error", message="テストエラー")
+
+        applier._update_summary(summary, result, "test-project", "pyproject")
+
+        assert summary.errors == 1
+        assert len(summary.error_messages) == 1
+        assert "テストエラー" in summary.error_messages[0]
+
+    def test_update_summary_error_without_message(self):
+        """エラーメッセージなしのエラー"""
+        import py_project.handlers.base as handlers_base
+
+        summary = applier.ApplySummary()
+        result = handlers_base.ApplyResult(status="error")
+
+        applier._update_summary(summary, result, "test-project", "pyproject")
+
+        assert summary.errors == 1
+        assert len(summary.error_messages) == 0
+
+    def test_update_summary_unknown_status(self):
+        """未知のステータス（何も更新されない）"""
+        import py_project.handlers.base as handlers_base
+
+        summary = applier.ApplySummary()
+        result = handlers_base.ApplyResult(status="unknown_status")
+
+        applier._update_summary(summary, result, "test-project", "pyproject")
+
+        # 何も更新されない
+        assert summary.created == 0
+        assert summary.updated == 0
+        assert summary.unchanged == 0
+        assert summary.skipped == 0
+        assert summary.errors == 0
+
+
+class TestPrintResult:
+    """_print_result のテスト"""
+
+    def test_print_result_with_message(self):
+        """メッセージ付きの結果表示"""
+        import py_project.handlers.base as handlers_base
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+        result = handlers_base.ApplyResult(status="updated", message="詳細メッセージ")
+
+        applier._print_result(console, "pyproject", result, dry_run=False)
+
+        assert "詳細メッセージ" in output.getvalue()
+
+    def test_print_result_unknown_status(self):
+        """未知のステータス"""
+        import py_project.handlers.base as handlers_base
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+        result = handlers_base.ApplyResult(status="unknown_status")
+
+        applier._print_result(console, "pyproject", result, dry_run=False)
+
+        assert "unknown_status" in output.getvalue()
+
+
+class TestPrintSummary:
+    """_print_summary のテスト"""
+
+    def test_print_summary_with_skipped(self):
+        """skipped を含むサマリ表示"""
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        summary = applier.ApplySummary(
+            created=1,
+            updated=2,
+            unchanged=3,
+            skipped=4,
+            projects_processed=1,
+        )
+
+        applier._print_summary(console, summary, dry_run=False)
+
+        result = output.getvalue()
+        assert "Skipped" in result
+
+    def test_print_summary_with_errors(self):
+        """エラーを含むサマリ表示"""
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        summary = applier.ApplySummary(
+            errors=2,
+            projects_processed=1,
+            error_messages=["Error 1", "Error 2"],
+        )
+
+        applier._print_summary(console, summary, dry_run=False)
+
+        result = output.getvalue()
+        assert "Errors" in result
+        assert "Error 1" in result
+
+    def test_print_summary_dry_run_with_changes(self):
+        """ドライランで変更がある場合"""
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        summary = applier.ApplySummary(
+            created=1,
+            updated=1,
+            projects_processed=1,
+        )
+
+        applier._print_summary(console, summary, dry_run=True)
+
+        result = output.getvalue()
+        assert "--apply" in result
+
+    def test_print_summary_apply_success(self):
+        """適用成功時の Done! 表示"""
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        summary = applier.ApplySummary(
+            updated=1,
+            projects_processed=1,
+            errors=0,
+        )
+
+        applier._print_summary(console, summary, dry_run=False)
+
+        result = output.getvalue()
+        assert "Done!" in result
+
+
+class TestRunUvSync:
+    """_run_uv_sync のテスト"""
+
+    def test_run_uv_sync_success(self, tmp_project, mocker):
+        """uv sync 成功"""
+        mock_run = mocker.patch("subprocess.run")
+        mock_run.return_value.returncode = 0
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        applier._run_uv_sync(tmp_project, console)
+
+        result = output.getvalue()
+        assert "uv sync completed" in result
+
+    def test_run_uv_sync_failure_with_stderr(self, tmp_project, mocker):
+        """uv sync 失敗（stderr あり）"""
+        mock_run = mocker.patch("subprocess.run")
+        mock_run.return_value.returncode = 1
+        mock_run.return_value.stderr = "Error message\nLine 2\nLine 3"
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        applier._run_uv_sync(tmp_project, console)
+
+        result = output.getvalue()
+        assert "uv sync failed" in result
+        assert "Error message" in result
+
+    def test_run_uv_sync_failure_without_stderr(self, tmp_project, mocker):
+        """uv sync 失敗（stderr なし）"""
+        mock_run = mocker.patch("subprocess.run")
+        mock_run.return_value.returncode = 1
+        mock_run.return_value.stderr = ""
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        applier._run_uv_sync(tmp_project, console)
+
+        result = output.getvalue()
+        assert "uv sync failed" in result
+
+    def test_run_uv_sync_timeout(self, tmp_project, mocker):
+        """uv sync タイムアウト"""
+        import subprocess
+
+        mocker.patch("subprocess.run", side_effect=subprocess.TimeoutExpired("uv", 120))
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        applier._run_uv_sync(tmp_project, console)
+
+        result = output.getvalue()
+        assert "timed out" in result
+
+    def test_run_uv_sync_not_found(self, tmp_project, mocker):
+        """uv コマンドが見つからない"""
+        mocker.patch("subprocess.run", side_effect=FileNotFoundError())
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        applier._run_uv_sync(tmp_project, console)
+
+        result = output.getvalue()
+        assert "uv command not found" in result

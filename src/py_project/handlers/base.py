@@ -31,17 +31,17 @@ class ConfigHandler(ABC):
     @abstractmethod
     def name(self) -> str:
         """設定タイプ名"""
-        pass
+        pass  # pragma: no cover
 
     @abstractmethod
     def apply(self, project: dict[str, Any], context: ApplyContext) -> ApplyResult:
         """設定を適用"""
-        pass
+        pass  # pragma: no cover
 
     @abstractmethod
     def diff(self, project: dict[str, Any], context: ApplyContext) -> str | None:
         """差分を取得（変更がない場合は None）"""
-        pass
+        pass  # pragma: no cover
 
     def get_project_path(self, project: dict[str, Any]) -> Path:
         """プロジェクトのパスを取得（~を展開）"""
