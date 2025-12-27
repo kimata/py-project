@@ -39,7 +39,16 @@ class MyPyLibHandler(handlers_base.ConfigHandler):
                 timeout=30,
             )
             # 出力形式: "hash\tHEAD"
-            return result.stdout.split()[0]
+            parts = result.stdout.split()
+            if not parts:
+                logger.warning("my-py-lib の最新コミットハッシュ取得に失敗: 出力が空です")
+                return None
+            commit_hash = parts[0]
+            # ハッシュの形式を検証（40文字の16進数）
+            if not commit_hash or len(commit_hash) != 40:
+                logger.warning("my-py-lib の最新コミットハッシュ取得に失敗: 不正なハッシュ形式: %s", commit_hash)
+                return None
+            return commit_hash
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired, IndexError) as e:
             logger.warning("my-py-lib の最新コミットハッシュ取得に失敗: %s", e)
             return None

@@ -142,9 +142,9 @@ class TestMyPyLibHandler:
         handler = my_py_lib_handler.MyPyLibHandler()
         project = {"name": "test-project", "path": str(tmp_project_with_my_lib)}
 
-        # 異なるハッシュを返すモック
+        # 異なるハッシュを返すモック（40文字の16進数）
         mock_result = mocker.MagicMock()
-        mock_result.stdout = "newhash567890abcdef1234567890abcdef12345678\tHEAD\n"
+        mock_result.stdout = "1234567890abcdef1234567890abcdef12345678\tHEAD\n"
         mocker.patch("subprocess.run", return_value=mock_result)
 
         diff = handler.diff(project, apply_context)
@@ -179,7 +179,8 @@ class TestMyPyLibHandler:
         handler = my_py_lib_handler.MyPyLibHandler()
         project = {"name": "test-project", "path": str(tmp_project_with_my_lib)}
 
-        new_hash = "newhash567890abcdef1234567890abcdef12345678"
+        # 40文字の16進数ハッシュ
+        new_hash = "1234567890abcdef1234567890abcdef12345678"
         mock_result = mocker.MagicMock()
         mock_result.stdout = f"{new_hash}\tHEAD\n"
         mocker.patch("subprocess.run", return_value=mock_result)
@@ -188,7 +189,7 @@ class TestMyPyLibHandler:
 
         assert result.status == "updated"
         assert "abcd1234" in result.message  # old hash
-        assert "newhash5" in result.message  # new hash (truncated)
+        assert "12345678" in result.message  # new hash (truncated)
 
         # ファイルが更新されていることを確認
         content = (tmp_project_with_my_lib / "pyproject.toml").read_text()
@@ -201,7 +202,8 @@ class TestMyPyLibHandler:
 
         original_content = (tmp_project_with_my_lib / "pyproject.toml").read_text()
 
-        new_hash = "newhash567890abcdef1234567890abcdef12345678"
+        # 40文字の16進数ハッシュ
+        new_hash = "1234567890abcdef1234567890abcdef12345678"
         mock_result = mocker.MagicMock()
         mock_result.stdout = f"{new_hash}\tHEAD\n"
         mocker.patch("subprocess.run", return_value=mock_result)
@@ -289,7 +291,8 @@ class TestMyPyLibHandlerErrors:
 
         original_content = (tmp_project_with_my_lib / "pyproject.toml").read_text()
 
-        new_hash = "newhash567890abcdef1234567890abcdef12345678"
+        # 40文字の16進数ハッシュ
+        new_hash = "1234567890abcdef1234567890abcdef12345678"
         mock_result = mocker.MagicMock()
         mock_result.stdout = f"{new_hash}\tHEAD\n"
         mocker.patch("subprocess.run", return_value=mock_result)
@@ -326,6 +329,19 @@ class TestMyPyLibHandlerErrors:
 
         mock_result = mocker.MagicMock()
         mock_result.stdout = ""
+        mocker.patch("subprocess.run", return_value=mock_result)
+
+        result = handler.get_latest_commit_hash()
+
+        assert result is None
+
+    def test_get_latest_commit_hash_invalid_format(self, mocker):
+        """不正なハッシュ形式（40文字でない）"""
+        handler = my_py_lib_handler.MyPyLibHandler()
+
+        mock_result = mocker.MagicMock()
+        # 40文字より短いハッシュ
+        mock_result.stdout = "abc123\tHEAD\n"
         mocker.patch("subprocess.run", return_value=mock_result)
 
         result = handler.get_latest_commit_hash()
