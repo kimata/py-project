@@ -17,7 +17,17 @@ logger = logging.getLogger(__name__)
 
 @dataclasses.dataclass
 class ApplySummary:
-    """適用結果サマリ"""
+    """適用結果サマリ
+
+    Attributes:
+        created: 新規作成された設定ファイル数
+        updated: 更新された設定ファイル数
+        unchanged: 変更なしの設定ファイル数
+        skipped: スキップされた設定ファイル数
+        errors: エラー数
+        projects_processed: 設定を適用したプロジェクト数（ディレクトリが存在したもののみ）
+        error_messages: エラーメッセージのリスト
+    """
 
     created: int = 0
     updated: int = 0
@@ -130,8 +140,8 @@ def apply_configs(
 
             handler = handler_class()
 
-            # 差分表示
-            if show_diff:
+            # 差分表示（--diff のみで --apply なしの場合）
+            if show_diff and dry_run:
                 diff_text = handler.diff(project, context)
                 if diff_text:
                     console.print(f"  [cyan]~ {config_type:15}[/cyan]")
@@ -212,6 +222,8 @@ def _update_summary(
         summary.errors += 1
         if result.message:
             summary.error_messages.append(f"{project_name}/{config_type}: {result.message}")
+    else:
+        logger.warning("未知のステータス: %s (%s/%s)", result.status, project_name, config_type)
 
 
 def _run_uv_sync(project_path: pathlib.Path, console: rich.console.Console) -> None:
