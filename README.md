@@ -1,5 +1,7 @@
 # 🛠️ py-project
 
+[![Test Status](https://github.com/kimata/py-project/actions/workflows/test.yml/badge.svg)](https://github.com/kimata/py-project/actions/workflows/test.yml)
+
 複数の Python プロジェクトに標準的な設定を一括適用するツール
 
 ## 📋 概要
@@ -27,6 +29,7 @@
 | `yamllint` | .yamllint.yaml |
 | `prettier` | .prettierrc |
 | `python-version` | .python-version |
+| `renovate` | renovate.json |
 | `my-py-lib` | my-py-lib 依存関係の更新 |
 
 ## 🚀 セットアップ
