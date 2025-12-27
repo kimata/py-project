@@ -101,3 +101,4 @@ import py_project.handlers.base as handlers_base
 
 - pyproject.toml 更新後は自動で `uv sync` 実行（`--no-sync` でスキップ）
 - tomlkit の空行差分対策で正規化処理あり
+- コードを更新した際は、README.md や CLAUDE.md の更新が必要か検討すること
