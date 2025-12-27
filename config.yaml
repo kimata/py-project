@@ -63,3 +63,11 @@ projects:
       - pre-commit
       - gitignore
       - my-py-lib
+
+  - name: py-project
+    path: ~/github/py-project
+    configs:
+      - pyproject
+      - pre-commit
+      - gitignore
+      - my-py-lib

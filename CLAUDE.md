@@ -78,6 +78,25 @@ import py_project.handlers.base as handlers_base
 - `jinja2`: テンプレート
 - `rich`: コンソール出力
 
+## 外部リソースの修正
+
+### my-py-lib
+
+`my_lib` のコードは `../my-py-lib` に存在します。リファクタリングで `my_lib` も修正した方がよい場合：
+
+1. `../my-py-lib` を修正
+2. commit & push
+3. このリポジトリの `pyproject.toml` を更新（ハッシュ値）
+4. `uv sync`
+
+**重要**: `my_lib` を修正する際は、何を変更したいのかを説明し、確認を取ること。
+
+### プロジェクト管理ファイル
+
+`pyproject.toml` をはじめとする一般的なプロジェクト管理ファイルは、このツール自身（py-project）で管理しています。修正したい場合は `templates/` 配下のテンプレートを更新し、ツールを実行して適用してください。
+
+**重要**: テンプレートを修正する際は、何を変更したいのかを説明し、確認を取ること。
+
 ## 注意
 
 - pyproject.toml 更新後は自動で `uv sync` 実行（`--no-sync` でスキップ）
