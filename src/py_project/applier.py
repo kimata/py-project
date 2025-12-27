@@ -140,15 +140,17 @@ def apply_configs(
 
             handler = handler_class()
 
-            # 差分表示（--diff のみで --apply なしの場合）
-            if show_diff and dry_run:
+            # 差分表示
+            if show_diff:
                 diff_text = handler.diff(project, context)
                 if diff_text:
                     console.print(f"  [cyan]~ {config_type:15}[/cyan]")
                     py_project.differ.print_diff(diff_text, console)
                 else:
                     console.print(f"  [green]✓ {config_type:15} : up to date[/green]")
-                continue
+                # --diff のみで --apply なしの場合はスキップ
+                if dry_run:
+                    continue
 
             # 適用
             result = handler.apply(project, context)
