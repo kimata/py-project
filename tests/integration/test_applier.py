@@ -566,3 +566,188 @@ class TestRunUvSync:
 
         result = output.getvalue()
         assert "uv command not found" in result
+
+
+class TestIsGitRepo:
+    """_is_git_repo のテスト"""
+
+    def test_is_git_repo_true(self, tmp_path, mocker):
+        """Git リポジトリの場合"""
+        mock_run = mocker.patch("subprocess.run")
+        mock_run.return_value.returncode = 0
+
+        result = applier._is_git_repo(tmp_path)
+
+        assert result is True
+
+    def test_is_git_repo_false(self, tmp_path, mocker):
+        """Git リポジトリでない場合"""
+        mock_run = mocker.patch("subprocess.run")
+        mock_run.return_value.returncode = 128
+
+        result = applier._is_git_repo(tmp_path)
+
+        assert result is False
+
+    def test_is_git_repo_timeout(self, tmp_path, mocker):
+        """タイムアウトの場合"""
+        import subprocess
+
+        mocker.patch("subprocess.run", side_effect=subprocess.TimeoutExpired("git", 5))
+
+        result = applier._is_git_repo(tmp_path)
+
+        assert result is False
+
+    def test_is_git_repo_git_not_found(self, tmp_path, mocker):
+        """git コマンドが見つからない場合"""
+        mocker.patch("subprocess.run", side_effect=FileNotFoundError())
+
+        result = applier._is_git_repo(tmp_path)
+
+        assert result is False
+
+
+class TestRunGitAdd:
+    """_run_git_add のテスト"""
+
+    def test_run_git_add_success(self, tmp_path, mocker):
+        """git add 成功"""
+        # _is_git_repo を True に
+        mocker.patch.object(applier, "_is_git_repo", return_value=True)
+        mock_run = mocker.patch("subprocess.run")
+        mock_run.return_value.returncode = 0
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        files = [tmp_path / "file1.txt", tmp_path / "file2.txt"]
+        applier._run_git_add(tmp_path, files, console)
+
+        result = output.getvalue()
+        assert "git add" in result
+        assert "file1.txt" in result
+
+    def test_run_git_add_outside_project(self, tmp_path, mocker):
+        """プロジェクト外のファイルの場合はフルパスで git add"""
+        import pathlib
+
+        mocker.patch.object(applier, "_is_git_repo", return_value=True)
+        mock_run = mocker.patch("subprocess.run")
+        mock_run.return_value.returncode = 0
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        # プロジェクト外のパスを指定
+        outside_file = pathlib.Path("/some/other/path/file.txt")
+        applier._run_git_add(tmp_path, [outside_file], console)
+
+        result = output.getvalue()
+        # フルパスで git add される
+        assert "git add" in result
+        assert "/some/other/path/file.txt" in result
+
+    def test_run_git_add_not_git_repo(self, tmp_path, mocker):
+        """Git リポジトリでない場合はスキップ"""
+        mocker.patch.object(applier, "_is_git_repo", return_value=False)
+        mock_run = mocker.patch("subprocess.run")
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        files = [tmp_path / "file1.txt"]
+        applier._run_git_add(tmp_path, files, console)
+
+        # subprocess.run は呼ばれない
+        mock_run.assert_not_called()
+        # 何も出力されない
+        assert output.getvalue() == ""
+
+    def test_run_git_add_failure(self, tmp_path, mocker):
+        """git add 失敗"""
+        mocker.patch.object(applier, "_is_git_repo", return_value=True)
+        mock_run = mocker.patch("subprocess.run")
+        mock_run.return_value.returncode = 1
+        mock_run.return_value.stderr = "fatal: error message"
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        files = [tmp_path / "file1.txt"]
+        applier._run_git_add(tmp_path, files, console)
+
+        result = output.getvalue()
+        assert "git add failed" in result
+
+    def test_run_git_add_timeout(self, tmp_path, mocker):
+        """git add タイムアウト"""
+        import subprocess
+
+        mocker.patch.object(applier, "_is_git_repo", return_value=True)
+        mocker.patch("subprocess.run", side_effect=subprocess.TimeoutExpired("git", 30))
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        files = [tmp_path / "file1.txt"]
+        applier._run_git_add(tmp_path, files, console)
+
+        result = output.getvalue()
+        assert "git add timed out" in result
+
+    def test_run_git_add_git_not_found(self, tmp_path, mocker):
+        """git コマンドが見つからない場合"""
+        mocker.patch.object(applier, "_is_git_repo", return_value=True)
+        mocker.patch("subprocess.run", side_effect=FileNotFoundError())
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        files = [tmp_path / "file1.txt"]
+        applier._run_git_add(tmp_path, files, console)
+
+        # 何も出力されない（サイレントスキップ）
+        assert output.getvalue() == ""
+
+
+class TestApplyWithGitAdd:
+    """git_add オプションのテスト"""
+
+    def test_apply_with_git_add(self, sample_config, tmp_project, tmp_templates, mocker):
+        """git_add=True でファイルが git add される"""
+        mocker.patch.object(applier, "_is_git_repo", return_value=True)
+        mock_run = mocker.patch("subprocess.run")
+        mock_run.return_value.returncode = 0
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        applier.apply_configs(
+            config=sample_config,
+            dry_run=False,
+            git_add=True,
+            run_sync=False,  # uv sync をスキップ
+            console=console,
+        )
+
+        result = output.getvalue()
+        # git add が実行される
+        assert "git add" in result
+
+    def test_apply_with_git_add_dry_run(self, sample_config, tmp_project, tmp_templates, mocker):
+        """dry_run=True では git_add は実行されない"""
+        mock_git_add = mocker.patch.object(applier, "_run_git_add")
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        applier.apply_configs(
+            config=sample_config,
+            dry_run=True,
+            git_add=True,
+            console=console,
+        )
+
+        # _run_git_add は呼ばれない
+        mock_git_add.assert_not_called()

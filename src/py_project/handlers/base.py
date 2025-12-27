@@ -59,6 +59,11 @@ class ConfigHandler(ABC):
         """差分を取得（変更がない場合は None）"""
         pass  # pragma: no cover
 
+    @abstractmethod
+    def get_output_path(self, project: dict[str, Any]) -> Path:
+        """出力ファイルのパスを取得"""
+        pass  # pragma: no cover
+
     def get_project_path(self, project: dict[str, Any]) -> Path:
         """プロジェクトのパスを取得（~を展開）"""
         return Path(project["path"]).expanduser()

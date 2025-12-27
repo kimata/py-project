@@ -22,6 +22,9 @@ class DummyHandler(handlers_base.ConfigHandler):
     def diff(self, project, context):
         return None
 
+    def get_output_path(self, project):
+        return self.get_project_path(project) / "dummy.txt"
+
 
 class TestFormatType:
     """FormatType のテスト"""

@@ -3,7 +3,7 @@
 複数の Python プロジェクトに標準的な設定を一括適用します。
 
 Usage:
-  app.py [-c CONFIG] [-a] [-p PROJECT]... [-t CONFIG_TYPE]... [-d] [-b] [-v] [--no-sync]
+  app.py [-c CONFIG] [-a] [-p PROJECT]... [-t CONFIG_TYPE]... [-d] [-b] [-v] [--no-sync] [--git-add]
   app.py [-c CONFIG] --validate
   app.py [-c CONFIG] --list-projects
   app.py --list-configs
@@ -17,6 +17,7 @@ Options:
   -b, --backup                  適用前にバックアップを作成します。
   -v, --verbose                 詳細ログを出力します。
   --no-sync                     pyproject.toml 更新後に uv sync を実行しません。
+  --git-add                     更新したファイルを git add します。
   --validate                    設定ファイルの検証のみ行います。
   --list-projects               プロジェクト一覧を表示します。
   --list-configs                設定タイプ一覧を表示します。
@@ -48,6 +49,7 @@ def execute(
     backup: bool = False,
     show_diff: bool = False,
     run_sync: bool = True,
+    git_add: bool = False,
 ) -> int:
     console = rich.console.Console()
 
@@ -59,6 +61,7 @@ def execute(
         backup=backup,
         show_diff=show_diff,
         run_sync=run_sync,
+        git_add=git_add,
         console=console,
     )
 
@@ -127,6 +130,7 @@ if __name__ == "__main__":  # pragma: no cover
     backup: bool = args["--backup"]
     verbose: bool = args["--verbose"]
     no_sync: bool = args["--no-sync"]
+    git_add_flag: bool = args["--git-add"]
     validate_only: bool = args["--validate"]
     list_projects_flag: bool = args["--list-projects"]
     list_configs_flag: bool = args["--list-configs"]
@@ -173,6 +177,7 @@ if __name__ == "__main__":  # pragma: no cover
         backup=backup,
         show_diff=show_diff,
         run_sync=not no_sync,
+        git_add=git_add_flag,
     )
 
     sys.exit(ret_code)

@@ -43,6 +43,7 @@ def apply_configs(
     backup: bool = False,
     show_diff: bool = False,
     run_sync: bool = True,
+    git_add: bool = False,
     console: rich.console.Console | None = None,
 ) -> ApplySummary:
     """設定を適用
@@ -55,6 +56,7 @@ def apply_configs(
         backup: バックアップ作成フラグ
         show_diff: 差分表示フラグ
         run_sync: pyproject.toml 更新後に uv sync を実行するかどうか
+        git_add: 更新されたファイルを git add するかどうか
         console: Rich Console インスタンス
 
     Returns:
@@ -111,6 +113,9 @@ def apply_configs(
         # pyproject が更新されたかどうかを追跡
         pyproject_updated = False
 
+        # git add 対象のファイルリスト
+        files_to_add: list[pathlib.Path] = []
+
         # 各設定タイプを処理
         for config_type in project_configs:
             # 設定タイプフィルタ
@@ -144,9 +149,18 @@ def apply_configs(
             if config_type in ("pyproject", "my-py-lib") and result.status == "updated":
                 pyproject_updated = True
 
+            # git add 対象のファイルを追加
+            if git_add and result.status in ("created", "updated") and not dry_run:
+                output_path = handler.get_output_path(project)
+                files_to_add.append(output_path)
+
         # pyproject.toml が更新された場合は uv sync を実行
         if pyproject_updated and not dry_run and run_sync:
             _run_uv_sync(project_path, console)
+
+        # git add を実行
+        if files_to_add:
+            _run_git_add(project_path, files_to_add, console)
 
         console.print()
 
@@ -222,6 +236,55 @@ def _run_uv_sync(project_path: pathlib.Path, console: rich.console.Console) -> N
         console.print("  [red]! uv sync timed out[/red]")
     except FileNotFoundError:
         console.print("  [yellow]! uv command not found[/yellow]")
+
+
+def _is_git_repo(project_path: pathlib.Path) -> bool:
+    """プロジェクトが Git リポジトリかどうかを確認"""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--git-dir"],
+            cwd=project_path,
+            capture_output=True,
+            timeout=5,
+        )
+        return result.returncode == 0
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return False
+
+
+def _run_git_add(
+    project_path: pathlib.Path,
+    files: list[pathlib.Path],
+    console: rich.console.Console,
+) -> None:
+    """git add を実行"""
+    if not _is_git_repo(project_path):
+        return
+
+    # 相対パスに変換
+    relative_files = []
+    for file_path in files:
+        try:
+            relative_files.append(str(file_path.relative_to(project_path)))
+        except ValueError:
+            relative_files.append(str(file_path))
+
+    try:
+        result = subprocess.run(
+            ["git", "add", *relative_files],
+            cwd=project_path,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode == 0:
+            console.print(f"  [dim]git add: {', '.join(relative_files)}[/dim]")
+        else:
+            console.print(f"  [red]! git add failed: {result.stderr.strip()}[/red]")
+    except subprocess.TimeoutExpired:
+        console.print("  [red]! git add timed out[/red]")
+    except FileNotFoundError:
+        pass  # git not installed, silently skip
 
 
 def _print_summary(console: rich.console.Console, summary: ApplySummary, dry_run: bool) -> None:
