@@ -1,7 +1,8 @@
 # 🛠️ py-project
 
 [![Test Status](https://github.com/kimata/py-project/actions/workflows/test.yml/badge.svg)](https://github.com/kimata/py-project/actions/workflows/test.yml)
-[![Coverage Report](https://img.shields.io/badge/coverage-report-blue)](https://kimata.github.io/py-project/)
+[![Test Report](https://img.shields.io/badge/test-report-blue)](https://kimata.github.io/py-project/report.html)
+[![Coverage Report](https://img.shields.io/badge/coverage-report-blue)](https://kimata.github.io/py-project/coverage/)
 
 複数の Python プロジェクトに標準的な設定を一括適用するツール
 
