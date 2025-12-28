@@ -91,7 +91,7 @@ jobs:
         if: success() || failure()
         with:
           name: test results
-          path: reports/junit.xml
+          path: reports/junit-report.xml
           reporter: java-junit
 
       - name: Upload test results artifact
