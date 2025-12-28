@@ -59,6 +59,15 @@ projects:
       - renovate
       - my-py-lib
 
+  - name: merhist-python
+    path: ~/github/merhist-python
+    configs:
+      - pyproject
+      - pre-commit
+      - gitignore
+      - renovate
+      - my-py-lib
+
   - name: amazon-bot
     path: ~/github/amazon-bot
     configs:
