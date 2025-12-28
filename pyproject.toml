@@ -5,7 +5,7 @@ description = "複数の Python プロジェクトに標準的な設定を一括
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "my-lib @ git+https://github.com/kimata/my-py-lib@22ae346853c77824eeb5e3f7ef3581d251497fd7",
+    "my-lib @ git+https://github.com/kimata/my-py-lib@97597c01d3f149c9deff413bd11d7803c4a26207",
     "docopt>=0.6",
     "jinja2>=3.0",
     "rich>=13.0",
@@ -38,7 +38,7 @@ default-groups = ["dev"]
 minversion = "6.0"
 # E2E テストはデフォルトで除外（外部サーバーが必要なため）
 # E2E テスト実行: uv run pytest tests/e2e/ --host <host> --port <port>
-addopts = "--verbose --timeout=300 --durations=10 --log-file-level=DEBUG --log-format=\"%(asctime)s %(levelname)s %(message)s\" --log-format=\"%(asctime)s %(levelname)s [%(filename)s:%(lineno)s %(funcName)s] %(message)s\" --capture=sys --html=reports/pytest.html --self-contained-html --cov=src --cov-report=html -n 4 --ignore=tests/e2e"
+addopts = "--verbose --timeout=300 --durations=10 --log-file-level=DEBUG --log-format=\"%(asctime)s %(levelname)s %(message)s\" --log-format=\"%(asctime)s %(levelname)s [%(filename)s:%(lineno)s %(funcName)s] %(message)s\" --capture=sys --junit-xml=reports/junit-report.xml --html=reports/pytest.html --self-contained-html --cov=src --cov-report=html --cov-report=term-missing --cov-report=xml:reports/coverage.xml -n 4 --ignore=tests/e2e"
 testpaths = ["tests"]
 filterwarnings = [
     "ignore:datetime\\.datetime\\.utcfromtimestamp\\(\\) is deprecated:DeprecationWarning",
@@ -64,10 +64,11 @@ branch = true
 exclude_lines = [
     "pragma: no cover",
     "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
 ]
 
 [tool.coverage.html]
-directory = "tests/evidence/coverage"
+directory = "reports/coverage"
 
 [tool.mypy]
 warn_return_any = false
@@ -82,6 +83,8 @@ reportArgumentType = "warning"
 reportOperatorIssue = "warning"
 reportIndexIssue = "warning"
 reportGeneralTypeIssues = "warning"
+include = ["src", "tests"]
+reportMissingImports = false
 
 [dependency-groups]
 dev = [

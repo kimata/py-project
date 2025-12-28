@@ -1285,7 +1285,7 @@ wheels = [
 [[package]]
 name = "my-lib"
 version = "0.2.0"
-source = { git = "https://github.com/kimata/my-py-lib?rev=22ae346853c77824eeb5e3f7ef3581d251497fd7#22ae346853c77824eeb5e3f7ef3581d251497fd7" }
+source = { git = "https://github.com/kimata/my-py-lib?rev=97597c01d3f149c9deff413bd11d7803c4a26207#97597c01d3f149c9deff413bd11d7803c4a26207" }
 dependencies = [
     { name = "coloredlogs" },
     { name = "docopt-ng" },
@@ -1598,7 +1598,7 @@ dev = [
 requires-dist = [
     { name = "docopt", specifier = ">=0.6" },
     { name = "jinja2", specifier = ">=3.0" },
-    { name = "my-lib", git = "https://github.com/kimata/my-py-lib?rev=22ae346853c77824eeb5e3f7ef3581d251497fd7" },
+    { name = "my-lib", git = "https://github.com/kimata/my-py-lib?rev=97597c01d3f149c9deff413bd11d7803c4a26207" },
     { name = "rich", specifier = ">=13.0" },
     { name = "tomlkit", specifier = ">=0.12" },
 ]
