@@ -1,6 +1,6 @@
 # 🛠️ py-project
 
-[![Test Status](https://github.com/kimata/py-project/actions/workflows/test.yml/badge.svg)](https://github.com/kimata/py-project/actions/workflows/test.yml)
+[![Test Status](https://github.com/kimata/py-project/actions/workflows/test.yaml/badge.svg)](https://github.com/kimata/py-project/actions/workflows/test.yaml)
 [![Test Report](https://img.shields.io/badge/Test_Report-pytest.html-blue)](https://kimata.github.io/py-project/pytest.html)
 [![Coverage Status](https://coveralls.io/repos/github/kimata/py-project/badge.svg?branch=main)](https://coveralls.io/github/kimata/py-project?branch=main)
 
