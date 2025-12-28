@@ -49,15 +49,13 @@ jobs:
         run: uv run mypy src/
 
       - name: Run tests
-        run: |
-          uv run pytest \
-            --numprocesses=auto \
-            --junit-xml=reports/junit.xml \
-            --html=reports/report.html \
-            --self-contained-html \
-            --cov=src \
-            --cov-report=html:reports/coverage \
-            tests/
+        run: uv run pytest --numprocesses=auto
+
+      - name: Upload coverage to Coveralls
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: reports/coverage.lcov
 
       - name: Generate index.html
         if: always()
