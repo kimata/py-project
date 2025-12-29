@@ -150,8 +150,8 @@ class RuffHandler(TemplateCopyHandler):
     """ruff 設定ハンドラ"""
 
     template_subdir = "ruff"
-    template_file = "ruff.toml"
-    output_file = "ruff.toml"
+    template_file = ".ruff.toml"
+    output_file = ".ruff.toml"
     format_type = FormatType.TOML
 
 
