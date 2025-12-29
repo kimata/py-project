@@ -5,11 +5,13 @@ description = "複数の Python プロジェクトに標準的な設定を一括
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "my-lib @ git+https://github.com/kimata/my-py-lib@fc41868630f966cb23eff07f6d2a42272f8ad1d7",
+    "my-lib @ git+https://github.com/kimata/my-py-lib@4d1f19955e0a6555dba51d98ca2f4b209c61116a",
     "docopt>=0.6",
     "jinja2>=3.0",
     "rich>=13.0",
+    "ruamel.yaml>=0.18",
     "tomlkit>=0.12",
+    "yamlpath>=3.0",
 ]
 authors = [
     { name = "KIMATA Tetsuya", email = "kimata@green-rabbit.net" }

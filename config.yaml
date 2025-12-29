@@ -11,6 +11,17 @@ defaults:
     - gitignore
     - renovate
     - my-py-lib
+    - gitlab-ci
+  vars:
+    registry: "gitlab.green-rabbit.net:5050/kimata"
+    ubuntu_tag: "251228_620c5aae"
+    renovate_tag: "251228_d5251182"
+  gitlab_ci:
+    edits:
+      - path: /image
+        value: "{{ vars.registry }}/local-ubuntu:{{ vars.ubuntu_tag }}"
+      - path: /renovate/image/name
+        value: "{{ vars.registry }}/local-renovate:{{ vars.renovate_tag }}"
 
 # テンプレートディレクトリ
 template_dir: ./templates
@@ -106,9 +117,3 @@ projects:
 
   - name: py-project
     path: ~/github/py-project
-    configs:
-      - pyproject
-      - pre-commit
-      - gitignore
-      - renovate
-      - my-py-lib

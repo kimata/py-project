@@ -1,6 +1,7 @@
 """設定タイプハンドラ"""
 
 import py_project.handlers.base as handlers_base
+import py_project.handlers.gitlab_ci as handlers_gitlab_ci
 import py_project.handlers.my_py_lib as handlers_my_py_lib
 import py_project.handlers.pyproject as handlers_pyproject
 import py_project.handlers.template_copy as handlers_template_copy
@@ -16,6 +17,7 @@ HANDLERS: dict[str, type[handlers_base.ConfigHandler]] = {
     "renovate": handlers_template_copy.RenovateHandler,
     "pyproject": handlers_pyproject.PyprojectHandler,
     "my-py-lib": handlers_my_py_lib.MyPyLibHandler,
+    "gitlab-ci": handlers_gitlab_ci.GitLabCIHandler,
 }
 
 # サブモジュールを公開

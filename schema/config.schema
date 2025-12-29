@@ -22,6 +22,16 @@
             "$ref": "#/$defs/configType"
           },
           "default": []
+        },
+        "vars": {
+          "type": "object",
+          "description": "テンプレート変数（Jinja2 で展開）",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "gitlab_ci": {
+          "$ref": "#/$defs/gitlabCiOptions"
         }
       },
       "additionalProperties": false
@@ -54,7 +64,8 @@
         "gitignore",
         "renovate",
         "pyproject",
-        "my-py-lib"
+        "my-py-lib",
+        "gitlab-ci"
       ],
       "description": "設定タイプ"
     },
@@ -115,6 +126,35 @@
             }
           },
           "additionalProperties": false
+        },
+        "gitlab_ci": {
+          "$ref": "#/$defs/gitlabCiOptions"
+        }
+      },
+      "additionalProperties": false
+    },
+    "gitlabCiOptions": {
+      "type": "object",
+      "description": "gitlab-ci 設定タイプのオプション",
+      "properties": {
+        "edits": {
+          "type": "array",
+          "description": "yamlpath 形式で値を編集",
+          "items": {
+            "type": "object",
+            "required": ["path", "value"],
+            "properties": {
+              "path": {
+                "type": "string",
+                "description": "yamlpath 形式のパス（例: /image, /renovate/image/name）"
+              },
+              "value": {
+                "type": "string",
+                "description": "設定する値"
+              }
+            },
+            "additionalProperties": false
+          }
         }
       },
       "additionalProperties": false
