@@ -5,12 +5,12 @@ description = "複数の Python プロジェクトに標準的な設定を一括
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "my-lib @ git+https://github.com/kimata/my-py-lib@f09cc98182a74b7cd0b54a1711f3240a655b49b5",
+    "my-lib @ git+https://github.com/kimata/my-py-lib@c391f5660704fa8c7735ce891bf70e860806abab",
     "docopt>=0.6",
-    "jinja2>=3.0",
-    "rich>=13.0",
+    "jinja2>=3.1",
+    "rich>=14.0",
     "ruamel.yaml>=0.18",
-    "tomlkit>=0.12",
+    "tomlkit>=0.13",
     "yamlpath>=3.0",
 ]
 authors = [
@@ -90,20 +90,20 @@ reportMissingImports = false
 
 [dependency-groups]
 dev = [
-    "pre-commit>=4.2.0",
+    "pre-commit>=4.5.0",
     "flaky>=3.8.1",
-    "playwright>=1.49.0",
-    "pytest>=8.3.0",
-    "pytest-cov>=6.0.0",
+    "playwright>=1.57.0",
+    "pytest>=9.0.0",
+    "pytest-cov>=7.0.0",
     "pytest-html>=4.1.1",
-    "pytest-mock>=3.14.0",
-    "pytest-playwright>=0.6.0",
-    "pytest-xdist>=3.6.1",
+    "pytest-mock>=3.15.0",
+    "pytest-playwright>=0.7.0",
+    "pytest-xdist>=3.8.0",
     "pytest-timeout>=2.4.0",
-    "time-machine>=2.16.0",
-    "mypy>=1.14.0",
-    "pyright>=1.1.0",
-    "types-pytz>=2024.1.0",
-    "types-paramiko>=3.4.0",
+    "time-machine>=3.2.0",
+    "mypy>=1.19.0",
+    "pyright>=1.1.400",
+    "types-pytz>=2025.2.0",
+    "types-paramiko>=4.0.0",
     "types-pyyaml>=6.0.12",
 ]
