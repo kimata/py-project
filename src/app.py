@@ -7,6 +7,7 @@ Usage:
   app.py [-c CONFIG] --validate
   app.py [-c CONFIG] --list-projects
   app.py --list-configs
+  app.py [-c CONFIG] --update-deps [-a]
 
 Options:
   -c CONFIG, --config CONFIG    CONFIG を設定ファイルとして読み込みます。[default: config.yaml]
@@ -21,6 +22,7 @@ Options:
   --validate                    設定ファイルの検証のみ行います。
   --list-projects               プロジェクト一覧を表示します。
   --list-configs                設定タイプ一覧を表示します。
+  --update-deps                 テンプレートの依存関係を最新バージョンに更新します。
 """
 
 from __future__ import annotations
@@ -36,6 +38,7 @@ import rich.console
 import rich.table
 
 import py_project.applier
+import py_project.dep_updater
 import py_project.handlers
 
 SCHEMA_PATH = pathlib.Path(__file__).parent.parent / "schema" / "config.schema"
@@ -134,6 +137,7 @@ if __name__ == "__main__":  # pragma: no cover
     validate_only: bool = args["--validate"]
     list_projects_flag: bool = args["--list-projects"]
     list_configs_flag: bool = args["--list-configs"]
+    update_deps_flag: bool = args["--update-deps"]
 
     log_level = logging.DEBUG if verbose else logging.INFO
     my_lib.logger.init("py-project", level=log_level)
@@ -166,6 +170,17 @@ if __name__ == "__main__":  # pragma: no cover
     # プロジェクト一覧表示
     if list_projects_flag:
         show_projects(config)
+        sys.exit(0)
+
+    # 依存関係更新
+    if update_deps_flag:
+        template_dir = pathlib.Path(config.get("template_dir", "./templates")).expanduser()
+        template_path = template_dir / "pyproject" / "sections.toml"
+        py_project.dep_updater.update_template_deps(
+            template_path=template_path,
+            dry_run=not apply_mode,
+            console=console,
+        )
         sys.exit(0)
 
     # 設定適用
