@@ -711,6 +711,96 @@ class TestRunGitAdd:
         assert output.getvalue() == ""
 
 
+class TestValidateProjects:
+    """_validate_projects のテスト"""
+
+    def test_validate_existing_projects(self):
+        """存在するプロジェクト名を指定した場合は空リストが返る"""
+        requested = ["project1", "project2"]
+        available = ["project1", "project2", "project3"]
+
+        result = applier._validate_projects(requested, available)
+
+        assert result == []
+
+    def test_validate_missing_project(self, caplog):
+        """存在しないプロジェクト名を指定した場合は警告が出る"""
+        import logging
+
+        requested = ["nonexistent"]
+        available = ["project1", "project2", "project3"]
+
+        with caplog.at_level(logging.WARNING):
+            result = applier._validate_projects(requested, available)
+
+        assert result == ["nonexistent"]
+        assert "nonexistent" in caplog.text
+        assert "設定に存在しません" in caplog.text
+
+    def test_validate_with_close_matches(self, caplog):
+        """類似候補がある場合は表示される"""
+        import logging
+
+        requested = ["projec1"]  # project1 のタイポ
+        available = ["project1", "project2", "project3"]
+
+        with caplog.at_level(logging.INFO):
+            result = applier._validate_projects(requested, available)
+
+        assert result == ["projec1"]
+        assert "類似候補" in caplog.text
+        assert "project1" in caplog.text
+
+    def test_validate_no_close_matches(self, caplog):
+        """類似候補がない場合は表示されない"""
+        import logging
+
+        requested = ["completely-different"]
+        available = ["project1", "project2", "project3"]
+
+        with caplog.at_level(logging.INFO):
+            result = applier._validate_projects(requested, available)
+
+        assert result == ["completely-different"]
+        assert "類似候補" not in caplog.text
+
+    def test_validate_multiple_missing_projects(self, caplog):
+        """複数の存在しないプロジェクトを指定した場合"""
+        import logging
+
+        requested = ["missing1", "project1", "missing2"]
+        available = ["project1", "project2", "project3"]
+
+        with caplog.at_level(logging.WARNING):
+            result = applier._validate_projects(requested, available)
+
+        assert result == ["missing1", "missing2"]
+        assert "missing1" in caplog.text
+        assert "missing2" in caplog.text
+
+    def test_validate_empty_requested(self):
+        """空のリクエストリストの場合は空リストが返る"""
+        requested: list[str] = []
+        available = ["project1", "project2"]
+
+        result = applier._validate_projects(requested, available)
+
+        assert result == []
+
+    def test_validate_empty_available(self, caplog):
+        """利用可能なプロジェクトが空の場合"""
+        import logging
+
+        requested = ["project1"]
+        available: list[str] = []
+
+        with caplog.at_level(logging.WARNING):
+            result = applier._validate_projects(requested, available)
+
+        assert result == ["project1"]
+        assert "設定に存在しません" in caplog.text
+
+
 class TestApplyWithGitAdd:
     """git_add オプションのテスト"""
 
