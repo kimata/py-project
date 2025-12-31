@@ -79,6 +79,15 @@ projects:
       - renovate
       - my-py-lib
 
+  - name: amazhist-python
+    path: ~/github/amazhist-python
+    configs:
+      - pyproject
+      - pre-commit
+      - gitignore
+      - renovate
+      - my-py-lib
+
   - name: amazon-bot
     path: ~/github/amazon-bot
     configs:
