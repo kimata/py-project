@@ -1,6 +1,7 @@
 """設定適用ロジック"""
 
 import dataclasses
+import difflib
 import logging
 import pathlib
 import subprocess
@@ -45,6 +46,35 @@ def get_project_configs(project: dict[str, typing.Any], defaults: dict[str, typi
     return defaults.get("configs", [])
 
 
+def _validate_projects(
+    requested_projects: list[str],
+    available_projects: list[str],
+) -> list[str]:
+    """指定されたプロジェクトが設定に存在するか検証し、存在しないものを返す
+
+    存在しないプロジェクトがあれば警告を出し、類似候補を表示する。
+
+    Args:
+        requested_projects: リクエストされたプロジェクト名のリスト
+        available_projects: 設定ファイルに定義されているプロジェクト名のリスト
+
+    Returns:
+        存在しないプロジェクト名のリスト
+    """
+    missing = []
+    for project in requested_projects:
+        if project not in available_projects:
+            missing.append(project)
+            logger.warning("プロジェクト '%s' は設定に存在しません", project)
+
+            # 類似候補を検索
+            close_matches = difflib.get_close_matches(project, available_projects, n=3, cutoff=0.4)
+            if close_matches:
+                logger.info("  類似候補: %s", ", ".join(close_matches))
+
+    return missing
+
+
 def apply_configs(
     config: dict[str, typing.Any],
     projects: list[str] | None = None,
@@ -82,6 +112,13 @@ def apply_configs(
 
     # デフォルト設定
     defaults = config.get("defaults", {})
+
+    # 利用可能なプロジェクト名のリストを取得
+    available_projects = [p["name"] for p in config.get("projects", [])]
+
+    # 指定されたプロジェクトの検証
+    if projects:
+        _validate_projects(projects, available_projects)
 
     # コンテキスト作成
     context = py_project.handlers.base.ApplyContext(
