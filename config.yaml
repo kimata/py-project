@@ -124,5 +124,14 @@ projects:
       - renovate
       - my-py-lib
 
+  - name: modes-sensing
+    path: ~/github/modes-sensing
+    configs:
+      - pyproject
+      - pre-commit
+      - gitignore
+      - renovate
+      - my-py-lib
+
   - name: py-project
     path: ~/github/py-project
