@@ -77,7 +77,7 @@ renovate:
     resource_group: renovate
 
     image:
-        name: gitlab.green-rabbit.net:5050/kimata/local-renovate:251228_d5251182
+        name: gitlab.green-rabbit.net:5050/kimata/local-renovate:250715_3b8866ff
 
     variables:
         RENOVATE_CACHE_DIR: .renovate-cache
