@@ -75,9 +75,27 @@ exclude_lines = [
 directory = "reports/coverage"
 
 [tool.mypy]
+python_version = "3.12"
 warn_return_any = false
 warn_unused_configs = true
 ignore_missing_imports = true
+exclude = [
+    "^tests/",
+    "^.venv/",
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "flask.*",
+    "flask_cors",
+    "flask_cors.*",
+    "docopt",
+    "docopt.*",
+    "pyModeS.*",
+    "sklearn.*",
+]
+ignore_missing_imports = true
+follow_imports = "skip"
 
 [tool.pyright]
 venvPath = "."
