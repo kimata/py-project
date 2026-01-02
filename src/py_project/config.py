@@ -8,6 +8,26 @@ import typing
 
 
 @dataclasses.dataclass
+class ApplyOptions:
+    """設定適用時のオプション
+
+    Attributes:
+        dry_run: ドライランモード（実際には変更しない）
+        backup: 適用前にバックアップを作成
+        show_diff: 差分を詳細表示
+        run_sync: pyproject.toml 更新後に uv sync を実行
+        git_add: 更新したファイルを git add
+
+    """
+
+    dry_run: bool = True
+    backup: bool = False
+    show_diff: bool = False
+    run_sync: bool = True
+    git_add: bool = False
+
+
+@dataclasses.dataclass
 class GitlabCiEdit:
     """GitLab CI の編集項目
 
@@ -186,23 +206,3 @@ class Config:
             defaults=defaults,
             template_dir=data.get("template_dir", "./templates"),
         )
-
-
-@dataclasses.dataclass
-class ApplyOptions:
-    """設定適用時の実行オプション
-
-    Attributes:
-        dry_run: ドライランモード（実際には変更しない）
-        backup: 適用前にバックアップを作成
-        show_diff: 差分を詳細表示
-        run_sync: pyproject.toml 更新後に uv sync を実行
-        git_add: 更新されたファイルを git add
-
-    """
-
-    dry_run: bool = True
-    backup: bool = False
-    show_diff: bool = False
-    run_sync: bool = True
-    git_add: bool = False

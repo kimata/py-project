@@ -33,9 +33,8 @@ def _normalize_toml(content: str) -> str:
 
     # 3つ以上の連続した空行を2つに正規化
     content = re.sub(r"\n{3,}", "\n\n", content)
-    # 末尾の空白を除去
-    content = content.rstrip() + "\n"
-    return content
+    # 末尾の空白を除去して改行を追加
+    return content.rstrip() + "\n"
 
 
 class PyprojectHandler(handlers_base.ConfigHandler):
@@ -70,9 +69,7 @@ class PyprojectHandler(handlers_base.ConfigHandler):
                 return None
         return current
 
-    def set_nested_value(
-        self, doc: tomlkit.TOMLDocument, key_path: str, value: typing.Any
-    ) -> None:
+    def set_nested_value(self, doc: tomlkit.TOMLDocument, key_path: str, value: typing.Any) -> None:
         """ドット区切りのキーパスで値を設定"""
         keys = key_path.split(".")
         current = doc
@@ -82,7 +79,7 @@ class PyprojectHandler(handlers_base.ConfigHandler):
             current = current[key]
         current[keys[-1]] = value
 
-    def merge_pyproject(
+    def merge_pyproject(  # noqa: C901, PLR0912
         self,
         current: tomlkit.TOMLDocument,
         template: tomlkit.TOMLDocument,
@@ -138,9 +135,7 @@ class PyprojectHandler(handlers_base.ConfigHandler):
                     if dep not in dev_deps:
                         dev_deps.append(dep)
             else:
-                logger.warning(
-                    "extra_dev_deps が指定されていますが、dependency-groups.dev が存在しません"
-                )
+                logger.warning("extra_dev_deps が指定されていますが、dependency-groups.dev が存在しません")
 
         return result
 
@@ -190,9 +185,7 @@ class PyprojectHandler(handlers_base.ConfigHandler):
         merged = self.merge_pyproject(current, template, project)
         return tomlkit.dumps(merged)
 
-    def diff(
-        self, project: py_project.config.Project, context: handlers_base.ApplyContext
-    ) -> str | None:
+    def diff(self, project: py_project.config.Project, context: handlers_base.ApplyContext) -> str | None:
         """差分を取得"""
         template_path = self.get_template_path(context)
         output_path = self.get_output_path(project)

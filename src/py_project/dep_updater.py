@@ -25,7 +25,7 @@ def get_latest_version(package: str) -> str | None:
     """PyPI から最新バージョンを取得"""
     url = f"https://pypi.org/pypi/{package}/json"
     try:
-        with urllib.request.urlopen(url, timeout=10) as response:
+        with urllib.request.urlopen(url, timeout=10) as response:  # noqa: S310
             data = json.loads(response.read().decode())
             return data["info"]["version"]
     except Exception:
@@ -59,8 +59,9 @@ def normalize_version(version: str) -> str:
     return version
 
 
-def update_template_deps(
+def update_template_deps(  # noqa: C901
     template_path: pathlib.Path,
+    *,
     dry_run: bool = True,
     console: rich.console.Console | None = None,
 ) -> list[DepUpdate]:
@@ -73,6 +74,7 @@ def update_template_deps(
 
     Returns:
         更新情報のリスト
+
     """
     if console is None:
         console = rich.console.Console()

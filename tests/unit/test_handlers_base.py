@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-# ruff: noqa: S101
+# ruff: noqa: S101, ARG002, D200, D403
 """
 handlers/base.py のテスト
 """
+
 import pathlib
 
 import py_project.config

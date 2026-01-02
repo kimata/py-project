@@ -35,7 +35,7 @@ class GitLabCIHandler(handlers_base.ConfigHandler):
         return self.get_project_path(project) / ".gitlab-ci.yml"
 
     def _get_line_number(self, content: str, yaml_path: str) -> int | None:
-        """yamlpath で指定されたパスの行番号を取得"""
+        """指定された YAML パスの行番号を取得"""
         yaml = ruamel.yaml.YAML()
         data = yaml.load(content)
 
@@ -78,9 +78,7 @@ class GitLabCIHandler(handlers_base.ConfigHandler):
             if line_num is not None:
                 original_line = lines[line_num]
                 newline = "\n" if original_line.endswith("\n") else ""
-                new_line = self._replace_value_in_line(
-                    original_line.rstrip("\n\r"), new_value
-                )
+                new_line = self._replace_value_in_line(original_line.rstrip("\n\r"), new_value)
                 lines[line_num] = new_line + newline
             else:
                 logger.warning("パス %s が見つかりません", yaml_path)
@@ -103,26 +101,15 @@ class GitLabCIHandler(handlers_base.ConfigHandler):
         project_gitlab_ci = project.gitlab_ci
 
         # デフォルトの edits をベースにプロジェクト固有の edits で上書き
-        default_edits = (
-            {e.path: e.value for e in default_gitlab_ci.edits}
-            if default_gitlab_ci
-            else {}
-        )
-        project_edits = (
-            {e.path: e.value for e in project_gitlab_ci.edits}
-            if project_gitlab_ci
-            else {}
-        )
+        default_edits = {e.path: e.value for e in default_gitlab_ci.edits} if default_gitlab_ci else {}
+        project_edits = {e.path: e.value for e in project_gitlab_ci.edits} if project_gitlab_ci else {}
 
         # マージ（プロジェクト設定が優先）
         merged = {**default_edits, **project_edits}
 
         # Jinja2 テンプレート展開
         vars_dict = defaults.vars
-        return [
-            {"path": k, "value": self._render_value(v, vars_dict)}
-            for k, v in merged.items()
-        ]
+        return [{"path": k, "value": self._render_value(v, vars_dict)} for k, v in merged.items()]
 
     def _generate_edited_content(
         self, project: py_project.config.Project, context: handlers_base.ApplyContext
@@ -137,9 +124,7 @@ class GitLabCIHandler(handlers_base.ConfigHandler):
         content = output_path.read_text()
         return self._apply_edits(content, edits)
 
-    def diff(
-        self, project: py_project.config.Project, context: handlers_base.ApplyContext
-    ) -> str | None:
+    def diff(self, project: py_project.config.Project, context: handlers_base.ApplyContext) -> str | None:
         """差分を取得"""
         output_path = self.get_output_path(project)
 
@@ -168,7 +153,7 @@ class GitLabCIHandler(handlers_base.ConfigHandler):
         )
         return "".join(diff)
 
-    def apply(
+    def apply(  # noqa: PLR0911
         self, project: py_project.config.Project, context: handlers_base.ApplyContext
     ) -> handlers_base.ApplyResult:
         """設定を適用"""

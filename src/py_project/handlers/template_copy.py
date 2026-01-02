@@ -39,14 +39,12 @@ class TemplateCopyHandler(handlers_base.ConfigHandler):
         """出力ファイルのパスを取得"""
         return self.get_project_path(project) / self.output_file
 
-    def render_template(
-        self, project: py_project.config.Project, context: handlers_base.ApplyContext
-    ) -> str:
+    def render_template(self, project: py_project.config.Project, context: handlers_base.ApplyContext) -> str:
         """テンプレートをレンダリング"""
         template_path = self.get_template_path(project, context)
 
-        # Jinja2 環境を設定
-        env = jinja2.Environment(
+        # Jinja2 環境を設定（テキストファイル生成なので autoescape 不要）
+        env = jinja2.Environment(  # noqa: S701
             loader=jinja2.FileSystemLoader(template_path.parent),
             keep_trailing_newline=True,
         )
@@ -62,9 +60,7 @@ class TemplateCopyHandler(handlers_base.ConfigHandler):
             vars=vars_,
         )
 
-    def diff(
-        self, project: py_project.config.Project, context: handlers_base.ApplyContext
-    ) -> str | None:
+    def diff(self, project: py_project.config.Project, context: handlers_base.ApplyContext) -> str | None:
         """差分を取得"""
         template_path = self.get_template_path(project, context)
         output_path = self.get_output_path(project)

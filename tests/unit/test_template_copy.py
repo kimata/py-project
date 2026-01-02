@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-# ruff: noqa: S101
+# ruff: noqa: S101, ARG002, D200, D403, PLR0402
 """
 handlers/template_copy.py のテスト
 """
+
 import py_project.config as config_module
 import py_project.handlers.base as handlers_base
 import py_project.handlers.template_copy as template_copy

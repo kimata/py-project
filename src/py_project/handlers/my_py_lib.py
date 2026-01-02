@@ -12,9 +12,7 @@ import py_project.handlers.base as handlers_base
 logger = logging.getLogger(__name__)
 
 MY_PY_LIB_REPO = "https://github.com/kimata/my-py-lib"
-MY_PY_LIB_PATTERN = re.compile(
-    r'my-lib\s*@\s*git\+https://github\.com/kimata/my-py-lib(?:@([a-f0-9]+))?'
-)
+MY_PY_LIB_PATTERN = re.compile(r"my-lib\s*@\s*git\+https://github\.com/kimata/my-py-lib(?:@([a-f0-9]+))?")
 
 
 class MyPyLibHandler(handlers_base.ConfigHandler):
@@ -31,8 +29,8 @@ class MyPyLibHandler(handlers_base.ConfigHandler):
     def get_latest_commit_hash(self) -> str | None:
         """my-py-lib の最新コミットハッシュを取得"""
         try:
-            result = subprocess.run(
-                ["git", "ls-remote", MY_PY_LIB_REPO, "HEAD"],
+            result = subprocess.run(  # noqa: S603
+                ["git", "ls-remote", MY_PY_LIB_REPO, "HEAD"],  # noqa: S607
                 capture_output=True,
                 text=True,
                 check=True,
@@ -46,7 +44,7 @@ class MyPyLibHandler(handlers_base.ConfigHandler):
             commit_hash = parts[0]
             # ハッシュの形式を検証（40文字の16進数）
             if not commit_hash or len(commit_hash) != 40:
-                logger.warning("my-py-lib の最新コミットハッシュ取得に失敗: 不正なハッシュ形式: %s", commit_hash)
+                logger.warning("my-py-lib ハッシュ取得失敗: 不正な形式: %s", commit_hash)
                 return None
             return commit_hash
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired, IndexError) as e:
@@ -58,6 +56,7 @@ class MyPyLibHandler(handlers_base.ConfigHandler):
 
         Returns:
             (現在のハッシュ or None, 開始位置, 終了位置)
+
         """
         match = MY_PY_LIB_PATTERN.search(content)
         if match:
@@ -70,9 +69,7 @@ class MyPyLibHandler(handlers_base.ConfigHandler):
         new_dep = f"my-lib @ git+https://github.com/kimata/my-py-lib@{new_hash}"
         return MY_PY_LIB_PATTERN.sub(new_dep, content)
 
-    def diff(
-        self, project: py_project.config.Project, context: handlers_base.ApplyContext
-    ) -> str | None:
+    def diff(self, project: py_project.config.Project, context: handlers_base.ApplyContext) -> str | None:  # noqa: ARG002
         """差分を取得"""
         output_path = self.get_output_path(project)
 

@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
-# ruff: noqa: S101
+# ruff: noqa: D403
 """
 共通テストフィクスチャ
 
 テスト全体で使用する共通のフィクスチャとヘルパーを定義します。
 """
-import pathlib
+
 import textwrap
 
 import pytest
 
 import py_project.config
 import py_project.handlers.base as handlers_base
-
 
 # === テスト用テンプレート ===
 TEMPLATE_PYPROJECT_SECTIONS = """\

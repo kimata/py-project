@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
-# ruff: noqa: S101
+# ruff: noqa: S101, ARG002, D200
 """
 app.py のテスト
 """
-import io
-
-import rich.console
 
 import py_project.config
 import py_project.handlers
@@ -18,9 +15,10 @@ class TestExecute:
         """正常実行"""
         import app
 
+        options = py_project.config.ApplyOptions(dry_run=True)
         ret_code = app.execute(
             config=sample_config,
-            dry_run=True,
+            options=options,
         )
 
         assert ret_code == 0
@@ -29,10 +27,11 @@ class TestExecute:
         """プロジェクトフィルタ"""
         import app
 
+        options = py_project.config.ApplyOptions(dry_run=True)
         ret_code = app.execute(
             config=sample_config,
+            options=options,
             projects=["test-project"],
-            dry_run=True,
         )
 
         assert ret_code == 0
@@ -41,10 +40,11 @@ class TestExecute:
         """設定タイプフィルタ"""
         import app
 
+        options = py_project.config.ApplyOptions(dry_run=True)
         ret_code = app.execute(
             config=sample_config,
+            options=options,
             config_types=["pyproject"],
-            dry_run=True,
         )
 
         assert ret_code == 0
@@ -67,12 +67,10 @@ class TestShowConfigTypes:
 
     def test_config_type_descriptions(self):
         """設定タイプの説明が定義されている"""
-        import app
-
         # descriptions 辞書に主要な設定タイプが含まれていることを確認
-        console = rich.console.Console(file=io.StringIO())
         # show_config_types は console を内部で作成するため、
-        # descriptions の存在確認のみ行う
+        # HANDLERS に登録されているタイプの存在確認のみ行う
+        assert "pyproject" in py_project.handlers.HANDLERS
 
 
 class TestShowProjects:

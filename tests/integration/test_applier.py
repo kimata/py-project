@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-# ruff: noqa: S101
+# ruff: noqa: S101, ARG002, SLF001, D200, D403, PLR0402, S108
 """
 applier.py の統合テスト
 """
+
 import io
 import textwrap
 
@@ -20,10 +21,11 @@ class TestApplyConfigs:
         """全設定を適用"""
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        options = py_project.config.ApplyOptions(dry_run=False)
 
         summary = applier.apply_configs(
             config=sample_config,
-            dry_run=False,
+            options=options,
             console=console,
         )
 
@@ -38,10 +40,11 @@ class TestApplyConfigs:
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        options = py_project.config.ApplyOptions(dry_run=True)
 
-        summary = applier.apply_configs(
+        applier.apply_configs(
             config=sample_config,
-            dry_run=True,
+            options=options,
             console=console,
         )
 
@@ -89,10 +92,11 @@ class TestApplyConfigs:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
+        options = py_project.config.ApplyOptions(dry_run=False)
         summary = applier.apply_configs(
             config=config,
+            options=options,
             projects=["project1"],
-            dry_run=False,
             console=console,
         )
 
@@ -107,10 +111,11 @@ class TestApplyConfigs:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
+        options = py_project.config.ApplyOptions(dry_run=False)
         summary = applier.apply_configs(
             config=sample_config,
+            options=options,
             config_types=["gitignore"],
-            dry_run=False,
             console=console,
         )
 
@@ -128,11 +133,11 @@ class TestApplyConfigs:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
+        options = py_project.config.ApplyOptions(dry_run=False, backup=True)
         summary = applier.apply_configs(
             config=sample_config,
+            options=options,
             config_types=["gitignore"],
-            dry_run=False,
-            backup=True,
             console=console,
         )
 
@@ -154,9 +159,10 @@ class TestApplyConfigs:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
+        options = py_project.config.ApplyOptions(dry_run=False)
         summary = applier.apply_configs(
             config=config,
-            dry_run=False,
+            options=options,
             console=console,
         )
 
@@ -180,9 +186,10 @@ class TestApplyConfigs:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
+        options = py_project.config.ApplyOptions(dry_run=False)
         summary = applier.apply_configs(
             config=config,
-            dry_run=False,
+            options=options,
             console=console,
         )
 
@@ -198,9 +205,10 @@ class TestApplySummary:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
+        options = py_project.config.ApplyOptions(dry_run=False)
         summary = applier.apply_configs(
             config=sample_config,
-            dry_run=False,
+            options=options,
             console=console,
         )
 
@@ -217,9 +225,10 @@ class TestShowDiff:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
+        options = py_project.config.ApplyOptions(show_diff=True)
         applier.apply_configs(
             config=sample_config,
-            show_diff=True,
+            options=options,
             console=console,
         )
 
@@ -256,9 +265,10 @@ class TestShowDiff:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
+        options = py_project.config.ApplyOptions(show_diff=True)
         applier.apply_configs(
             config=full_config,
-            show_diff=True,
+            options=options,
             console=console,
         )
 
@@ -272,9 +282,7 @@ class TestGetProjectConfigs:
 
     def test_project_specific_configs(self):
         """プロジェクト固有の設定"""
-        project = py_project.config.Project(
-            name="test", path="/tmp/test", configs=["ruff", "pre-commit"]
-        )
+        project = py_project.config.Project(name="test", path="/tmp/test", configs=["ruff", "pre-commit"])
         defaults = py_project.config.Defaults(configs=["pyproject"])
 
         result = applier.get_project_configs(project, defaults)
@@ -306,9 +314,10 @@ class TestApplyWithoutConsole:
     def test_apply_without_console(self, sample_config):
         """console を渡さない場合"""
         # console=None の場合、内部で Console が作成される
+        options = py_project.config.ApplyOptions(dry_run=True)
         summary = applier.apply_configs(
             config=sample_config,
-            dry_run=True,
+            options=options,
             console=None,
         )
 
@@ -820,11 +829,10 @@ class TestApplyWithGitAdd:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
+        options = py_project.config.ApplyOptions(dry_run=False, git_add=True, run_sync=False)
         applier.apply_configs(
             config=sample_config,
-            dry_run=False,
-            git_add=True,
-            run_sync=False,  # uv sync をスキップ
+            options=options,
             console=console,
         )
 
@@ -839,10 +847,10 @@ class TestApplyWithGitAdd:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
+        options = py_project.config.ApplyOptions(dry_run=True, git_add=True)
         applier.apply_configs(
             config=sample_config,
-            dry_run=True,
-            git_add=True,
+            options=options,
             console=console,
         )
 

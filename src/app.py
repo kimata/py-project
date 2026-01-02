@@ -46,25 +46,17 @@ SCHEMA_PATH = pathlib.Path(__file__).parent.parent / "schema" / "config.schema"
 
 def execute(
     config: py_project.config.Config,
+    options: py_project.config.ApplyOptions,
     projects: list[str] | None = None,
     config_types: list[str] | None = None,
-    dry_run: bool = True,
-    backup: bool = False,
-    show_diff: bool = False,
-    run_sync: bool = True,
-    git_add: bool = False,
 ) -> int:
     console = rich.console.Console()
 
     summary = py_project.applier.apply_configs(
         config=config,
+        options=options,
         projects=projects,
         config_types=config_types,
-        dry_run=dry_run,
-        backup=backup,
-        show_diff=show_diff,
-        run_sync=run_sync,
-        git_add=git_add,
         console=console,
     )
 
@@ -184,15 +176,18 @@ if __name__ == "__main__":  # pragma: no cover
         sys.exit(0)
 
     # 設定適用
-    ret_code = execute(
-        config=config,
-        projects=projects,
-        config_types=config_types,
+    options = py_project.config.ApplyOptions(
         dry_run=not apply_mode,
         backup=backup,
         show_diff=show_diff,
         run_sync=not no_sync,
         git_add=git_add_flag,
+    )
+    ret_code = execute(
+        config=config,
+        options=options,
+        projects=projects,
+        config_types=config_types,
     )
 
     sys.exit(ret_code)

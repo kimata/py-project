@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-# ruff: noqa: S101
+# ruff: noqa: S101, D200, PLR0402
 """
 differ.py のテスト
 """
+
 import io
 
 import rich.console

@@ -40,6 +40,26 @@ class ApplySummary:
     error_messages: list[str] = dataclasses.field(default_factory=list)
 
 
+@dataclasses.dataclass
+class ProcessContext:
+    """プロジェクト処理用コンテキスト
+
+    Attributes:
+        context: ハンドラ用コンテキスト
+        options: 適用オプション
+        config_types: 対象設定タイプのリスト（None の場合は全て）
+        summary: 適用結果サマリ（更新される）
+        console: Rich Console インスタンス
+
+    """
+
+    context: py_project.handlers.base.ApplyContext
+    options: py_project.config.ApplyOptions
+    config_types: list[str] | None
+    summary: ApplySummary
+    console: rich.console.Console
+
+
 def get_project_configs(
     project: py_project.config.Project, defaults: py_project.config.Defaults
 ) -> list[str]:
@@ -81,32 +101,26 @@ def _validate_projects(
 
 def apply_configs(
     config: py_project.config.Config,
+    options: py_project.config.ApplyOptions | None = None,
     projects: list[str] | None = None,
     config_types: list[str] | None = None,
-    dry_run: bool = True,
-    backup: bool = False,
-    show_diff: bool = False,
-    run_sync: bool = True,
-    git_add: bool = False,
     console: rich.console.Console | None = None,
 ) -> ApplySummary:
     """設定を適用
 
     Args:
         config: アプリケーション設定
+        options: 適用オプション（None の場合はデフォルト）
         projects: 対象プロジェクト名のリスト（None の場合は全て）
         config_types: 対象設定タイプのリスト（None の場合は全て）
-        dry_run: ドライランモード
-        backup: バックアップ作成フラグ
-        show_diff: 差分表示フラグ
-        run_sync: pyproject.toml 更新後に uv sync を実行するかどうか
-        git_add: 更新されたファイルを git add するかどうか
         console: Rich Console インスタンス
 
     Returns:
         適用結果サマリ
 
     """
+    if options is None:
+        options = py_project.config.ApplyOptions()
     if console is None:
         console = rich.console.Console()
 
@@ -114,9 +128,6 @@ def apply_configs(
 
     # テンプレートディレクトリ
     template_dir = config.get_template_dir()
-
-    # デフォルト設定
-    defaults = config.defaults
 
     # 利用可能なプロジェクト名のリストを取得
     available_projects = config.get_project_names()
@@ -129,105 +140,130 @@ def apply_configs(
     context = py_project.handlers.base.ApplyContext(
         config=config,
         template_dir=template_dir,
-        dry_run=dry_run,
-        backup=backup,
+        dry_run=options.dry_run,
+        backup=options.backup,
     )
 
     # モード表示
-    if dry_run:
+    if options.dry_run:
         console.print("[yellow]🔍 Dry run mode[/yellow] (use --apply to apply changes)\n")
     else:
         console.print("[green]🚀 Applying configurations...[/green]\n")
 
+    # プロセスコンテキスト作成
+    proc_ctx = ProcessContext(
+        context=context,
+        options=options,
+        config_types=config_types,
+        summary=summary,
+        console=console,
+    )
+
     # 各プロジェクトを処理
     for project in config.projects:
-        project_name = project.name
-
         # プロジェクトフィルタ
-        if projects and project_name not in projects:
+        if projects and project.name not in projects:
             continue
 
-        project_path = project.get_path()
-        console.print(f"[bold blue]{project_name}[/bold blue] ({project_path})")
-
-        # プロジェクトディレクトリの存在確認
-        if not project_path.exists():
-            console.print("  [red]! プロジェクトディレクトリが見つかりません[/red]")
-            summary.errors += 1
-            summary.error_messages.append(f"{project_name}: ディレクトリが見つかりません")
-            continue
-
-        summary.projects_processed += 1
-
-        # 適用する設定タイプを取得
-        project_configs = get_project_configs(project, defaults)
-
-        # pyproject が更新されたかどうかを追跡
-        pyproject_updated = False
-
-        # git add 対象のファイルリスト
-        files_to_add: list[pathlib.Path] = []
-
-        # 各設定タイプを処理
-        for config_type in project_configs:
-            # 設定タイプフィルタ
-            if config_types and config_type not in config_types:
-                continue
-
-            handler_class = py_project.handlers.HANDLERS.get(config_type)
-            if handler_class is None:
-                console.print(f"  [red]! {config_type:15} : 未知の設定タイプ[/red]")
-                summary.errors += 1
-                continue
-
-            handler = handler_class()
-
-            # 差分表示
-            if show_diff:
-                diff_text = handler.diff(project, context)
-                if diff_text:
-                    console.print(f"  [cyan]~ {config_type:15}[/cyan]")
-                    py_project.differ.print_diff(diff_text, console)
-                else:
-                    console.print(f"  [green]✓ {config_type:15} : up to date[/green]")
-                # --diff のみで --apply なしの場合はスキップ
-                if dry_run:
-                    continue
-
-            # 適用
-            result = handler.apply(project, context)
-            _print_result(console, config_type, result, dry_run)
-            _update_summary(summary, result, project_name, config_type)
-
-            # pyproject または my-py-lib が更新されたかチェック
-            if config_type in ("pyproject", "my-py-lib") and result.status == "updated":
-                pyproject_updated = True
-
-            # git add 対象のファイルを追加
-            if git_add and result.status in ("created", "updated") and not dry_run:
-                output_path = handler.get_output_path(project)
-                files_to_add.append(output_path)
-
-        # pyproject.toml が更新された場合は uv sync を実行
-        if pyproject_updated and not dry_run and run_sync:
-            _run_uv_sync(project_path, console)
-
-        # git add を実行
-        if files_to_add:
-            _run_git_add(project_path, files_to_add, console)
-
-        console.print()
+        _process_project(project, proc_ctx)
 
     # サマリ表示
-    _print_summary(console, summary, dry_run)
+    _print_summary(console, summary, dry_run=options.dry_run)
 
     return summary
+
+
+def _process_project(  # noqa: C901
+    project: py_project.config.Project,
+    proc_ctx: ProcessContext,
+) -> None:
+    """単一プロジェクトの設定を処理"""
+    # コンテキストから必要な値を取得
+    context = proc_ctx.context
+    options = proc_ctx.options
+    config_types = proc_ctx.config_types
+    summary = proc_ctx.summary
+    console = proc_ctx.console
+    defaults = context.config.defaults
+
+    project_name = project.name
+    project_path = project.get_path()
+    console.print(f"[bold blue]{project_name}[/bold blue] ({project_path})")
+
+    # プロジェクトディレクトリの存在確認
+    if not project_path.exists():
+        console.print("  [red]! プロジェクトディレクトリが見つかりません[/red]")
+        summary.errors += 1
+        summary.error_messages.append(f"{project_name}: ディレクトリが見つかりません")
+        return
+
+    summary.projects_processed += 1
+
+    # 適用する設定タイプを取得
+    project_configs = get_project_configs(project, defaults)
+
+    # pyproject が更新されたかどうかを追跡
+    pyproject_updated = False
+
+    # git add 対象のファイルリスト
+    files_to_add: list[pathlib.Path] = []
+
+    # 各設定タイプを処理
+    for config_type in project_configs:
+        # 設定タイプフィルタ
+        if config_types and config_type not in config_types:
+            continue
+
+        handler_class = py_project.handlers.HANDLERS.get(config_type)
+        if handler_class is None:
+            console.print(f"  [red]! {config_type:15} : 未知の設定タイプ[/red]")
+            summary.errors += 1
+            continue
+
+        handler = handler_class()
+
+        # 差分表示
+        if options.show_diff:
+            diff_text = handler.diff(project, context)
+            if diff_text:
+                console.print(f"  [cyan]~ {config_type:15}[/cyan]")
+                py_project.differ.print_diff(diff_text, console)
+            else:
+                console.print(f"  [green]✓ {config_type:15} : up to date[/green]")
+            # --diff のみで --apply なしの場合はスキップ
+            if options.dry_run:
+                continue
+
+        # 適用
+        result = handler.apply(project, context)
+        _print_result(console, config_type, result, dry_run=options.dry_run)
+        _update_summary(summary, result, project_name, config_type)
+
+        # pyproject または my-py-lib が更新されたかチェック
+        if config_type in ("pyproject", "my-py-lib") and result.status == "updated":
+            pyproject_updated = True
+
+        # git add 対象のファイルを追加
+        if options.git_add and result.status in ("created", "updated") and not options.dry_run:
+            output_path = handler.get_output_path(project)
+            files_to_add.append(output_path)
+
+    # pyproject.toml が更新された場合は uv sync を実行
+    if pyproject_updated and not options.dry_run and options.run_sync:
+        _run_uv_sync(project_path, console)
+
+    # git add を実行
+    if files_to_add:
+        _run_git_add(project_path, files_to_add, console)
+
+    console.print()
 
 
 def _print_result(
     console: rich.console.Console,
     config_type: str,
     result: py_project.handlers.base.ApplyResult,
+    *,
     dry_run: bool,
 ) -> None:
     """適用結果を表示"""
@@ -275,7 +311,7 @@ def _run_uv_sync(project_path: pathlib.Path, console: rich.console.Console) -> N
     console.print("  [dim]Running uv sync...[/dim]")
     try:
         result = subprocess.run(
-            ["uv", "sync"],
+            ["uv", "sync"],  # noqa: S607
             cwd=project_path,
             capture_output=True,
             text=True,
@@ -299,7 +335,7 @@ def _is_git_repo(project_path: pathlib.Path) -> bool:
     """プロジェクトが Git リポジトリかどうかを確認"""
     try:
         result = subprocess.run(
-            ["git", "rev-parse", "--git-dir"],
+            ["git", "rev-parse", "--git-dir"],  # noqa: S607
             cwd=project_path,
             capture_output=True,
             timeout=5,
@@ -328,8 +364,8 @@ def _run_git_add(
             relative_files.append(str(file_path))
 
     try:
-        result = subprocess.run(
-            ["git", "add", *relative_files],
+        result = subprocess.run(  # noqa: S603
+            ["git", "add", *relative_files],  # noqa: S607
             cwd=project_path,
             capture_output=True,
             text=True,
@@ -346,7 +382,7 @@ def _run_git_add(
         pass  # git not installed, silently skip
 
 
-def _print_summary(console: rich.console.Console, summary: ApplySummary, dry_run: bool) -> None:
+def _print_summary(console: rich.console.Console, summary: ApplySummary, *, dry_run: bool) -> None:
     """サマリを表示"""
     table = rich.table.Table(show_header=False, box=None)
     table.add_column("Key", style="dim")

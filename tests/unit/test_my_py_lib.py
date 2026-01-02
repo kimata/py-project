@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-# ruff: noqa: S101
+# ruff: noqa: S101, D200, D403
 """
 handlers/my_py_lib.py のテスト
 """
+
 import textwrap
 
 import py_project.config
@@ -15,7 +16,7 @@ class TestMyPyLibPattern:
 
     def test_match_with_hash(self):
         """ハッシュ付きの依存関係にマッチ"""
-        content = 'my-lib @ git+https://github.com/kimata/my-py-lib@abcd1234'
+        content = "my-lib @ git+https://github.com/kimata/my-py-lib@abcd1234"
 
         match = my_py_lib_handler.MY_PY_LIB_PATTERN.search(content)
 
@@ -24,7 +25,7 @@ class TestMyPyLibPattern:
 
     def test_match_without_hash(self):
         """ハッシュなしの依存関係にマッチ"""
-        content = 'my-lib @ git+https://github.com/kimata/my-py-lib'
+        content = "my-lib @ git+https://github.com/kimata/my-py-lib"
 
         match = my_py_lib_handler.MY_PY_LIB_PATTERN.search(content)
 
@@ -33,7 +34,7 @@ class TestMyPyLibPattern:
 
     def test_match_full_hash(self):
         """フルハッシュにマッチ"""
-        content = 'my-lib @ git+https://github.com/kimata/my-py-lib@abcd1234567890abcdef1234567890abcdef1234'
+        content = "my-lib @ git+https://github.com/kimata/my-py-lib@abcd1234567890abcdef1234567890abcdef1234"
 
         match = my_py_lib_handler.MY_PY_LIB_PATTERN.search(content)
 
@@ -42,7 +43,7 @@ class TestMyPyLibPattern:
 
     def test_no_match(self):
         """マッチしない場合"""
-        content = 'requests @ https://example.com/requests'
+        content = "requests @ https://example.com/requests"
 
         match = my_py_lib_handler.MY_PY_LIB_PATTERN.search(content)
 

@@ -56,26 +56,22 @@ class ConfigHandler(ABC):
     @abstractmethod
     def name(self) -> str:
         """設定タイプ名"""
-        pass  # pragma: no cover
+        ...  # pragma: no cover
 
     @abstractmethod
-    def apply(
-        self, project: py_project.config.Project, context: ApplyContext
-    ) -> ApplyResult:
+    def apply(self, project: py_project.config.Project, context: ApplyContext) -> ApplyResult:
         """設定を適用"""
-        pass  # pragma: no cover
+        ...  # pragma: no cover
 
     @abstractmethod
-    def diff(
-        self, project: py_project.config.Project, context: ApplyContext
-    ) -> str | None:
+    def diff(self, project: py_project.config.Project, context: ApplyContext) -> str | None:
         """差分を取得（変更がない場合は None）"""
-        pass  # pragma: no cover
+        ...  # pragma: no cover
 
     @abstractmethod
     def get_output_path(self, project: py_project.config.Project) -> Path:
         """出力ファイルのパスを取得"""
-        pass  # pragma: no cover
+        ...  # pragma: no cover
 
     def get_project_path(self, project: py_project.config.Project) -> Path:
         """プロジェクトのパスを取得（~を展開）"""
