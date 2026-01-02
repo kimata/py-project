@@ -5,11 +5,11 @@ import difflib
 import logging
 import pathlib
 import subprocess
-import typing
 
 import rich.console
 import rich.table
 
+import py_project.config
 import py_project.differ
 import py_project.handlers
 
@@ -28,6 +28,7 @@ class ApplySummary:
         errors: エラー数
         projects_processed: 設定を適用したプロジェクト数（ディレクトリが存在したもののみ）
         error_messages: エラーメッセージのリスト
+
     """
 
     created: int = 0
@@ -39,11 +40,13 @@ class ApplySummary:
     error_messages: list[str] = dataclasses.field(default_factory=list)
 
 
-def get_project_configs(project: dict[str, typing.Any], defaults: dict[str, typing.Any]) -> list[str]:
+def get_project_configs(
+    project: py_project.config.Project, defaults: py_project.config.Defaults
+) -> list[str]:
     """プロジェクトに適用する設定タイプのリストを取得"""
-    if "configs" in project:
-        return project["configs"]
-    return defaults.get("configs", [])
+    if project.configs is not None:
+        return project.configs
+    return defaults.configs
 
 
 def _validate_projects(
@@ -60,6 +63,7 @@ def _validate_projects(
 
     Returns:
         存在しないプロジェクト名のリスト
+
     """
     missing = []
     for project in requested_projects:
@@ -76,7 +80,7 @@ def _validate_projects(
 
 
 def apply_configs(
-    config: dict[str, typing.Any],
+    config: py_project.config.Config,
     projects: list[str] | None = None,
     config_types: list[str] | None = None,
     dry_run: bool = True,
@@ -101,6 +105,7 @@ def apply_configs(
 
     Returns:
         適用結果サマリ
+
     """
     if console is None:
         console = rich.console.Console()
@@ -108,13 +113,13 @@ def apply_configs(
     summary = ApplySummary()
 
     # テンプレートディレクトリ
-    template_dir = pathlib.Path(config.get("template_dir", "./templates")).expanduser()
+    template_dir = config.get_template_dir()
 
     # デフォルト設定
-    defaults = config.get("defaults", {})
+    defaults = config.defaults
 
     # 利用可能なプロジェクト名のリストを取得
-    available_projects = [p["name"] for p in config.get("projects", [])]
+    available_projects = config.get_project_names()
 
     # 指定されたプロジェクトの検証
     if projects:
@@ -135,14 +140,14 @@ def apply_configs(
         console.print("[green]🚀 Applying configurations...[/green]\n")
 
     # 各プロジェクトを処理
-    for project in config.get("projects", []):
-        project_name = project["name"]
+    for project in config.projects:
+        project_name = project.name
 
         # プロジェクトフィルタ
         if projects and project_name not in projects:
             continue
 
-        project_path = pathlib.Path(project["path"]).expanduser()
+        project_path = project.get_path()
         console.print(f"[bold blue]{project_name}[/bold blue] ({project_path})")
 
         # プロジェクトディレクトリの存在確認
@@ -266,7 +271,7 @@ def _update_summary(
 
 
 def _run_uv_sync(project_path: pathlib.Path, console: rich.console.Console) -> None:
-    """uv sync を実行"""
+    """Uv sync を実行"""
     console.print("  [dim]Running uv sync...[/dim]")
     try:
         result = subprocess.run(
@@ -275,6 +280,7 @@ def _run_uv_sync(project_path: pathlib.Path, console: rich.console.Console) -> N
             capture_output=True,
             text=True,
             timeout=120,
+            check=False,
         )
         if result.returncode == 0:
             console.print("  [green]✓ uv sync completed[/green]")
@@ -297,6 +303,7 @@ def _is_git_repo(project_path: pathlib.Path) -> bool:
             cwd=project_path,
             capture_output=True,
             timeout=5,
+            check=False,
         )
         return result.returncode == 0
     except (subprocess.TimeoutExpired, FileNotFoundError):
@@ -308,7 +315,7 @@ def _run_git_add(
     files: list[pathlib.Path],
     console: rich.console.Console,
 ) -> None:
-    """git add を実行"""
+    """Git add を実行"""
     if not _is_git_repo(project_path):
         return
 
@@ -327,6 +334,7 @@ def _run_git_add(
             capture_output=True,
             text=True,
             timeout=30,
+            check=False,
         )
         if result.returncode == 0:
             console.print(f"  [dim]git add: {', '.join(relative_files)}[/dim]")

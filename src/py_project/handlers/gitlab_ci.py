@@ -5,15 +5,14 @@ import difflib
 import logging
 import pathlib
 import re
-import typing
 
 import jinja2
 import ruamel.yaml
 import yamlpath.processor as yamlpath_processor
 import yamlpath.wrappers as yamlpath_wrappers
 
+import py_project.config
 import py_project.handlers.base as handlers_base
-from py_project.handlers.base import FormatType
 
 logger = logging.getLogger(__name__)
 
@@ -25,13 +24,13 @@ class GitLabCIHandler(handlers_base.ConfigHandler):
     yamlpath で行番号を特定し、文字列置換でフォーマットを完全保持。
     """
 
-    format_type = FormatType.YAML
+    format_type = handlers_base.FormatType.YAML
 
     @property
     def name(self) -> str:
         return "gitlab-ci"
 
-    def get_output_path(self, project: dict[str, typing.Any]) -> pathlib.Path:
+    def get_output_path(self, project: py_project.config.Project) -> pathlib.Path:
         """出力ファイルのパスを取得"""
         return self.get_project_path(project) / ".gitlab-ci.yml"
 
@@ -96,29 +95,37 @@ class GitLabCIHandler(handlers_base.ConfigHandler):
         return template.render(vars=vars_dict)
 
     def _get_edits(
-        self, project: dict[str, typing.Any], context: handlers_base.ApplyContext
+        self, project: py_project.config.Project, context: handlers_base.ApplyContext
     ) -> list[dict[str, str]]:
         """編集リストを取得（defaults とプロジェクト設定をマージ、Jinja2 展開）"""
-        defaults = context.config.get("defaults", {})
-        default_gitlab_ci = defaults.get("gitlab_ci", {})
-        project_gitlab_ci = project.get("gitlab_ci", {})
+        defaults = context.config.defaults
+        default_gitlab_ci = defaults.gitlab_ci
+        project_gitlab_ci = project.gitlab_ci
 
         # デフォルトの edits をベースにプロジェクト固有の edits で上書き
-        default_edits = {e["path"]: e["value"] for e in default_gitlab_ci.get("edits", [])}
-        project_edits = {e["path"]: e["value"] for e in project_gitlab_ci.get("edits", [])}
+        default_edits = (
+            {e.path: e.value for e in default_gitlab_ci.edits}
+            if default_gitlab_ci
+            else {}
+        )
+        project_edits = (
+            {e.path: e.value for e in project_gitlab_ci.edits}
+            if project_gitlab_ci
+            else {}
+        )
 
         # マージ（プロジェクト設定が優先）
         merged = {**default_edits, **project_edits}
 
         # Jinja2 テンプレート展開
-        vars_dict = defaults.get("vars", {})
+        vars_dict = defaults.vars
         return [
             {"path": k, "value": self._render_value(v, vars_dict)}
             for k, v in merged.items()
         ]
 
     def _generate_edited_content(
-        self, project: dict[str, typing.Any], context: handlers_base.ApplyContext
+        self, project: py_project.config.Project, context: handlers_base.ApplyContext
     ) -> str | None:
         """編集後の内容を生成"""
         output_path = self.get_output_path(project)
@@ -131,7 +138,7 @@ class GitLabCIHandler(handlers_base.ConfigHandler):
         return self._apply_edits(content, edits)
 
     def diff(
-        self, project: dict[str, typing.Any], context: handlers_base.ApplyContext
+        self, project: py_project.config.Project, context: handlers_base.ApplyContext
     ) -> str | None:
         """差分を取得"""
         output_path = self.get_output_path(project)
@@ -162,7 +169,7 @@ class GitLabCIHandler(handlers_base.ConfigHandler):
         return "".join(diff)
 
     def apply(
-        self, project: dict[str, typing.Any], context: handlers_base.ApplyContext
+        self, project: py_project.config.Project, context: handlers_base.ApplyContext
     ) -> handlers_base.ApplyResult:
         """設定を適用"""
         output_path = self.get_output_path(project)

@@ -3,12 +3,11 @@
 import difflib
 import logging
 import pathlib
-import typing
 
 import jinja2
 
+import py_project.config
 import py_project.handlers.base as handlers_base
-from py_project.handlers.base import FormatType
 
 logger = logging.getLogger(__name__)
 
@@ -20,29 +19,28 @@ class TemplateCopyHandler(handlers_base.ConfigHandler):
     template_subdir: str = ""  # テンプレートのサブディレクトリ
     template_file: str = ""  # テンプレートファイル名
     output_file: str = ""  # 出力ファイル名
-    format_type: FormatType = FormatType.TEXT  # 書式タイプ
+    format_type: handlers_base.FormatType = handlers_base.FormatType.TEXT  # 書式タイプ
 
     @property
     def name(self) -> str:
         return self.template_subdir
 
     def get_template_path(
-        self, project: dict[str, typing.Any], context: handlers_base.ApplyContext
+        self, project: py_project.config.Project, context: handlers_base.ApplyContext
     ) -> pathlib.Path:
         """テンプレートファイルのパスを取得"""
         # template_overrides でオーバーライドされているかチェック
-        overrides = project.get("template_overrides", {})
-        if self.name in overrides:
-            return pathlib.Path(overrides[self.name]).expanduser()
+        if self.name in project.template_overrides:
+            return pathlib.Path(project.template_overrides[self.name]).expanduser()
 
         return context.template_dir / self.template_subdir / self.template_file
 
-    def get_output_path(self, project: dict[str, typing.Any]) -> pathlib.Path:
+    def get_output_path(self, project: py_project.config.Project) -> pathlib.Path:
         """出力ファイルのパスを取得"""
         return self.get_project_path(project) / self.output_file
 
     def render_template(
-        self, project: dict[str, typing.Any], context: handlers_base.ApplyContext
+        self, project: py_project.config.Project, context: handlers_base.ApplyContext
     ) -> str:
         """テンプレートをレンダリング"""
         template_path = self.get_template_path(project, context)
@@ -55,8 +53,8 @@ class TemplateCopyHandler(handlers_base.ConfigHandler):
         template = env.get_template(template_path.name)
 
         # テンプレート変数を構築
-        defaults = context.config.get("defaults", {})
-        vars_ = project.get("vars", {})
+        defaults = context.config.defaults
+        vars_ = project.vars
 
         return template.render(
             project=project,
@@ -65,7 +63,7 @@ class TemplateCopyHandler(handlers_base.ConfigHandler):
         )
 
     def diff(
-        self, project: dict[str, typing.Any], context: handlers_base.ApplyContext
+        self, project: py_project.config.Project, context: handlers_base.ApplyContext
     ) -> str | None:
         """差分を取得"""
         template_path = self.get_template_path(project, context)
@@ -94,7 +92,7 @@ class TemplateCopyHandler(handlers_base.ConfigHandler):
         return "".join(diff)
 
     def apply(
-        self, project: dict[str, typing.Any], context: handlers_base.ApplyContext
+        self, project: py_project.config.Project, context: handlers_base.ApplyContext
     ) -> handlers_base.ApplyResult:
         """設定を適用"""
         template_path = self.get_template_path(project, context)
@@ -143,7 +141,7 @@ class PreCommitHandler(TemplateCopyHandler):
     template_subdir = "pre-commit"
     template_file = ".pre-commit-config.yaml"
     output_file = ".pre-commit-config.yaml"
-    format_type = FormatType.YAML
+    format_type = handlers_base.FormatType.YAML
 
 
 class RuffHandler(TemplateCopyHandler):
@@ -152,7 +150,7 @@ class RuffHandler(TemplateCopyHandler):
     template_subdir = "ruff"
     template_file = ".ruff.toml"
     output_file = ".ruff.toml"
-    format_type = FormatType.TOML
+    format_type = handlers_base.FormatType.TOML
 
 
 class YamllintHandler(TemplateCopyHandler):
@@ -161,7 +159,7 @@ class YamllintHandler(TemplateCopyHandler):
     template_subdir = "yamllint"
     template_file = ".yamllint.yaml"
     output_file = ".yamllint.yaml"
-    format_type = FormatType.YAML
+    format_type = handlers_base.FormatType.YAML
 
 
 class PrettierHandler(TemplateCopyHandler):
@@ -170,7 +168,7 @@ class PrettierHandler(TemplateCopyHandler):
     template_subdir = "prettier"
     template_file = ".prettierrc"
     output_file = ".prettierrc"
-    format_type = FormatType.JSON
+    format_type = handlers_base.FormatType.JSON
 
 
 class PythonVersionHandler(TemplateCopyHandler):
@@ -203,4 +201,4 @@ class RenovateHandler(TemplateCopyHandler):
     template_subdir = "renovate"
     template_file = "renovate.json"
     output_file = "renovate.json"
-    format_type = FormatType.JSON
+    format_type = handlers_base.FormatType.JSON

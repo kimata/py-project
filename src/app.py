@@ -30,7 +30,6 @@ from __future__ import annotations
 import logging
 import pathlib
 import sys
-import typing
 
 import my_lib.config
 import my_lib.logger
@@ -38,6 +37,7 @@ import rich.console
 import rich.table
 
 import py_project.applier
+import py_project.config
 import py_project.dep_updater
 import py_project.handlers
 
@@ -45,7 +45,7 @@ SCHEMA_PATH = pathlib.Path(__file__).parent.parent / "schema" / "config.schema"
 
 
 def execute(
-    config: dict[str, typing.Any],
+    config: py_project.config.Config,
     projects: list[str] | None = None,
     config_types: list[str] | None = None,
     dry_run: bool = True,
@@ -97,7 +97,7 @@ def show_config_types() -> None:
     console.print(table)
 
 
-def show_projects(config: dict[str, typing.Any]) -> None:
+def show_projects(config: py_project.config.Config) -> None:
     """プロジェクト一覧を表示"""
     console = rich.console.Console()
     table = rich.table.Table(title="Configured Projects")
@@ -105,16 +105,13 @@ def show_projects(config: dict[str, typing.Any]) -> None:
     table.add_column("Path")
     table.add_column("Configs")
 
-    defaults = config.get("defaults", {})
-    default_configs = defaults.get("configs", [])
+    default_configs = config.defaults.configs
 
-    for proj in config.get("projects", []):
-        name = proj["name"]
-        path = proj["path"]
-        configs = proj.get("configs", default_configs)
+    for proj in config.projects:
+        configs = proj.configs if proj.configs is not None else default_configs
         configs_str = ", ".join(configs) if configs else "(defaults)"
 
-        table.add_row(name, path, configs_str)
+        table.add_row(proj.name, proj.path, configs_str)
 
     console.print(table)
 
@@ -151,7 +148,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     # 設定ファイル読み込み
     try:
-        config = my_lib.config.load(config_file, str(SCHEMA_PATH))
+        config_dict = my_lib.config.load(config_file, str(SCHEMA_PATH))
     except my_lib.config.ConfigFileNotFoundError as e:
         console.print(f"[red]設定ファイルが見つかりません: {e}[/red]")
         sys.exit(1)
@@ -167,6 +164,9 @@ if __name__ == "__main__":  # pragma: no cover
         console.print("[green]設定ファイルは正常です[/green]")
         sys.exit(0)
 
+    # dict を Config オブジェクトに変換
+    config = py_project.config.Config.from_dict(config_dict)
+
     # プロジェクト一覧表示
     if list_projects_flag:
         show_projects(config)
@@ -174,7 +174,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     # 依存関係更新
     if update_deps_flag:
-        template_dir = pathlib.Path(config.get("template_dir", "./templates")).expanduser()
+        template_dir = config.get_template_dir()
         template_path = template_dir / "pyproject" / "sections.toml"
         py_project.dep_updater.update_template_deps(
             template_path=template_path,

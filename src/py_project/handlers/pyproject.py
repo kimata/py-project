@@ -9,8 +9,8 @@ import typing
 
 import tomlkit
 
+import py_project.config
 import py_project.handlers.base as handlers_base
-from py_project.handlers.base import FormatType
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ def _normalize_toml(content: str) -> str:
 class PyprojectHandler(handlers_base.ConfigHandler):
     """pyproject.toml 共通設定ハンドラ"""
 
-    format_type = FormatType.TOML
+    format_type = handlers_base.FormatType.TOML
 
     @property
     def name(self) -> str:
@@ -51,7 +51,7 @@ class PyprojectHandler(handlers_base.ConfigHandler):
         """テンプレートファイルのパスを取得"""
         return context.template_dir / "pyproject" / "sections.toml"
 
-    def get_output_path(self, project: dict[str, typing.Any]) -> pathlib.Path:
+    def get_output_path(self, project: py_project.config.Project) -> pathlib.Path:
         """出力ファイルのパスを取得"""
         return self.get_project_path(project) / "pyproject.toml"
 
@@ -86,7 +86,7 @@ class PyprojectHandler(handlers_base.ConfigHandler):
         self,
         current: tomlkit.TOMLDocument,
         template: tomlkit.TOMLDocument,
-        project: dict[str, typing.Any],
+        project: py_project.config.Project,
     ) -> tomlkit.TOMLDocument:
         """pyproject.toml をマージ
 
@@ -94,9 +94,9 @@ class PyprojectHandler(handlers_base.ConfigHandler):
         プロジェクト固有のフィールドは保持される。
         """
         # プロジェクト設定からオプションを取得
-        pyproject_opts = project.get("pyproject", {})
-        extra_preserve = pyproject_opts.get("preserve_sections", [])
-        extra_dev_deps = pyproject_opts.get("extra_dev_deps", [])
+        pyproject_opts = project.pyproject
+        extra_preserve = pyproject_opts.preserve_sections if pyproject_opts else []
+        extra_dev_deps = pyproject_opts.extra_dev_deps if pyproject_opts else []
 
         # 保持するセクションのリスト
         preserve_sections = PRESERVE_SECTIONS + extra_preserve
@@ -175,7 +175,7 @@ class PyprojectHandler(handlers_base.ConfigHandler):
             result[section][field] = value
 
     def generate_merged_content(
-        self, project: dict[str, typing.Any], context: handlers_base.ApplyContext
+        self, project: py_project.config.Project, context: handlers_base.ApplyContext
     ) -> str:
         """マージされた内容を生成
 
@@ -191,7 +191,7 @@ class PyprojectHandler(handlers_base.ConfigHandler):
         return tomlkit.dumps(merged)
 
     def diff(
-        self, project: dict[str, typing.Any], context: handlers_base.ApplyContext
+        self, project: py_project.config.Project, context: handlers_base.ApplyContext
     ) -> str | None:
         """差分を取得"""
         template_path = self.get_template_path(context)
@@ -222,7 +222,7 @@ class PyprojectHandler(handlers_base.ConfigHandler):
         return "".join(diff)
 
     def apply(
-        self, project: dict[str, typing.Any], context: handlers_base.ApplyContext
+        self, project: py_project.config.Project, context: handlers_base.ApplyContext
     ) -> handlers_base.ApplyResult:
         """設定を適用"""
         template_path = self.get_template_path(context)

@@ -5,10 +5,11 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any
 
 import tomlkit
 import yaml
+
+import py_project.config
 
 
 class FormatType(Enum):
@@ -22,12 +23,20 @@ class FormatType(Enum):
 
 @dataclass
 class ApplyContext:
-    """適用時のコンテキスト情報"""
+    """適用時のコンテキスト情報
 
-    config: dict[str, Any]  # アプリ設定全体
-    template_dir: Path  # テンプレートディレクトリ
-    dry_run: bool  # ドライランモード
-    backup: bool  # バックアップ作成フラグ
+    Attributes:
+        config: アプリ設定全体
+        template_dir: テンプレートディレクトリ
+        dry_run: ドライランモード
+        backup: バックアップ作成フラグ
+
+    """
+
+    config: py_project.config.Config
+    template_dir: Path
+    dry_run: bool
+    backup: bool
 
 
 @dataclass
@@ -50,23 +59,27 @@ class ConfigHandler(ABC):
         pass  # pragma: no cover
 
     @abstractmethod
-    def apply(self, project: dict[str, Any], context: ApplyContext) -> ApplyResult:
+    def apply(
+        self, project: py_project.config.Project, context: ApplyContext
+    ) -> ApplyResult:
         """設定を適用"""
         pass  # pragma: no cover
 
     @abstractmethod
-    def diff(self, project: dict[str, Any], context: ApplyContext) -> str | None:
+    def diff(
+        self, project: py_project.config.Project, context: ApplyContext
+    ) -> str | None:
         """差分を取得（変更がない場合は None）"""
         pass  # pragma: no cover
 
     @abstractmethod
-    def get_output_path(self, project: dict[str, Any]) -> Path:
+    def get_output_path(self, project: py_project.config.Project) -> Path:
         """出力ファイルのパスを取得"""
         pass  # pragma: no cover
 
-    def get_project_path(self, project: dict[str, Any]) -> Path:
+    def get_project_path(self, project: py_project.config.Project) -> Path:
         """プロジェクトのパスを取得（~を展開）"""
-        return Path(project["path"]).expanduser()
+        return project.get_path()
 
     def create_backup(self, file_path: Path) -> Path | None:
         """バックアップを作成"""
@@ -86,6 +99,7 @@ class ConfigHandler(ABC):
         Returns:
             (True, None) - 有効
             (False, error_message) - 無効
+
         """
         if self.format_type == FormatType.TEXT:
             return (True, None)

@@ -5,8 +5,8 @@ import logging
 import pathlib
 import re
 import subprocess
-import typing
 
+import py_project.config
 import py_project.handlers.base as handlers_base
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ class MyPyLibHandler(handlers_base.ConfigHandler):
     def name(self) -> str:
         return "my-py-lib"
 
-    def get_output_path(self, project: dict[str, typing.Any]) -> pathlib.Path:
+    def get_output_path(self, project: py_project.config.Project) -> pathlib.Path:
         """出力ファイルのパスを取得"""
         return self.get_project_path(project) / "pyproject.toml"
 
@@ -71,7 +71,7 @@ class MyPyLibHandler(handlers_base.ConfigHandler):
         return MY_PY_LIB_PATTERN.sub(new_dep, content)
 
     def diff(
-        self, project: dict[str, typing.Any], context: handlers_base.ApplyContext
+        self, project: py_project.config.Project, context: handlers_base.ApplyContext
     ) -> str | None:
         """差分を取得"""
         output_path = self.get_output_path(project)
@@ -104,7 +104,7 @@ class MyPyLibHandler(handlers_base.ConfigHandler):
         return "".join(diff)
 
     def apply(
-        self, project: dict[str, typing.Any], context: handlers_base.ApplyContext
+        self, project: py_project.config.Project, context: handlers_base.ApplyContext
     ) -> handlers_base.ApplyResult:
         """設定を適用"""
         output_path = self.get_output_path(project)
