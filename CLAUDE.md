@@ -46,23 +46,32 @@ src/
 ## コーディング規約
 
 ### インポートスタイル
+
 ```python
 # NG: from xxx import yyy
 # OK: import xxx として xxx.yyy でアクセス
+import py_project.config
+# 使用時: py_project.config.Project
+
+# 例外: handlers.base は循環インポート回避のため as を使用
 import py_project.handlers.base as handlers_base
+# 使用時: handlers_base.ConfigHandler
 ```
 
 ### CLI
+
 - docopt を使用
 - エントリポイントは `src/app.py`
 - `if __name__ == "__main__":` で引数解析
 
 ### ハンドラ追加手順
+
 1. `handlers/` に新クラス作成（`ConfigHandler` 継承）
 2. `name`, `apply()`, `diff()` を実装
 3. `handlers/__init__.py` の `HANDLERS` に登録
 
 ### ログ
+
 - ハンドラ内は DEBUG レベル（コンソール出力と重複するため）
 
 ## 設定
