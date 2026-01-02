@@ -5,8 +5,8 @@ handlers/base.py のテスト
 """
 import pathlib
 
+import py_project.config
 import py_project.handlers.base as handlers_base
-from py_project.handlers.base import FormatType
 
 
 class DummyHandler(handlers_base.ConfigHandler):
@@ -31,10 +31,10 @@ class TestFormatType:
 
     def test_format_type_values(self):
         """FormatType の値"""
-        assert FormatType.YAML.value == "yaml"
-        assert FormatType.TOML.value == "toml"
-        assert FormatType.JSON.value == "json"
-        assert FormatType.TEXT.value == "text"
+        assert handlers_base.FormatType.YAML.value == "yaml"
+        assert handlers_base.FormatType.TOML.value == "toml"
+        assert handlers_base.FormatType.JSON.value == "json"
+        assert handlers_base.FormatType.TEXT.value == "text"
 
 
 class TestApplyResult:
@@ -66,14 +66,18 @@ class TestApplyContext:
 
     def test_context_creation(self, tmp_path):
         """コンテキスト作成"""
+        config = py_project.config.Config(
+            defaults=py_project.config.Defaults(configs=[]),
+            projects=[],
+        )
         context = handlers_base.ApplyContext(
-            config={"key": "value"},
+            config=config,
             template_dir=tmp_path,
             dry_run=True,
             backup=False,
         )
 
-        assert context.config == {"key": "value"}
+        assert context.config == config
         assert context.template_dir == tmp_path
         assert context.dry_run is True
         assert context.backup is False
@@ -85,7 +89,7 @@ class TestConfigHandler:
     def test_get_project_path_expands_tilde(self, tmp_path):
         """~ が展開されることを確認"""
         handler = DummyHandler()
-        project = {"path": "~/test-project"}
+        project = py_project.config.Project(name="test", path="~/test-project")
 
         result = handler.get_project_path(project)
 
@@ -123,7 +127,7 @@ class TestValidate:
     def test_validate_text_always_valid(self):
         """TEXT 形式は常に有効"""
         handler = DummyHandler()
-        handler.format_type = FormatType.TEXT
+        handler.format_type = handlers_base.FormatType.TEXT
 
         is_valid, error = handler.validate("any content")
 
@@ -133,7 +137,7 @@ class TestValidate:
     def test_validate_yaml_valid(self):
         """有効な YAML"""
         handler = DummyHandler()
-        handler.format_type = FormatType.YAML
+        handler.format_type = handlers_base.FormatType.YAML
 
         is_valid, error = handler.validate("key: value\nlist:\n  - item1\n  - item2\n")
 
@@ -143,7 +147,7 @@ class TestValidate:
     def test_validate_yaml_invalid(self):
         """無効な YAML"""
         handler = DummyHandler()
-        handler.format_type = FormatType.YAML
+        handler.format_type = handlers_base.FormatType.YAML
 
         is_valid, error = handler.validate("key: [unclosed bracket")
 
@@ -153,7 +157,7 @@ class TestValidate:
     def test_validate_toml_valid(self):
         """有効な TOML"""
         handler = DummyHandler()
-        handler.format_type = FormatType.TOML
+        handler.format_type = handlers_base.FormatType.TOML
 
         is_valid, error = handler.validate('[section]\nkey = "value"\n')
 
@@ -163,7 +167,7 @@ class TestValidate:
     def test_validate_toml_invalid(self):
         """無効な TOML"""
         handler = DummyHandler()
-        handler.format_type = FormatType.TOML
+        handler.format_type = handlers_base.FormatType.TOML
 
         is_valid, error = handler.validate('[section\nkey = "value"')
 
@@ -173,7 +177,7 @@ class TestValidate:
     def test_validate_json_valid(self):
         """有効な JSON"""
         handler = DummyHandler()
-        handler.format_type = FormatType.JSON
+        handler.format_type = handlers_base.FormatType.JSON
 
         is_valid, error = handler.validate('{"key": "value", "list": [1, 2, 3]}')
 
@@ -183,7 +187,7 @@ class TestValidate:
     def test_validate_json_invalid(self):
         """無効な JSON"""
         handler = DummyHandler()
-        handler.format_type = FormatType.JSON
+        handler.format_type = handlers_base.FormatType.JSON
 
         is_valid, error = handler.validate('{"key": "value",}')  # trailing comma
 

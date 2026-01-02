@@ -3,6 +3,7 @@
 """
 handlers/template_copy.py のテスト
 """
+import py_project.config as config_module
 import py_project.handlers.base as handlers_base
 import py_project.handlers.template_copy as template_copy
 
@@ -10,94 +11,87 @@ import py_project.handlers.template_copy as template_copy
 class TestTemplateCopyHandler:
     """TemplateCopyHandler のテスト"""
 
-    def test_render_template(self, tmp_templates, tmp_project, apply_context):
+    def test_render_template(self, tmp_templates, tmp_project, apply_context, sample_project):
         """テンプレートレンダリング"""
         handler = template_copy.PreCommitHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
 
-        result = handler.render_template(project, apply_context)
+        result = handler.render_template(sample_project, apply_context)
 
         assert "ruff-pre-commit" in result
         assert "v0.12.0" in result
 
-    def test_diff_new_file(self, tmp_templates, tmp_project, apply_context):
+    def test_diff_new_file(self, tmp_templates, tmp_project, apply_context, sample_project):
         """新規ファイルの差分"""
         handler = template_copy.PreCommitHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
 
-        diff = handler.diff(project, apply_context)
+        diff = handler.diff(sample_project, apply_context)
 
         assert diff is not None
         assert "新規作成" in diff
 
-    def test_diff_unchanged(self, tmp_templates, tmp_project, apply_context):
+    def test_diff_unchanged(self, tmp_templates, tmp_project, apply_context, sample_project):
         """変更なしの場合"""
         handler = template_copy.PreCommitHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
 
         # テンプレートと同じ内容を書き込む
-        content = handler.render_template(project, apply_context)
+        content = handler.render_template(sample_project, apply_context)
         (tmp_project / ".pre-commit-config.yaml").write_text(content)
 
-        diff = handler.diff(project, apply_context)
+        diff = handler.diff(sample_project, apply_context)
 
         assert diff is None
 
-    def test_diff_with_changes(self, tmp_templates, tmp_project, apply_context):
+    def test_diff_with_changes(self, tmp_templates, tmp_project, apply_context, sample_project):
         """変更がある場合"""
         handler = template_copy.PreCommitHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
 
         # 異なる内容を書き込む
         (tmp_project / ".pre-commit-config.yaml").write_text("old content")
 
-        diff = handler.diff(project, apply_context)
+        diff = handler.diff(sample_project, apply_context)
 
         assert diff is not None
         assert "---" in diff  # unified diff format
 
-    def test_apply_creates_new_file(self, tmp_templates, tmp_project, apply_context):
+    def test_apply_creates_new_file(self, tmp_templates, tmp_project, apply_context, sample_project):
         """新規ファイル作成"""
         handler = template_copy.PreCommitHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
 
-        result = handler.apply(project, apply_context)
+        result = handler.apply(sample_project, apply_context)
 
         assert result.status == "created"
         assert (tmp_project / ".pre-commit-config.yaml").exists()
 
-    def test_apply_updates_file(self, tmp_templates, tmp_project, apply_context):
+    def test_apply_updates_file(self, tmp_templates, tmp_project, apply_context, sample_project):
         """ファイル更新"""
         handler = template_copy.PreCommitHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
 
         # 古い内容を書き込む
         (tmp_project / ".pre-commit-config.yaml").write_text("old content")
 
-        result = handler.apply(project, apply_context)
+        result = handler.apply(sample_project, apply_context)
 
         assert result.status == "updated"
 
-    def test_apply_unchanged(self, tmp_templates, tmp_project, apply_context):
+    def test_apply_unchanged(self, tmp_templates, tmp_project, apply_context, sample_project):
         """変更なし"""
         handler = template_copy.PreCommitHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
 
         # テンプレートと同じ内容を書き込む
-        content = handler.render_template(project, apply_context)
+        content = handler.render_template(sample_project, apply_context)
         (tmp_project / ".pre-commit-config.yaml").write_text(content)
 
-        result = handler.apply(project, apply_context)
+        result = handler.apply(sample_project, apply_context)
 
         assert result.status == "unchanged"
 
-    def test_apply_dry_run(self, tmp_templates, tmp_project):
+    def test_apply_dry_run(self, tmp_templates, tmp_project, sample_config):
         """ドライランモード"""
         handler = template_copy.PreCommitHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
+        project = config_module.Project(name="test-project", path=str(tmp_project))
 
         context = handlers_base.ApplyContext(
-            config={},
+            config=sample_config,
             template_dir=tmp_templates,
             dry_run=True,
             backup=False,
@@ -109,16 +103,16 @@ class TestTemplateCopyHandler:
         # ドライランなのでファイルは作成されない
         assert not (tmp_project / ".pre-commit-config.yaml").exists()
 
-    def test_apply_with_backup(self, tmp_templates, tmp_project):
+    def test_apply_with_backup(self, tmp_templates, tmp_project, sample_config):
         """バックアップ作成"""
         handler = template_copy.PreCommitHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
+        project = config_module.Project(name="test-project", path=str(tmp_project))
 
         # 古い内容を書き込む
         (tmp_project / ".pre-commit-config.yaml").write_text("old content")
 
         context = handlers_base.ApplyContext(
-            config={},
+            config=sample_config,
             template_dir=tmp_templates,
             dry_run=False,
             backup=True,
@@ -134,12 +128,11 @@ class TestTemplateCopyHandler:
 class TestGitignoreHandler:
     """GitignoreHandler のテスト"""
 
-    def test_apply(self, tmp_templates, tmp_project, apply_context):
+    def test_apply(self, tmp_templates, tmp_project, apply_context, sample_project):
         """gitignore 適用"""
         handler = template_copy.GitignoreHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
 
-        result = handler.apply(project, apply_context)
+        result = handler.apply(sample_project, apply_context)
 
         assert result.status == "created"
         content = (tmp_project / ".gitignore").read_text()
@@ -149,7 +142,7 @@ class TestGitignoreHandler:
 class TestTemplateOverrides:
     """template_overrides のテスト"""
 
-    def test_template_override(self, tmp_path, tmp_project):
+    def test_template_override(self, tmp_path, tmp_project, sample_config):
         """テンプレートオーバーライド"""
         # カスタムテンプレートを作成
         custom_template = tmp_path / "custom" / ".pre-commit-config.yaml"
@@ -157,16 +150,16 @@ class TestTemplateOverrides:
         custom_template.write_text("custom: template\n")
 
         handler = template_copy.PreCommitHandler()
-        project = {
-            "name": "test-project",
-            "path": str(tmp_project),
-            "template_overrides": {
+        project = config_module.Project(
+            name="test-project",
+            path=str(tmp_project),
+            template_overrides={
                 "pre-commit": str(custom_template),
             },
-        }
+        )
 
         context = handlers_base.ApplyContext(
-            config={},
+            config=sample_config,
             template_dir=tmp_path / "templates",  # 存在しなくてもオーバーライドで上書き
             dry_run=False,
             backup=False,
@@ -182,13 +175,13 @@ class TestTemplateOverrides:
 class TestTemplateCopyErrors:
     """エラーケースのテスト"""
 
-    def test_diff_missing_template(self, tmp_path, tmp_project):
+    def test_diff_missing_template(self, tmp_path, tmp_project, sample_config):
         """テンプレートが存在しない場合の diff"""
         handler = template_copy.PreCommitHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
+        project = config_module.Project(name="test-project", path=str(tmp_project))
 
         context = handlers_base.ApplyContext(
-            config={},
+            config=sample_config,
             template_dir=tmp_path / "nonexistent",
             dry_run=False,
             backup=False,
@@ -198,13 +191,13 @@ class TestTemplateCopyErrors:
 
         assert "テンプレートが見つかりません" in diff
 
-    def test_apply_missing_template(self, tmp_path, tmp_project):
+    def test_apply_missing_template(self, tmp_path, tmp_project, sample_config):
         """テンプレートが存在しない場合の apply"""
         handler = template_copy.PreCommitHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
+        project = config_module.Project(name="test-project", path=str(tmp_project))
 
         context = handlers_base.ApplyContext(
-            config={},
+            config=sample_config,
             template_dir=tmp_path / "nonexistent",
             dry_run=False,
             backup=False,
@@ -215,19 +208,27 @@ class TestTemplateCopyErrors:
         assert result.status == "error"
         assert "テンプレートが見つかりません" in result.message
 
-    def test_apply_validation_failure(self, tmp_path, tmp_project):
+    def test_apply_validation_failure(self, tmp_path):
         """バリデーション失敗時の apply"""
+        # テスト用のプロジェクトディレクトリを作成
+        project_dir = tmp_path / "test-project"
+        project_dir.mkdir()
+        (project_dir / "pyproject.toml").write_text("[project]\nname = 'test'\n")
+
         handler = template_copy.PreCommitHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
+        project = config_module.Project(name="test-project", path=str(project_dir))
 
         # 無効な YAML を含むテンプレートを作成
-        template_dir = tmp_path / "templates" / "pre-commit"
+        template_dir = tmp_path / "invalid_templates" / "pre-commit"
         template_dir.mkdir(parents=True)
         (template_dir / ".pre-commit-config.yaml").write_text("invalid: [unclosed")
 
+        # 最小限の Config を作成
+        config = config_module.Config(projects=[project])
+
         context = handlers_base.ApplyContext(
-            config={},
-            template_dir=tmp_path / "templates",
+            config=config,
+            template_dir=tmp_path / "invalid_templates",
             dry_run=False,
             backup=False,
         )

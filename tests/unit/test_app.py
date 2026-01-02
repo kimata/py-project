@@ -7,6 +7,7 @@ import io
 
 import rich.console
 
+import py_project.config
 import py_project.handlers
 
 
@@ -88,17 +89,17 @@ class TestShowProjects:
         """デフォルト設定でのプロジェクト表示"""
         import app
 
-        config = {
-            "defaults": {
-                "configs": ["pyproject"],
-            },
-            "projects": [
-                {
-                    "name": "test-project",
-                    "path": str(tmp_project),
-                }
+        config = py_project.config.Config(
+            defaults=py_project.config.Defaults(
+                configs=["pyproject"],
+            ),
+            projects=[
+                py_project.config.Project(
+                    name="test-project",
+                    path=str(tmp_project),
+                )
             ],
-        }
+        )
 
         # エラーなく実行できることを確認
         app.show_projects(config)
@@ -107,18 +108,18 @@ class TestShowProjects:
         """プロジェクト固有設定でのプロジェクト表示"""
         import app
 
-        config = {
-            "defaults": {
-                "configs": ["pyproject"],
-            },
-            "projects": [
-                {
-                    "name": "test-project",
-                    "path": str(tmp_project),
-                    "configs": ["pre-commit", "ruff"],
-                }
+        config = py_project.config.Config(
+            defaults=py_project.config.Defaults(
+                configs=["pyproject"],
+            ),
+            projects=[
+                py_project.config.Project(
+                    name="test-project",
+                    path=str(tmp_project),
+                    configs=["pre-commit", "ruff"],
+                )
             ],
-        }
+        )
 
         # エラーなく実行できることを確認
         app.show_projects(config)
@@ -127,10 +128,10 @@ class TestShowProjects:
         """空のプロジェクト一覧"""
         import app
 
-        config = {
-            "defaults": {},
-            "projects": [],
-        }
+        config = py_project.config.Config(
+            defaults=py_project.config.Defaults(configs=[]),
+            projects=[],
+        )
 
         # エラーなく実行できることを確認
         app.show_projects(config)

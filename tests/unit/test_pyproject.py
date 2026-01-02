@@ -7,6 +7,7 @@ import textwrap
 
 import tomlkit
 
+import py_project.config
 import py_project.handlers.base as handlers_base
 import py_project.handlers.pyproject as pyproject_handler
 
@@ -37,7 +38,7 @@ class TestPyprojectHandler:
     def test_merge_preserves_project_name(self, tmp_templates, tmp_project, apply_context):
         """プロジェクト名が保持されることを確認"""
         handler = pyproject_handler.PyprojectHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project))
 
         # 元のファイルを読み込む
         current = tomlkit.parse((tmp_project / "pyproject.toml").read_text())
@@ -53,7 +54,7 @@ class TestPyprojectHandler:
     def test_merge_applies_template_settings(self, tmp_templates, tmp_project, apply_context):
         """テンプレート設定が適用されることを確認"""
         handler = pyproject_handler.PyprojectHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project))
 
         current = tomlkit.parse((tmp_project / "pyproject.toml").read_text())
         template = tomlkit.parse((tmp_templates / "pyproject" / "sections.toml").read_text())
@@ -67,7 +68,7 @@ class TestPyprojectHandler:
     def test_merge_preserves_dependencies(self, tmp_templates, tmp_project, apply_context):
         """dependencies が保持されることを確認"""
         handler = pyproject_handler.PyprojectHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project))
 
         # dependencies を追加
         pyproject_content = textwrap.dedent("""\
@@ -94,7 +95,7 @@ class TestPyprojectHandler:
     def test_diff_no_changes(self, tmp_templates, tmp_project, apply_context):
         """変更なしの場合"""
         handler = pyproject_handler.PyprojectHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project))
 
         # マージ結果と同じ内容を書き込む
         merged = handler.generate_merged_content(project, apply_context)
@@ -109,7 +110,7 @@ class TestPyprojectHandler:
     def test_diff_with_changes(self, tmp_templates, tmp_project, apply_context):
         """変更がある場合"""
         handler = pyproject_handler.PyprojectHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project))
 
         diff = handler.diff(project, apply_context)
 
@@ -119,7 +120,7 @@ class TestPyprojectHandler:
     def test_apply_updates_file(self, tmp_templates, tmp_project, apply_context):
         """ファイル更新"""
         handler = pyproject_handler.PyprojectHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project))
 
         result = handler.apply(project, apply_context)
 
@@ -133,7 +134,7 @@ class TestPyprojectHandler:
     def test_apply_unchanged(self, tmp_templates, tmp_project, apply_context):
         """変更なし"""
         handler = pyproject_handler.PyprojectHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project))
 
         # 一度適用
         handler.apply(project, apply_context)
@@ -146,12 +147,16 @@ class TestPyprojectHandler:
     def test_apply_dry_run(self, tmp_templates, tmp_project):
         """ドライランモード"""
         handler = pyproject_handler.PyprojectHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project))
 
         original_content = (tmp_project / "pyproject.toml").read_text()
 
+        config = py_project.config.Config(
+            defaults=py_project.config.Defaults(configs=[]),
+            projects=[],
+        )
         context = handlers_base.ApplyContext(
-            config={},
+            config=config,
             template_dir=tmp_templates,
             dry_run=True,
             backup=False,
@@ -168,7 +173,7 @@ class TestPyprojectHandler:
         handler = pyproject_handler.PyprojectHandler()
         empty_project = tmp_path / "empty-project"
         empty_project.mkdir()
-        project = {"name": "empty-project", "path": str(empty_project)}
+        project = py_project.config.Project(name="empty-project", path=str(empty_project))
 
         result = handler.apply(project, apply_context)
 
@@ -286,7 +291,7 @@ class TestMergePyprojectAdvanced:
 
         current = tomlkit.parse(project_content)
         template = tomlkit.parse(template_content)
-        project = {"name": "test", "path": str(project_dir)}
+        project = py_project.config.Project(name="test", path=str(project_dir))
 
         result = handler.merge_pyproject(current, template, project)
 
@@ -297,11 +302,11 @@ class TestMergePyprojectAdvanced:
     def test_merge_without_extra_dev_deps(self, tmp_templates, tmp_project):
         """extra_dev_deps がない場合（デフォルトケース）"""
         handler = pyproject_handler.PyprojectHandler()
-        project = {
-            "name": "test-project",
-            "path": str(tmp_project),
+        project = py_project.config.Project(
+            name="test-project",
+            path=str(tmp_project),
             # pyproject オプションなし
-        }
+        )
 
         current = tomlkit.parse((tmp_project / "pyproject.toml").read_text())
         template = tomlkit.parse((tmp_templates / "pyproject" / "sections.toml").read_text())
@@ -339,13 +344,13 @@ class TestMergePyprojectAdvanced:
 
         current = tomlkit.parse(project_content)
         template = tomlkit.parse(template_content)
-        project = {
-            "name": "test",
-            "path": str(project_dir),
-            "pyproject": {
-                "extra_dev_deps": ["some-package>=1.0"],
-            },
-        }
+        project = py_project.config.Project(
+            name="test",
+            path=str(project_dir),
+            pyproject=py_project.config.PyprojectOptions(
+                extra_dev_deps=["some-package>=1.0"],
+            ),
+        )
 
         result = handler.merge_pyproject(current, template, project)
 
@@ -355,7 +360,7 @@ class TestMergePyprojectAdvanced:
     def test_merge_preserves_hatch_build(self, tmp_templates, tmp_project):
         """tool.hatch.build が保持されることを確認"""
         handler = pyproject_handler.PyprojectHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project))
 
         pyproject_content = textwrap.dedent("""\
             [project]
@@ -385,7 +390,7 @@ class TestMergePyprojectAdvanced:
     def test_merge_preserves_mypy_overrides(self, tmp_templates, tmp_project):
         """tool.mypy.overrides が保持されることを確認"""
         handler = pyproject_handler.PyprojectHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project))
 
         pyproject_content = textwrap.dedent("""\
             [project]
@@ -414,13 +419,13 @@ class TestMergePyprojectAdvanced:
     def test_merge_with_extra_dev_deps(self, tmp_templates, tmp_project):
         """extra_dev_deps が追加されることを確認"""
         handler = pyproject_handler.PyprojectHandler()
-        project = {
-            "name": "test-project",
-            "path": str(tmp_project),
-            "pyproject": {
-                "extra_dev_deps": ["custom-package>=1.0"],
-            },
-        }
+        project = py_project.config.Project(
+            name="test-project",
+            path=str(tmp_project),
+            pyproject=py_project.config.PyprojectOptions(
+                extra_dev_deps=["custom-package>=1.0"],
+            ),
+        )
 
         current = tomlkit.parse((tmp_project / "pyproject.toml").read_text())
         template = tomlkit.parse((tmp_templates / "pyproject" / "sections.toml").read_text())
@@ -439,13 +444,13 @@ class TestMergePyprojectAdvanced:
         template = tomlkit.parse((tmp_templates / "pyproject" / "sections.toml").read_text())
         existing_dep = str(template["dependency-groups"]["dev"][0])  # 最初の依存関係
 
-        project = {
-            "name": "test-project",
-            "path": str(tmp_project),
-            "pyproject": {
-                "extra_dev_deps": [existing_dep],  # 完全に同じ文字列
-            },
-        }
+        project = py_project.config.Project(
+            name="test-project",
+            path=str(tmp_project),
+            pyproject=py_project.config.PyprojectOptions(
+                extra_dev_deps=[existing_dep],  # 完全に同じ文字列
+            ),
+        )
 
         current = tomlkit.parse((tmp_project / "pyproject.toml").read_text())
 
@@ -459,13 +464,13 @@ class TestMergePyprojectAdvanced:
     def test_merge_with_multiple_extra_dev_deps(self, tmp_templates, tmp_project):
         """複数の extra_dev_deps が追加される"""
         handler = pyproject_handler.PyprojectHandler()
-        project = {
-            "name": "test-project",
-            "path": str(tmp_project),
-            "pyproject": {
-                "extra_dev_deps": ["new-package>=1.0", "another-package>=2.0"],
-            },
-        }
+        project = py_project.config.Project(
+            name="test-project",
+            path=str(tmp_project),
+            pyproject=py_project.config.PyprojectOptions(
+                extra_dev_deps=["new-package>=1.0", "another-package>=2.0"],
+            ),
+        )
 
         current = tomlkit.parse((tmp_project / "pyproject.toml").read_text())
         template = tomlkit.parse((tmp_templates / "pyproject" / "sections.toml").read_text())
@@ -479,13 +484,13 @@ class TestMergePyprojectAdvanced:
     def test_merge_with_extra_preserve_sections(self, tmp_templates, tmp_project):
         """preserve_sections で追加のセクションを保持"""
         handler = pyproject_handler.PyprojectHandler()
-        project = {
-            "name": "test-project",
-            "path": str(tmp_project),
-            "pyproject": {
-                "preserve_sections": ["tool.custom"],
-            },
-        }
+        project = py_project.config.Project(
+            name="test-project",
+            path=str(tmp_project),
+            pyproject=py_project.config.PyprojectOptions(
+                preserve_sections=["tool.custom"],
+            ),
+        )
 
         pyproject_content = textwrap.dedent("""\
             [project]
@@ -511,7 +516,7 @@ class TestMergePyprojectAdvanced:
     def test_merge_adds_new_tool_section(self, tmp_templates, tmp_project):
         """テンプレートの新しい tool セクションが追加される"""
         handler = pyproject_handler.PyprojectHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project))
 
         # tool セクションがない pyproject.toml
         pyproject_content = textwrap.dedent("""\
@@ -635,13 +640,13 @@ class TestToolSectionMerge:
 
         current = tomlkit.parse(project_content)
         template = tomlkit.parse(template_content)
-        project = {
-            "name": "test",
-            "path": str(project_dir),
-            "pyproject": {
-                "preserve_sections": ["tool.custom"],  # tool.custom を保持
-            },
-        }
+        project = py_project.config.Project(
+            name="test",
+            path=str(project_dir),
+            pyproject=py_project.config.PyprojectOptions(
+                preserve_sections=["tool.custom"],  # tool.custom を保持
+            ),
+        )
 
         result = handler.merge_pyproject(current, template, project)
 
@@ -682,7 +687,7 @@ class TestToolSectionMerge:
 
         current = tomlkit.parse(project_content)
         template = tomlkit.parse(template_content)
-        project = {"name": "test", "path": str(project_dir)}
+        project = py_project.config.Project(name="test", path=str(project_dir))
 
         result = handler.merge_pyproject(current, template, project)
 
@@ -720,7 +725,7 @@ class TestToolSectionMerge:
 
         current = tomlkit.parse(project_content)
         template = tomlkit.parse(template_content)
-        project = {"name": "test", "path": str(project_dir)}
+        project = py_project.config.Project(name="test", path=str(project_dir))
 
         result = handler.merge_pyproject(current, template, project)
 
@@ -768,7 +773,7 @@ class TestToolSectionMerge:
 
         current = tomlkit.parse(project_content)
         template = tomlkit.parse(template_content)
-        project = {"name": "test", "path": str(project_dir)}
+        project = py_project.config.Project(name="test", path=str(project_dir))
 
         result = handler.merge_pyproject(current, template, project)
 
@@ -785,10 +790,14 @@ class TestDiffErrors:
     def test_diff_missing_template(self, tmp_path, tmp_project):
         """テンプレートが存在しない場合"""
         handler = pyproject_handler.PyprojectHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project))
 
+        config = py_project.config.Config(
+            defaults=py_project.config.Defaults(configs=[]),
+            projects=[],
+        )
         context = handlers_base.ApplyContext(
-            config={},
+            config=config,
             template_dir=tmp_path / "nonexistent",
             dry_run=False,
             backup=False,
@@ -803,10 +812,14 @@ class TestDiffErrors:
         handler = pyproject_handler.PyprojectHandler()
         empty_project = tmp_path / "empty"
         empty_project.mkdir()
-        project = {"name": "empty", "path": str(empty_project)}
+        project = py_project.config.Project(name="empty", path=str(empty_project))
 
+        config = py_project.config.Config(
+            defaults=py_project.config.Defaults(configs=[]),
+            projects=[],
+        )
         context = handlers_base.ApplyContext(
-            config={},
+            config=config,
             template_dir=tmp_templates,
             dry_run=False,
             backup=False,
@@ -823,10 +836,14 @@ class TestApplyErrors:
     def test_apply_missing_template(self, tmp_path, tmp_project):
         """テンプレートが存在しない場合"""
         handler = pyproject_handler.PyprojectHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project))
 
+        config = py_project.config.Config(
+            defaults=py_project.config.Defaults(configs=[]),
+            projects=[],
+        )
         context = handlers_base.ApplyContext(
-            config={},
+            config=config,
             template_dir=tmp_path / "nonexistent",
             dry_run=False,
             backup=False,
@@ -840,12 +857,16 @@ class TestApplyErrors:
     def test_apply_with_backup(self, tmp_templates, tmp_project):
         """バックアップ付き適用"""
         handler = pyproject_handler.PyprojectHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project))
 
         original_content = (tmp_project / "pyproject.toml").read_text()
 
+        config = py_project.config.Config(
+            defaults=py_project.config.Defaults(configs=[]),
+            projects=[],
+        )
         context = handlers_base.ApplyContext(
-            config={},
+            config=config,
             template_dir=tmp_templates,
             dry_run=False,
             backup=True,

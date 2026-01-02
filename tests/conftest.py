@@ -10,6 +10,9 @@ import textwrap
 
 import pytest
 
+import py_project.config
+import py_project.handlers.base as handlers_base
+
 
 # === テスト用テンプレート ===
 TEMPLATE_PYPROJECT_SECTIONS = """\
@@ -146,7 +149,25 @@ def tmp_config(tmp_path, tmp_project, tmp_templates):
 
 @pytest.fixture
 def sample_config(tmp_project, tmp_templates):
-    """テスト用の設定辞書を作成"""
+    """テスト用の Config オブジェクトを作成"""
+    return py_project.config.Config(
+        defaults=py_project.config.Defaults(
+            python_version="3.12",
+            configs=["pyproject", "pre-commit", "gitignore"],
+        ),
+        template_dir=str(tmp_templates),
+        projects=[
+            py_project.config.Project(
+                name="test-project",
+                path=str(tmp_project),
+            )
+        ],
+    )
+
+
+@pytest.fixture
+def sample_config_dict(tmp_project, tmp_templates):
+    """テスト用の設定辞書を作成（dict 形式）"""
     return {
         "defaults": {
             "python_version": "3.12",
@@ -163,12 +184,19 @@ def sample_config(tmp_project, tmp_templates):
 
 
 @pytest.fixture
-def apply_context(tmp_templates):
-    """テスト用の ApplyContext を作成"""
-    import py_project.handlers.base as handlers_base
+def sample_project(tmp_project):
+    """テスト用の Project オブジェクトを作成"""
+    return py_project.config.Project(
+        name="test-project",
+        path=str(tmp_project),
+    )
 
+
+@pytest.fixture
+def apply_context(tmp_templates, sample_config):
+    """テスト用の ApplyContext を作成"""
     return handlers_base.ApplyContext(
-        config={},
+        config=sample_config,
         template_dir=tmp_templates,
         dry_run=False,
         backup=False,

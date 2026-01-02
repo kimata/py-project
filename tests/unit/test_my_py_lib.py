@@ -5,6 +5,7 @@ handlers/my_py_lib.py のテスト
 """
 import textwrap
 
+import py_project.config
 import py_project.handlers.base as handlers_base
 import py_project.handlers.my_py_lib as my_py_lib_handler
 
@@ -116,7 +117,7 @@ class TestMyPyLibHandler:
     def test_diff_no_my_lib(self, tmp_project, apply_context):
         """my-lib 依存関係がない場合"""
         handler = my_py_lib_handler.MyPyLibHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project))
 
         diff = handler.diff(project, apply_context)
 
@@ -126,7 +127,7 @@ class TestMyPyLibHandler:
     def test_diff_same_hash(self, tmp_project_with_my_lib, apply_context, mocker):
         """ハッシュが同じ場合"""
         handler = my_py_lib_handler.MyPyLibHandler()
-        project = {"name": "test-project", "path": str(tmp_project_with_my_lib)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project_with_my_lib))
 
         # 同じハッシュを返すモック
         mock_result = mocker.MagicMock()
@@ -140,7 +141,7 @@ class TestMyPyLibHandler:
     def test_diff_different_hash(self, tmp_project_with_my_lib, apply_context, mocker):
         """ハッシュが異なる場合"""
         handler = my_py_lib_handler.MyPyLibHandler()
-        project = {"name": "test-project", "path": str(tmp_project_with_my_lib)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project_with_my_lib))
 
         # 異なるハッシュを返すモック（40文字の16進数）
         mock_result = mocker.MagicMock()
@@ -155,7 +156,7 @@ class TestMyPyLibHandler:
     def test_apply_no_my_lib(self, tmp_project, apply_context):
         """my-lib 依存関係がない場合"""
         handler = my_py_lib_handler.MyPyLibHandler()
-        project = {"name": "test-project", "path": str(tmp_project)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project))
 
         result = handler.apply(project, apply_context)
 
@@ -164,7 +165,7 @@ class TestMyPyLibHandler:
     def test_apply_same_hash(self, tmp_project_with_my_lib, apply_context, mocker):
         """ハッシュが同じ場合"""
         handler = my_py_lib_handler.MyPyLibHandler()
-        project = {"name": "test-project", "path": str(tmp_project_with_my_lib)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project_with_my_lib))
 
         mock_result = mocker.MagicMock()
         mock_result.stdout = "abcd1234567890abcdef1234567890abcdef1234\tHEAD\n"
@@ -177,7 +178,7 @@ class TestMyPyLibHandler:
     def test_apply_updates_hash(self, tmp_project_with_my_lib, apply_context, mocker):
         """ハッシュを更新"""
         handler = my_py_lib_handler.MyPyLibHandler()
-        project = {"name": "test-project", "path": str(tmp_project_with_my_lib)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project_with_my_lib))
 
         # 40文字の16進数ハッシュ
         new_hash = "1234567890abcdef1234567890abcdef12345678"
@@ -198,7 +199,7 @@ class TestMyPyLibHandler:
     def test_apply_dry_run(self, tmp_project_with_my_lib, mocker):
         """ドライランモード"""
         handler = my_py_lib_handler.MyPyLibHandler()
-        project = {"name": "test-project", "path": str(tmp_project_with_my_lib)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project_with_my_lib))
 
         original_content = (tmp_project_with_my_lib / "pyproject.toml").read_text()
 
@@ -208,8 +209,12 @@ class TestMyPyLibHandler:
         mock_result.stdout = f"{new_hash}\tHEAD\n"
         mocker.patch("subprocess.run", return_value=mock_result)
 
+        config = py_project.config.Config(
+            defaults=py_project.config.Defaults(configs=[]),
+            projects=[],
+        )
         context = handlers_base.ApplyContext(
-            config={},
+            config=config,
             template_dir=tmp_project_with_my_lib.parent,
             dry_run=True,
             backup=False,
@@ -239,7 +244,7 @@ class TestMyPyLibHandlerErrors:
         handler = my_py_lib_handler.MyPyLibHandler()
         empty_project = tmp_path / "empty"
         empty_project.mkdir()
-        project = {"name": "empty", "path": str(empty_project)}
+        project = py_project.config.Project(name="empty", path=str(empty_project))
 
         diff = handler.diff(project, apply_context)
 
@@ -248,7 +253,7 @@ class TestMyPyLibHandlerErrors:
     def test_diff_hash_fetch_failure(self, tmp_project_with_my_lib, apply_context, mocker):
         """ハッシュ取得失敗時の diff"""
         handler = my_py_lib_handler.MyPyLibHandler()
-        project = {"name": "test-project", "path": str(tmp_project_with_my_lib)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project_with_my_lib))
 
         import subprocess
 
@@ -263,7 +268,7 @@ class TestMyPyLibHandlerErrors:
         handler = my_py_lib_handler.MyPyLibHandler()
         empty_project = tmp_path / "empty"
         empty_project.mkdir()
-        project = {"name": "empty", "path": str(empty_project)}
+        project = py_project.config.Project(name="empty", path=str(empty_project))
 
         result = handler.apply(project, apply_context)
 
@@ -273,7 +278,7 @@ class TestMyPyLibHandlerErrors:
     def test_apply_hash_fetch_failure(self, tmp_project_with_my_lib, apply_context, mocker):
         """ハッシュ取得失敗時の apply"""
         handler = my_py_lib_handler.MyPyLibHandler()
-        project = {"name": "test-project", "path": str(tmp_project_with_my_lib)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project_with_my_lib))
 
         import subprocess
 
@@ -287,7 +292,7 @@ class TestMyPyLibHandlerErrors:
     def test_apply_with_backup(self, tmp_project_with_my_lib, mocker):
         """バックアップ付き適用"""
         handler = my_py_lib_handler.MyPyLibHandler()
-        project = {"name": "test-project", "path": str(tmp_project_with_my_lib)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project_with_my_lib))
 
         original_content = (tmp_project_with_my_lib / "pyproject.toml").read_text()
 
@@ -297,8 +302,12 @@ class TestMyPyLibHandlerErrors:
         mock_result.stdout = f"{new_hash}\tHEAD\n"
         mocker.patch("subprocess.run", return_value=mock_result)
 
+        config = py_project.config.Config(
+            defaults=py_project.config.Defaults(configs=[]),
+            projects=[],
+        )
         context = handlers_base.ApplyContext(
-            config={},
+            config=config,
             template_dir=tmp_project_with_my_lib.parent,
             dry_run=False,
             backup=True,

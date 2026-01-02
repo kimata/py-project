@@ -9,6 +9,8 @@ import textwrap
 import rich.console
 
 import py_project.applier as applier
+import py_project.config
+import py_project.handlers.base as handlers_base
 
 
 class TestApplyConfigs:
@@ -75,14 +77,14 @@ class TestApplyConfigs:
             """)
         )
 
-        config = {
-            "template_dir": str(tmp_templates),
-            "defaults": {"configs": ["pyproject"]},
-            "projects": [
-                {"name": "project1", "path": str(project1)},
-                {"name": "project2", "path": str(project2)},
+        config = py_project.config.Config(
+            template_dir=str(tmp_templates),
+            defaults=py_project.config.Defaults(configs=["pyproject"]),
+            projects=[
+                py_project.config.Project(name="project1", path=str(project1)),
+                py_project.config.Project(name="project2", path=str(project2)),
             ],
-        }
+        )
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
@@ -141,13 +143,13 @@ class TestApplyConfigs:
 
     def test_apply_nonexistent_project(self, tmp_path, tmp_templates):
         """存在しないプロジェクト"""
-        config = {
-            "template_dir": str(tmp_templates),
-            "defaults": {"configs": ["pyproject"]},
-            "projects": [
-                {"name": "nonexistent", "path": str(tmp_path / "nonexistent")},
+        config = py_project.config.Config(
+            template_dir=str(tmp_templates),
+            defaults=py_project.config.Defaults(configs=["pyproject"]),
+            projects=[
+                py_project.config.Project(name="nonexistent", path=str(tmp_path / "nonexistent")),
             ],
-        }
+        )
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
@@ -163,17 +165,17 @@ class TestApplyConfigs:
 
     def test_apply_unknown_config_type(self, tmp_path, tmp_templates):
         """未知の設定タイプ"""
-        project = tmp_path / "project"
-        project.mkdir()
-        (project / "pyproject.toml").write_text("[project]\nname = 'test'\n")
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        (project_dir / "pyproject.toml").write_text("[project]\nname = 'test'\n")
 
-        config = {
-            "template_dir": str(tmp_templates),
-            "defaults": {"configs": ["unknown-type"]},
-            "projects": [
-                {"name": "project", "path": str(project)},
+        config = py_project.config.Config(
+            template_dir=str(tmp_templates),
+            defaults=py_project.config.Defaults(configs=["unknown-type"]),
+            projects=[
+                py_project.config.Project(name="project", path=str(project_dir)),
             ],
-        }
+        )
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
@@ -228,31 +230,34 @@ class TestShowDiff:
     def test_show_diff_no_changes(self, tmp_project, tmp_templates):
         """差分なしの場合の表示"""
         # gitignore をテンプレートと同じ内容で作成
-        import py_project.handlers.base as handlers_base
         import py_project.handlers.template_copy as template_copy
 
         handler = template_copy.GitignoreHandler()
+        config = py_project.config.Config(
+            defaults=py_project.config.Defaults(configs=[]),
+            projects=[],
+        )
         context = handlers_base.ApplyContext(
-            config={},
+            config=config,
             template_dir=tmp_templates,
             dry_run=False,
             backup=False,
         )
-        project = {"name": "test-project", "path": str(tmp_project)}
+        project = py_project.config.Project(name="test-project", path=str(tmp_project))
         content = handler.render_template(project, context)
         (tmp_project / ".gitignore").write_text(content)
 
-        config = {
-            "template_dir": str(tmp_templates),
-            "defaults": {"configs": ["gitignore"]},
-            "projects": [project],
-        }
+        full_config = py_project.config.Config(
+            template_dir=str(tmp_templates),
+            defaults=py_project.config.Defaults(configs=["gitignore"]),
+            projects=[project],
+        )
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
         applier.apply_configs(
-            config=config,
+            config=full_config,
             show_diff=True,
             console=console,
         )
@@ -267,8 +272,10 @@ class TestGetProjectConfigs:
 
     def test_project_specific_configs(self):
         """プロジェクト固有の設定"""
-        project = {"name": "test", "path": "/tmp/test", "configs": ["ruff", "pre-commit"]}
-        defaults = {"configs": ["pyproject"]}
+        project = py_project.config.Project(
+            name="test", path="/tmp/test", configs=["ruff", "pre-commit"]
+        )
+        defaults = py_project.config.Defaults(configs=["pyproject"])
 
         result = applier.get_project_configs(project, defaults)
 
@@ -276,8 +283,8 @@ class TestGetProjectConfigs:
 
     def test_default_configs(self):
         """デフォルト設定の使用"""
-        project = {"name": "test", "path": "/tmp/test"}
-        defaults = {"configs": ["pyproject", "gitignore"]}
+        project = py_project.config.Project(name="test", path="/tmp/test")
+        defaults = py_project.config.Defaults(configs=["pyproject", "gitignore"])
 
         result = applier.get_project_configs(project, defaults)
 
@@ -285,8 +292,8 @@ class TestGetProjectConfigs:
 
     def test_empty_defaults(self):
         """デフォルト設定が空の場合"""
-        project = {"name": "test", "path": "/tmp/test"}
-        defaults = {}
+        project = py_project.config.Project(name="test", path="/tmp/test")
+        defaults = py_project.config.Defaults(configs=[])
 
         result = applier.get_project_configs(project, defaults)
 
