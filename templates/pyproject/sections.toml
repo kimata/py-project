@@ -102,6 +102,11 @@ venvPath = "."
 venv = ".venv"
 include = ["src", "tests"]
 reportMissingImports = false
+# tomlkit 等の型定義が不完全なライブラリ向け
+reportArgumentType = false
+reportOperatorIssue = false
+reportIndexIssue = false
+reportGeneralTypeIssues = false
 
 [tool.ruff]
 line-length = 110

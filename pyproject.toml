@@ -89,10 +89,10 @@ exclude = [
 venvPath = "."
 venv = ".venv"
 # tomlkit の型定義が不完全なため、一部のエラーを無視
-reportArgumentType = "warning"
-reportOperatorIssue = "warning"
-reportIndexIssue = "warning"
-reportGeneralTypeIssues = "warning"
+reportArgumentType = false
+reportOperatorIssue = false
+reportIndexIssue = false
+reportGeneralTypeIssues = false
 include = ["src", "tests"]
 reportMissingImports = false
 
