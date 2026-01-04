@@ -14,8 +14,8 @@ defaults:
     - gitlab-ci
   vars:
     registry: "gitlab.green-rabbit.net:5050/kimata"
-    ubuntu_tag: "251228_620c5aae"
-    renovate_tag: "251228_d5251182"
+    ubuntu_tag: "260104_3efe597c"
+    renovate_tag: "260104_3da7b77b"
   gitlab_ci:
     edits:
       - path: /image
@@ -30,11 +30,8 @@ template_dir: ./templates
 projects:
   - name: my-py-lib
     path: ~/github/my-py-lib
-    configs:
-      - pyproject
-      - pre-commit
-      - gitignore
-      - renovate
+    exclude_configs:
+      - my-py-lib
     pyproject:
       extra_dev_deps:
         - amazon-paapi5>=1.1.2
@@ -54,84 +51,33 @@ projects:
 
   - name: rasp-water
     path: ~/github/rasp-water
-    configs:
-      - pyproject
-      - pre-commit
-      - gitignore
-      - renovate
-      - my-py-lib
 
   - name: mercari-bot
     path: ~/github/mercari-bot
-    configs:
-      - pyproject
-      - pre-commit
-      - gitignore
-      - renovate
-      - my-py-lib
 
   - name: merhist-python
     path: ~/github/merhist-python
-    configs:
-      - pyproject
-      - pre-commit
-      - gitignore
-      - renovate
-      - my-py-lib
 
   - name: amazhist-python
     path: ~/github/amazhist-python
-    configs:
-      - pyproject
-      - pre-commit
-      - gitignore
-      - renovate
-      - my-py-lib
 
   - name: amazon-bot
     path: ~/github/amazon-bot
-    configs:
-      - pyproject
-      - pre-commit
-      - gitignore
-      - renovate
-      - my-py-lib
 
   - name: eink-weather-panel
     path: ~/github/eink-weather-panel
-    configs:
-      - pyproject
-      - pre-commit
-      - gitignore
-      - renovate
-      - my-py-lib
 
   - name: unit-cooler
     path: ~/github/unit-cooler
-    configs:
-      - pyproject
-      - pre-commit
-      - gitignore
-      - renovate
-      - my-py-lib
 
   - name: rasp-shutter
     path: ~/github/rasp-shutter
-    configs:
-      - pyproject
-      - pre-commit
-      - gitignore
-      - renovate
-      - my-py-lib
 
   - name: modes-sensing
     path: ~/github/modes-sensing
-    configs:
-      - pyproject
-      - pre-commit
-      - gitignore
-      - renovate
-      - my-py-lib
+
+  - name: rsudp
+    path: ~/github/rsudp
 
   - name: py-project
     path: ~/github/py-project
