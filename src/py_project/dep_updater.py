@@ -167,31 +167,3 @@ def update_template_deps(
     console.print(f"[green]✨ {updated_count} 個の依存関係を更新しました[/green]")
 
     return updates
-
-
-def _print_update_summary(
-    updates: list[DepUpdate],
-    console: rich.console.Console | None = None,
-) -> None:
-    """更新サマリを表示"""
-    if console is None:
-        console = rich.console.Console()
-
-    if not updates:
-        return
-
-    updated = [u for u in updates if u.updated]
-    if not updated:
-        return
-
-    console.print("\n[bold]更新内容:[/bold]")
-    table = rich.table.Table(show_header=True, box=None)
-    table.add_column("Package", style="cyan")
-    table.add_column("Current")
-    table.add_column("")
-    table.add_column("Latest", style="green")
-
-    for u in updated:
-        table.add_row(u.package, u.current, "→", u.latest)
-
-    console.print(table)
