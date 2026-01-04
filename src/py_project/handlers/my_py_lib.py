@@ -11,8 +11,8 @@ import py_project.handlers.base as handlers_base
 
 logger = logging.getLogger(__name__)
 
-MY_PY_LIB_REPO = "https://github.com/kimata/my-py-lib"
-MY_PY_LIB_PATTERN = re.compile(r"my-lib\s*@\s*git\+https://github\.com/kimata/my-py-lib(?:@([a-f0-9]+))?")
+_MY_PY_LIB_REPO = "https://github.com/kimata/my-py-lib"
+_MY_PY_LIB_PATTERN = re.compile(r"my-lib\s*@\s*git\+https://github\.com/kimata/my-py-lib(?:@([a-f0-9]+))?")
 
 
 class MyPyLibHandler(handlers_base.ConfigHandler):
@@ -30,7 +30,7 @@ class MyPyLibHandler(handlers_base.ConfigHandler):
         """my-py-lib の最新コミットハッシュを取得"""
         try:
             result = subprocess.run(  # noqa: S603
-                ["git", "ls-remote", MY_PY_LIB_REPO, "HEAD"],  # noqa: S607
+                ["git", "ls-remote", _MY_PY_LIB_REPO, "HEAD"],  # noqa: S607
                 capture_output=True,
                 text=True,
                 check=True,
@@ -58,7 +58,7 @@ class MyPyLibHandler(handlers_base.ConfigHandler):
             (現在のハッシュ or None, 開始位置, 終了位置)
 
         """
-        match = MY_PY_LIB_PATTERN.search(content)
+        match = _MY_PY_LIB_PATTERN.search(content)
         if match:
             current_hash = match.group(1)
             return current_hash, match.start(), match.end()
@@ -67,7 +67,7 @@ class MyPyLibHandler(handlers_base.ConfigHandler):
     def update_dependency(self, content: str, new_hash: str) -> str:
         """依存関係を更新した内容を返す"""
         new_dep = f"my-lib @ git+https://github.com/kimata/my-py-lib@{new_hash}"
-        return MY_PY_LIB_PATTERN.sub(new_dep, content)
+        return _MY_PY_LIB_PATTERN.sub(new_dep, content)
 
     def diff(self, project: py_project.config.Project, context: handlers_base.ApplyContext) -> str | None:
         """差分を取得"""

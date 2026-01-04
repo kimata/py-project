@@ -12,13 +12,13 @@ import py_project.handlers.my_py_lib as my_py_lib_handler
 
 
 class TestMyPyLibPattern:
-    """MY_PY_LIB_PATTERN のテスト"""
+    """_MY_PY_LIB_PATTERN のテスト"""
 
     def test_match_with_hash(self):
         """ハッシュ付きの依存関係にマッチ"""
         content = "my-lib @ git+https://github.com/kimata/my-py-lib@abcd1234"
 
-        match = my_py_lib_handler.MY_PY_LIB_PATTERN.search(content)
+        match = my_py_lib_handler._MY_PY_LIB_PATTERN.search(content)
 
         assert match is not None
         assert match.group(1) == "abcd1234"
@@ -27,7 +27,7 @@ class TestMyPyLibPattern:
         """ハッシュなしの依存関係にマッチ"""
         content = "my-lib @ git+https://github.com/kimata/my-py-lib"
 
-        match = my_py_lib_handler.MY_PY_LIB_PATTERN.search(content)
+        match = my_py_lib_handler._MY_PY_LIB_PATTERN.search(content)
 
         assert match is not None
         assert match.group(1) is None
@@ -36,7 +36,7 @@ class TestMyPyLibPattern:
         """フルハッシュにマッチ"""
         content = "my-lib @ git+https://github.com/kimata/my-py-lib@abcd1234567890abcdef1234567890abcdef1234"
 
-        match = my_py_lib_handler.MY_PY_LIB_PATTERN.search(content)
+        match = my_py_lib_handler._MY_PY_LIB_PATTERN.search(content)
 
         assert match is not None
         assert match.group(1) == "abcd1234567890abcdef1234567890abcdef1234"
@@ -45,7 +45,7 @@ class TestMyPyLibPattern:
         """マッチしない場合"""
         content = "requests @ https://example.com/requests"
 
-        match = my_py_lib_handler.MY_PY_LIB_PATTERN.search(content)
+        match = my_py_lib_handler._MY_PY_LIB_PATTERN.search(content)
 
         assert match is None
 

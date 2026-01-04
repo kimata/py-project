@@ -15,12 +15,12 @@ import py_project.handlers.base as handlers_base
 logger = logging.getLogger(__name__)
 
 # プロジェクト固有のフィールド（常に保持）
-PRESERVE_FIELDS = {
+_PRESERVE_FIELDS = {
     "project": ["name", "version", "description", "dependencies"],
 }
 
 # プロジェクト固有のセクション（常に保持）
-PRESERVE_SECTIONS = [
+_PRESERVE_SECTIONS = [
     "tool.hatch.build.targets.wheel",
     "tool.mypy.packages",
     "tool.mypy.overrides",
@@ -96,13 +96,13 @@ class PyprojectHandler(handlers_base.ConfigHandler):
         extra_dev_deps = pyproject_opts.extra_dev_deps if pyproject_opts else []
 
         # 保持するセクションのリスト
-        preserve_sections = PRESERVE_SECTIONS + extra_preserve
+        preserve_sections = _PRESERVE_SECTIONS + extra_preserve
 
         # 元のファイルをベースにコピー
         result = tomlkit.parse(tomlkit.dumps(current))
 
         # テンプレートの各セクションを処理
-        self._merge_section(result, template, "project", PRESERVE_FIELDS.get("project", []))
+        self._merge_section(result, template, "project", _PRESERVE_FIELDS.get("project", []))
         self._merge_section(result, template, "dependency-groups", [])
         self._merge_section(result, template, "build-system", [])
 

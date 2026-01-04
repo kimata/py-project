@@ -21,7 +21,7 @@ class DepUpdate:
     updated: bool = False
 
 
-def get_latest_version(package: str) -> str | None:
+def _get_latest_version(package: str) -> str | None:
     """PyPI から最新バージョンを取得"""
     url = f"https://pypi.org/pypi/{package}/json"
     try:
@@ -32,7 +32,7 @@ def get_latest_version(package: str) -> str | None:
         return None
 
 
-def parse_dependency(dep: str) -> tuple[str, str] | None:
+def _parse_dependency(dep: str) -> tuple[str, str] | None:
     """依存関係文字列からパッケージ名とバージョンを抽出
 
     例: "pytest>=8.3.0" -> ("pytest", "8.3.0")
@@ -43,12 +43,12 @@ def parse_dependency(dep: str) -> tuple[str, str] | None:
     return None
 
 
-def format_dependency(package: str, version: str) -> str:
+def _format_dependency(package: str, version: str) -> str:
     """依存関係文字列を生成"""
     return f"{package}>={version}"
 
 
-def normalize_version(version: str) -> str:
+def _normalize_version(version: str) -> str:
     """バージョン文字列を正規化（メジャー.マイナー.パッチ形式に）
 
     例: "2025.2.0.20251108" -> "2025.2.0"
@@ -101,7 +101,7 @@ def update_template_deps(
 
     new_deps = []
     for dep in dev_deps:
-        parsed = parse_dependency(str(dep))
+        parsed = _parse_dependency(str(dep))
         if parsed is None:
             new_deps.append(dep)
             continue
@@ -109,18 +109,18 @@ def update_template_deps(
         package, current_version = parsed
         console.print(f"  🔍 {package}...", end="")
 
-        latest = get_latest_version(package)
+        latest = _get_latest_version(package)
         if latest is None:
             console.print(" [yellow]取得失敗[/yellow]")
             new_deps.append(dep)
             continue
 
         # バージョンを正規化
-        normalized_latest = normalize_version(latest)
+        normalized_latest = _normalize_version(latest)
 
         if normalized_latest != current_version:
             console.print(f" [cyan]⬆️  {current_version} → {normalized_latest}[/cyan]")
-            new_dep = format_dependency(package, normalized_latest)
+            new_dep = _format_dependency(package, normalized_latest)
             new_deps.append(new_dep)
             updates.append(
                 DepUpdate(
@@ -169,7 +169,7 @@ def update_template_deps(
     return updates
 
 
-def print_update_summary(
+def _print_update_summary(
     updates: list[DepUpdate],
     console: rich.console.Console | None = None,
 ) -> None:

@@ -41,7 +41,7 @@ import py_project.config
 import py_project.dep_updater
 import py_project.handlers
 
-SCHEMA_PATH = pathlib.Path(__file__).parent.parent / "schema" / "config.schema"
+_SCHEMA_PATH = pathlib.Path(__file__).parent.parent / "schema" / "config.schema"
 
 
 def execute(
@@ -140,7 +140,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     # 設定ファイル読み込み
     try:
-        config_dict = my_lib.config.load(config_file, str(SCHEMA_PATH))
+        config_dict = my_lib.config.load(config_file, str(_SCHEMA_PATH))
     except my_lib.config.ConfigFileNotFoundError as e:
         console.print(f"[red]設定ファイルが見つかりません: {e}[/red]")
         sys.exit(1)
