@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# ruff: noqa: S101, ARG002, SLF001, D200, D403, PLR0402, S108
+# ruff: noqa: S101, S108
 """
 applier.py の統合テスト
 """
@@ -280,14 +280,15 @@ class TestShowDiff:
 class TestGetProjectConfigs:
     """get_project_configs のテスト"""
 
-    def test_project_specific_configs(self):
-        """プロジェクト固有の設定"""
+    def test_merge_project_configs_with_defaults(self):
+        """プロジェクトの configs は defaults にマージされる"""
         project = py_project.config.Project(name="test", path="/tmp/test", configs=["ruff", "pre-commit"])
         defaults = py_project.config.Defaults(configs=["pyproject"])
 
         result = applier.get_project_configs(project, defaults)
 
-        assert result == ["ruff", "pre-commit"]
+        # defaults.configs をベースに project.configs が追加される
+        assert result == ["pyproject", "ruff", "pre-commit"]
 
     def test_default_configs(self):
         """デフォルト設定の使用"""
@@ -306,6 +307,40 @@ class TestGetProjectConfigs:
         result = applier.get_project_configs(project, defaults)
 
         assert result == []
+
+    def test_exclude_configs(self):
+        """exclude_configs で設定を除外できる"""
+        project = py_project.config.Project(name="test", path="/tmp/test", exclude_configs=["gitignore"])
+        defaults = py_project.config.Defaults(configs=["pyproject", "gitignore", "renovate"])
+
+        result = applier.get_project_configs(project, defaults)
+
+        assert result == ["pyproject", "renovate"]
+
+    def test_exclude_configs_with_add(self):
+        """configs 追加と exclude_configs を同時に使用"""
+        project = py_project.config.Project(
+            name="test",
+            path="/tmp/test",
+            configs=["ruff"],
+            exclude_configs=["gitignore"],
+        )
+        defaults = py_project.config.Defaults(configs=["pyproject", "gitignore"])
+
+        result = applier.get_project_configs(project, defaults)
+
+        # pyproject + ruff (gitignore は除外)
+        assert result == ["pyproject", "ruff"]
+
+    def test_no_duplicate_configs(self):
+        """重複する configs は追加されない"""
+        project = py_project.config.Project(name="test", path="/tmp/test", configs=["pyproject", "ruff"])
+        defaults = py_project.config.Defaults(configs=["pyproject", "gitignore"])
+
+        result = applier.get_project_configs(project, defaults)
+
+        # pyproject は重複しないので1回だけ
+        assert result == ["pyproject", "gitignore", "ruff"]
 
 
 class TestApplyWithoutConsole:

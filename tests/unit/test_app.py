@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# ruff: noqa: S101, ARG002, D200
+# ruff: noqa: S101
 """
 app.py のテスト
 """

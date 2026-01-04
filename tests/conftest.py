@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# ruff: noqa: D403
 """
 共通テストフィクスチャ
 

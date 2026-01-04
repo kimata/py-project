@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# ruff: noqa: S101, ARG002, D200, D403, PLR0402
+# ruff: noqa: S101
 """
 handlers/template_copy.py のテスト
 """

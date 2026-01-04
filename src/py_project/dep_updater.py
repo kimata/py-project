@@ -59,7 +59,7 @@ def normalize_version(version: str) -> str:
     return version
 
 
-def update_template_deps(  # noqa: C901
+def update_template_deps(
     template_path: pathlib.Path,
     *,
     dry_run: bool = True,

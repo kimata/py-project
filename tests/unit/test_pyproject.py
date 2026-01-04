@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# ruff: noqa: S101, ARG002, SLF001, D200, D403
+# ruff: noqa: S101
 """
 handlers/pyproject.py のテスト
 """

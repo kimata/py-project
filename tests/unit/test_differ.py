@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# ruff: noqa: S101, D200, PLR0402
+# ruff: noqa: S101
 """
 differ.py のテスト
 """

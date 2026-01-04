@@ -69,7 +69,7 @@ class MyPyLibHandler(handlers_base.ConfigHandler):
         new_dep = f"my-lib @ git+https://github.com/kimata/my-py-lib@{new_hash}"
         return MY_PY_LIB_PATTERN.sub(new_dep, content)
 
-    def diff(self, project: py_project.config.Project, context: handlers_base.ApplyContext) -> str | None:  # noqa: ARG002
+    def diff(self, project: py_project.config.Project, context: handlers_base.ApplyContext) -> str | None:
         """差分を取得"""
         output_path = self.get_output_path(project)
 

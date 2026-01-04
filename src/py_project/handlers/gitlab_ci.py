@@ -153,7 +153,7 @@ class GitLabCIHandler(handlers_base.ConfigHandler):
         )
         return "".join(diff)
 
-    def apply(  # noqa: PLR0911
+    def apply(
         self, project: py_project.config.Project, context: handlers_base.ApplyContext
     ) -> handlers_base.ApplyResult:
         """設定を適用"""

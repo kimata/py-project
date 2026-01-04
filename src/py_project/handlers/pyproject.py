@@ -79,7 +79,7 @@ class PyprojectHandler(handlers_base.ConfigHandler):
             current = current[key]
         current[keys[-1]] = value
 
-    def merge_pyproject(  # noqa: C901, PLR0912
+    def merge_pyproject(
         self,
         current: tomlkit.TOMLDocument,
         template: tomlkit.TOMLDocument,
