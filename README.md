@@ -21,18 +21,18 @@
 
 ### 対応する設定タイプ
 
-| タイプ | 説明 |
-|--------|------|
-| `pyproject` | pyproject.toml 共通セクション |
-| `pre-commit` | .pre-commit-config.yaml |
-| `ruff` | ruff.toml |
-| `gitignore` | .gitignore |
-| `dockerignore` | .dockerignore |
-| `yamllint` | .yamllint.yaml |
-| `prettier` | .prettierrc |
-| `python-version` | .python-version |
-| `renovate` | renovate.json |
-| `my-py-lib` | my-py-lib 依存関係の更新 |
+| タイプ           | 説明                          |
+| ---------------- | ----------------------------- |
+| `pyproject`      | pyproject.toml 共通セクション |
+| `pre-commit`     | .pre-commit-config.yaml       |
+| `ruff`           | ruff.toml                     |
+| `gitignore`      | .gitignore                    |
+| `dockerignore`   | .dockerignore                 |
+| `yamllint`       | .yamllint.yaml                |
+| `prettier`       | .prettierrc                   |
+| `python-version` | .python-version               |
+| `renovate`       | renovate.json                 |
+| `my-py-lib`      | my-py-lib 依存関係の更新      |
 
 ## 🚀 セットアップ
 
@@ -53,26 +53,26 @@ uv sync
 ```yaml
 # デフォルト設定
 defaults:
-  python_version: "3.12"
-  configs:
-    - pyproject
-    - pre-commit
-    - ruff
-    - gitignore
+    python_version: "3.12"
+    configs:
+        - pyproject
+        - pre-commit
+        - ruff
+        - gitignore
 
 # テンプレートディレクトリ
 template_dir: ./templates
 
 # プロジェクト一覧
 projects:
-  - name: my-project
-    path: ~/github/my-project
+    - name: my-project
+      path: ~/github/my-project
 
-  - name: another-project
-    path: ~/github/another-project
-    configs:  # プロジェクト固有の設定
-      - pyproject
-      - pre-commit
+    - name: another-project
+      path: ~/github/another-project
+      configs: # プロジェクト固有の設定
+          - pyproject
+          - pre-commit
 ```
 
 ## 💻 使い方
@@ -155,11 +155,11 @@ templates/
 ```yaml
 # .pre-commit-config.yaml の例
 repos:
-  - repo: local
-    hooks:
-      - id: ruff
-        language: python
-        language_version: "{{ vars.python_version | default(defaults.python_version) }}"
+    - repo: local
+      hooks:
+          - id: ruff
+            language: python
+            language_version: "{{ vars.python_version | default(defaults.python_version) }}"
 ```
 
 ## ⚙️ 高度な設定
@@ -168,25 +168,25 @@ repos:
 
 ```yaml
 projects:
-  - name: special-project
-    path: ~/github/special-project
+    - name: special-project
+      path: ~/github/special-project
 
-    # テンプレート変数
-    vars:
-      python_version: "3.11"
+      # テンプレート変数
+      vars:
+          python_version: "3.11"
 
-    # テンプレートファイルのオーバーライド
-    template_overrides:
-      pre-commit: ~/my-templates/.pre-commit-config.yaml
+      # テンプレートファイルのオーバーライド
+      template_overrides:
+          pre-commit: ~/my-templates/.pre-commit-config.yaml
 
-    # pyproject.toml 固有オプション
-    pyproject:
-      # 追加で保持するセクション
-      preserve_sections:
-        - tool.custom
-      # 追加の開発依存
-      extra_dev_deps:
-        - some-package>=1.0
+      # pyproject.toml 固有オプション
+      pyproject:
+          # 追加で保持するセクション
+          preserve_sections:
+              - tool.custom
+          # 追加の開発依存
+          extra_dev_deps:
+              - some-package>=1.0
 ```
 
 ## 📝 ライセンス

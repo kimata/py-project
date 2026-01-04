@@ -190,6 +190,17 @@ class GitignoreHandler(TemplateCopyHandler):
     template_file = ".gitignore"
     output_file = ".gitignore"
 
+    def render_template(self, project: py_project.config.Project, context: handlers_base.ApplyContext) -> str:
+        """テンプレートをレンダリングし、extra_lines を追加"""
+        content = super().render_template(project, context)
+
+        # extra_lines がある場合は末尾に追加
+        if project.gitignore and project.gitignore.extra_lines:
+            extra = "\n".join(project.gitignore.extra_lines)
+            content = content.rstrip("\n") + "\n" + extra + "\n"
+
+        return content
+
 
 class RenovateHandler(TemplateCopyHandler):
     """renovate 設定ハンドラ"""

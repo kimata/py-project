@@ -184,3 +184,5 @@ react/node_modules/
 *.deb
 output/
 !output/.gitkeep
+!config.yaml
+!templates/**/*.yaml

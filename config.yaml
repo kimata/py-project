@@ -3,81 +3,86 @@
 
 # グローバル設定（全プロジェクト共通のデフォルト）
 defaults:
-  python_version: "3.12"
-  configs:
-    - pyproject
-    - pre-commit
-    - ruff
-    - gitignore
-    - renovate
-    - my-py-lib
-    - gitlab-ci
-  vars:
-    registry: "gitlab.green-rabbit.net:5050/kimata"
-    ubuntu_tag: "260104_3efe597c"
-    renovate_tag: "260104_3da7b77b"
-  gitlab_ci:
-    edits:
-      - path: /image
-        value: "{{ vars.registry }}/local-ubuntu:{{ vars.ubuntu_tag }}"
-      - path: /renovate/image/name
-        value: "{{ vars.registry }}/local-renovate:{{ vars.renovate_tag }}"
+    python_version: "3.12"
+    configs:
+        - pyproject
+        - pre-commit
+        - ruff
+        - gitignore
+        - renovate
+        - my-py-lib
+        - gitlab-ci
+        - yamllint
+    vars:
+        registry: "gitlab.green-rabbit.net:5050/kimata"
+        ubuntu_tag: "260104_3efe597c"
+        renovate_tag: "260104_3da7b77b"
+    gitlab_ci:
+        edits:
+            - path: /image
+              value: "{{ vars.registry }}/local-ubuntu:{{ vars.ubuntu_tag }}"
+            - path: /renovate/image/name
+              value: "{{ vars.registry }}/local-renovate:{{ vars.renovate_tag }}"
 
 # テンプレートディレクトリ
 template_dir: ./templates
 
 # プロジェクト一覧
 projects:
-  - name: my-py-lib
-    path: ~/github/my-py-lib
-    exclude_configs:
-      - my-py-lib
-    pyproject:
-      extra_dev_deps:
-        - amazon-paapi5>=1.1.2
-        - flask-cors>=4.0.1
-        - flask>=3.0.3
-        - openpyxl>=3.1.5
-        - pillow>=10.4.0
-        - rpi-lgpio>=0.6
-        - selenium>=4.23.1
-        - spidev>=3.6
-        - speechrecognition>=3.11.0
-        - pydub>=0.25.1
-        - pytest-forked>=1.6.0
-        - pytest-rerunfailures>=15.1
-        - undetected-chromedriver>=3.5.5
-        - types-requests>=2.32.0
+    - name: my-py-lib
+      path: ~/github/my-py-lib
+      exclude_configs:
+          - my-py-lib
+      pyproject:
+          extra_dev_deps:
+              - amazon-paapi5>=1.1.2
+              - flask-cors>=4.0.1
+              - flask>=3.0.3
+              - openpyxl>=3.1.5
+              - pillow>=10.4.0
+              - rpi-lgpio>=0.6
+              - selenium>=4.23.1
+              - spidev>=3.6
+              - speechrecognition>=3.11.0
+              - pydub>=0.25.1
+              - pytest-forked>=1.6.0
+              - pytest-rerunfailures>=15.1
+              - undetected-chromedriver>=3.5.5
+              - types-requests>=2.32.0
 
-  - name: rasp-water
-    path: ~/github/rasp-water
+    - name: rasp-water
+      path: ~/github/rasp-water
 
-  - name: mercari-bot
-    path: ~/github/mercari-bot
+    - name: mercari-bot
+      path: ~/github/mercari-bot
 
-  - name: merhist-python
-    path: ~/github/merhist-python
+    - name: merhist-python
+      path: ~/github/merhist-python
 
-  - name: amazhist-python
-    path: ~/github/amazhist-python
+    - name: amazhist-python
+      path: ~/github/amazhist-python
 
-  - name: amazon-bot
-    path: ~/github/amazon-bot
+    - name: amazon-bot
+      path: ~/github/amazon-bot
 
-  - name: eink-weather-panel
-    path: ~/github/eink-weather-panel
+    - name: eink-weather-panel
+      path: ~/github/eink-weather-panel
 
-  - name: unit-cooler
-    path: ~/github/unit-cooler
+    - name: unit-cooler
+      path: ~/github/unit-cooler
 
-  - name: rasp-shutter
-    path: ~/github/rasp-shutter
+    - name: rasp-shutter
+      path: ~/github/rasp-shutter
 
-  - name: modes-sensing
-    path: ~/github/modes-sensing
+    - name: modes-sensing
+      path: ~/github/modes-sensing
 
-  - name: rsudp
-    path: ~/github/rsudp
+    - name: rsudp
+      path: ~/github/rsudp
 
-  - name: py-project
-    path: ~/github/py-project
+    - name: py-project
+      path: ~/github/py-project
+      gitignore:
+          extra_lines:
+              - "!config.yaml"
+              - "!templates/**/*.yaml"

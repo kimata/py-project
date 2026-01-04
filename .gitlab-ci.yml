@@ -47,7 +47,7 @@ test-pytest:
         - test-prepare
 
     script:
-        - uv run pytest --numprocesses=auto --junit-xml=reports/junit-report.xml --html=reports/report.html --self-contained-html --cov-report=term-missing --cov-report=xml:reports/coverage.xml tests/
+        - uv run pytest
 
     coverage: '/TOTAL.*\s+(\d+%)/'
 

@@ -87,6 +87,23 @@ class PyprojectOptions:
 
 
 @dataclasses.dataclass
+class GitignoreOptions:
+    """gitignore 設定タイプのオプション
+
+    Attributes:
+        extra_lines: テンプレートの末尾に追加する行
+
+    """
+
+    extra_lines: list[str] = dataclasses.field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, typing.Any]) -> GitignoreOptions:
+        """辞書から GitignoreOptions を生成"""
+        return cls(extra_lines=data.get("extra_lines", []))
+
+
+@dataclasses.dataclass
 class Defaults:
     """全プロジェクト共通のデフォルト設定
 
@@ -130,6 +147,7 @@ class Project:
         template_overrides: 設定タイプ別のテンプレート上書き
         pyproject: pyproject.toml 設定タイプのオプション
         gitlab_ci: gitlab-ci 設定タイプのオプション
+        gitignore: gitignore 設定タイプのオプション
 
     """
 
@@ -141,6 +159,7 @@ class Project:
     template_overrides: dict[str, str] = dataclasses.field(default_factory=dict)
     pyproject: PyprojectOptions | None = None
     gitlab_ci: GitlabCiOptions | None = None
+    gitignore: GitignoreOptions | None = None
 
     def get_path(self) -> pathlib.Path:
         """展開されたパスを取得"""
@@ -155,6 +174,9 @@ class Project:
         gitlab_ci = None
         if "gitlab_ci" in data:
             gitlab_ci = GitlabCiOptions.from_dict(data["gitlab_ci"])
+        gitignore = None
+        if "gitignore" in data:
+            gitignore = GitignoreOptions.from_dict(data["gitignore"])
         return cls(
             name=data["name"],
             path=data["path"],
@@ -164,6 +186,7 @@ class Project:
             template_overrides=data.get("template_overrides", {}),
             pyproject=pyproject,
             gitlab_ci=gitlab_ci,
+            gitignore=gitignore,
         )
 
 

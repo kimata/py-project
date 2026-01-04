@@ -136,6 +136,23 @@
         },
         "gitlab_ci": {
           "$ref": "#/$defs/gitlabCiOptions"
+        },
+        "gitignore": {
+          "$ref": "#/$defs/gitignoreOptions"
+        }
+      },
+      "additionalProperties": false
+    },
+    "gitignoreOptions": {
+      "type": "object",
+      "description": "gitignore 設定タイプのオプション",
+      "properties": {
+        "extra_lines": {
+          "type": "array",
+          "description": "テンプレートの末尾に追加する行（例: !config.yaml）",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": false
