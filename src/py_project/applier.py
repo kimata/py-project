@@ -63,10 +63,26 @@ class ProcessContext:
 def get_project_configs(
     project: py_project.config.Project, defaults: py_project.config.Defaults
 ) -> list[str]:
-    """プロジェクトに適用する設定タイプのリストを取得"""
-    if project.configs is not None:
-        return project.configs
-    return defaults.configs
+    """プロジェクトに適用する設定タイプのリストを取得
+
+    defaults.configs をベースに、project.configs を追加し、
+    project.exclude_configs を除外した結果を返す。
+    """
+    # defaults.configs をベースにする
+    configs = list(defaults.configs)
+
+    # project.configs があれば追加（重複排除）
+    if project.configs:
+        for config in project.configs:
+            if config not in configs:
+                configs.append(config)
+
+    # exclude_configs を除外
+    for exclude in project.exclude_configs:
+        if exclude in configs:
+            configs.remove(exclude)
+
+    return configs
 
 
 def _validate_projects(
@@ -173,7 +189,7 @@ def apply_configs(
     return summary
 
 
-def _process_project(  # noqa: C901
+def _process_project(
     project: py_project.config.Project,
     proc_ctx: ProcessContext,
 ) -> None:

@@ -85,7 +85,14 @@
         },
         "configs": {
           "type": "array",
-          "description": "適用する設定タイプ（省略時は defaults.configs を使用）",
+          "description": "追加で適用する設定タイプ（defaults.configs にマージ）",
+          "items": {
+            "$ref": "#/$defs/configType"
+          }
+        },
+        "exclude_configs": {
+          "type": "array",
+          "description": "除外する設定タイプ（defaults.configs から除外）",
           "items": {
             "$ref": "#/$defs/configType"
           }

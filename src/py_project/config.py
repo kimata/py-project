@@ -124,7 +124,8 @@ class Project:
     Attributes:
         name: プロジェクト名（識別用）
         path: プロジェクトのパス（絶対パスまたは ~/ 形式）
-        configs: 適用する設定タイプ（省略時は defaults.configs を使用）
+        configs: 追加で適用する設定タイプ（defaults.configs にマージ）
+        exclude_configs: 除外する設定タイプ（defaults.configs から除外）
         vars: テンプレート変数
         template_overrides: 設定タイプ別のテンプレート上書き
         pyproject: pyproject.toml 設定タイプのオプション
@@ -135,6 +136,7 @@ class Project:
     name: str
     path: str
     configs: list[str] | None = None
+    exclude_configs: list[str] = dataclasses.field(default_factory=list)
     vars: dict[str, str] = dataclasses.field(default_factory=dict)
     template_overrides: dict[str, str] = dataclasses.field(default_factory=dict)
     pyproject: PyprojectOptions | None = None
@@ -157,6 +159,7 @@ class Project:
             name=data["name"],
             path=data["path"],
             configs=data.get("configs"),
+            exclude_configs=data.get("exclude_configs", []),
             vars=data.get("vars", {}),
             template_overrides=data.get("template_overrides", {}),
             pyproject=pyproject,
