@@ -139,6 +139,52 @@ class TestGitignoreHandler:
         content = (tmp_project / ".gitignore").read_text()
         assert "__pycache__/" in content
 
+    def test_apply_with_extra_lines(self, tmp_templates, tmp_project, sample_config):
+        """gitignore に extra_lines を追加"""
+        handler = template_copy.GitignoreHandler()
+        project = config_module.Project(
+            name="test-project",
+            path=str(tmp_project),
+            gitignore=config_module.GitignoreOptions(extra_lines=["!config.yaml", "*.secret"]),
+        )
+
+        context = handlers_base.ApplyContext(
+            config=sample_config,
+            template_dir=tmp_templates,
+            dry_run=False,
+            backup=False,
+        )
+
+        result = handler.apply(project, context)
+
+        assert result.status == "created"
+        content = (tmp_project / ".gitignore").read_text()
+        assert "__pycache__/" in content
+        assert "!config.yaml" in content
+        assert "*.secret" in content
+
+    def test_render_template_with_extra_lines(self, tmp_templates, sample_config):
+        """extra_lines 付きでテンプレートをレンダリング"""
+        handler = template_copy.GitignoreHandler()
+        project = config_module.Project(
+            name="test-project",
+            path="/tmp/test",  # noqa: S108
+            gitignore=config_module.GitignoreOptions(extra_lines=["!keep.txt", "custom-pattern/*"]),
+        )
+
+        context = handlers_base.ApplyContext(
+            config=sample_config,
+            template_dir=tmp_templates,
+            dry_run=False,
+            backup=False,
+        )
+
+        content = handler.render_template(project, context)
+
+        assert "__pycache__/" in content
+        assert "!keep.txt" in content
+        assert "custom-pattern/*" in content
+
 
 class TestTemplateOverrides:
     """template_overrides のテスト"""
@@ -337,3 +383,52 @@ class TestFormatTypes:
 
         handler = template_copy.RenovateHandler()
         assert handler.format_type == FormatType.JSON
+
+
+class TestJSONValidation:
+    """JSON フォーマットのバリデーションテスト"""
+
+    def test_validate_valid_json(self):
+        """有効な JSON のバリデーション"""
+        handler = template_copy.PrettierHandler()
+        is_valid, error = handler.validate('{"key": "value"}')
+
+        assert is_valid is True
+        assert error is None
+
+    def test_validate_invalid_json(self):
+        """無効な JSON のバリデーション"""
+        handler = template_copy.PrettierHandler()
+        is_valid, error = handler.validate('{"key": "value"')  # 閉じ括弧なし
+
+        assert is_valid is False
+        assert error is not None
+
+    def test_apply_invalid_json_template(self, tmp_path):
+        """無効な JSON テンプレートを適用した場合"""
+        handler = template_copy.PrettierHandler()
+        project_dir = tmp_path / "json-test-project"
+        project_dir.mkdir()
+        (project_dir / "pyproject.toml").write_text("[project]\nname = 'test'\n")
+
+        project = config_module.Project(name="json-test-project", path=str(project_dir))
+
+        # 無効な JSON を含むテンプレートを作成
+        template_dir = tmp_path / "invalid_json_templates" / "prettier"
+        template_dir.mkdir(parents=True)
+        (template_dir / ".prettierrc").write_text('{"invalid: json')
+
+        # 最小限の Config を作成
+        config = config_module.Config(projects=[project])
+
+        context = handlers_base.ApplyContext(
+            config=config,
+            template_dir=tmp_path / "invalid_json_templates",
+            dry_run=False,
+            backup=False,
+        )
+
+        result = handler.apply(project, context)
+
+        assert result.status == "error"
+        assert "バリデーション失敗" in result.message

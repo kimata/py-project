@@ -12,6 +12,7 @@ import rich.console
 import py_project.applier as applier
 import py_project.config
 import py_project.handlers.base as handlers_base
+import py_project.progress
 
 
 class TestApplyConfigs:
@@ -341,6 +342,20 @@ class TestGetProjectConfigs:
 
         # pyproject は重複しないので1回だけ
         assert result == ["pyproject", "gitignore", "ruff"]
+
+    def test_exclude_nonexistent_config(self):
+        """存在しない設定を exclude_configs で指定しても問題ない"""
+        project = py_project.config.Project(
+            name="test",
+            path="/tmp/test",
+            exclude_configs=["nonexistent-config"],  # 存在しない設定
+        )
+        defaults = py_project.config.Defaults(configs=["pyproject", "gitignore"])
+
+        result = applier.get_project_configs(project, defaults)
+
+        # nonexistent-config は無視される
+        assert result == ["pyproject", "gitignore"]
 
 
 class TestApplyWithoutConsole:
@@ -891,3 +906,314 @@ class TestApplyWithGitAdd:
 
         # _run_git_add は呼ばれない
         mock_git_add.assert_not_called()
+
+
+class TestApplyWithProgress:
+    """progress パラメータを使うテスト"""
+
+    def test_apply_with_progress(self, sample_config, tmp_project, tmp_templates, mocker):
+        """progress を渡す場合"""
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        # ProgressManager のモック
+        mock_progress = mocker.MagicMock(spec=py_project.progress.ProgressManager)
+        mock_progress._start_time = 0  # 経過時間計算用
+
+        options = py_project.config.ApplyOptions(dry_run=False, run_sync=False)
+        summary = applier.apply_configs(
+            config=sample_config,
+            options=options,
+            console=console,
+            progress=mock_progress,
+        )
+
+        # progress のメソッドが呼ばれていることを確認
+        mock_progress.print.assert_called()
+        mock_progress.set_progress_bar.assert_called()
+        mock_progress.update_progress_bar.assert_called()
+        mock_progress.remove_progress_bar.assert_called()
+        mock_progress.set_status.assert_called()
+
+        assert summary.projects_processed == 1
+
+    def test_apply_with_progress_nonexistent_project(self, tmp_path, tmp_templates, mocker):
+        """progress ありで存在しないプロジェクトを処理"""
+
+        config = py_project.config.Config(
+            template_dir=str(tmp_templates),
+            defaults=py_project.config.Defaults(configs=["pyproject"]),
+            projects=[
+                py_project.config.Project(name="nonexistent", path=str(tmp_path / "nonexistent")),
+            ],
+        )
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        mock_progress = mocker.MagicMock(spec=py_project.progress.ProgressManager)
+        mock_progress._start_time = 0
+
+        options = py_project.config.ApplyOptions(dry_run=False)
+        summary = applier.apply_configs(
+            config=config,
+            options=options,
+            console=console,
+            progress=mock_progress,
+        )
+
+        assert summary.errors == 1
+        # progress.print でエラーメッセージが出力される
+        mock_progress.print.assert_called()
+
+    def test_apply_with_progress_unknown_config_type(self, tmp_path, tmp_templates, mocker):
+        """progress ありで未知の設定タイプを処理"""
+
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+        (project_dir / "pyproject.toml").write_text("[project]\nname = 'test'\n")
+
+        config = py_project.config.Config(
+            template_dir=str(tmp_templates),
+            defaults=py_project.config.Defaults(configs=["unknown-type"]),
+            projects=[
+                py_project.config.Project(name="project", path=str(project_dir)),
+            ],
+        )
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        mock_progress = mocker.MagicMock(spec=py_project.progress.ProgressManager)
+        mock_progress._start_time = 0
+
+        options = py_project.config.ApplyOptions(dry_run=False)
+        summary = applier.apply_configs(
+            config=config,
+            options=options,
+            console=console,
+            progress=mock_progress,
+        )
+
+        assert summary.errors == 1
+        # progress.print と update_progress_bar が呼ばれる
+        mock_progress.print.assert_called()
+        mock_progress.update_progress_bar.assert_called()
+
+    def test_apply_with_progress_show_diff(self, sample_config, tmp_project, tmp_templates, mocker):
+        """progress ありで差分表示モード"""
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        mock_progress = mocker.MagicMock(spec=py_project.progress.ProgressManager)
+        mock_progress._start_time = 0
+
+        options = py_project.config.ApplyOptions(show_diff=True, dry_run=True)
+        applier.apply_configs(
+            config=sample_config,
+            options=options,
+            console=console,
+            progress=mock_progress,
+        )
+
+        # progress.print が呼ばれていることを確認
+        mock_progress.print.assert_called()
+
+
+class TestRunUvSyncWithProgress:
+    """_run_uv_sync の progress 付きテスト"""
+
+    def test_run_uv_sync_with_progress(self, tmp_project, mocker):
+        """progress を渡す場合"""
+
+        mock_run = mocker.patch("subprocess.run")
+        mock_run.return_value.returncode = 0
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        mock_progress = mocker.MagicMock(spec=py_project.progress.ProgressManager)
+
+        applier._run_uv_sync(tmp_project, console, progress=mock_progress)
+
+        # progress.print が呼ばれていることを確認
+        mock_progress.print.assert_called()
+
+
+class TestRunGitAddWithProgress:
+    """_run_git_add の progress 付きテスト"""
+
+    def test_run_git_add_with_progress(self, tmp_path, mocker):
+        """progress を渡す場合"""
+
+        mocker.patch.object(applier, "_is_git_repo", return_value=True)
+        mock_run = mocker.patch("subprocess.run")
+        mock_run.return_value.returncode = 0
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        mock_progress = mocker.MagicMock(spec=py_project.progress.ProgressManager)
+
+        files = [tmp_path / "file1.txt"]
+        applier._run_git_add(tmp_path, files, console, progress=mock_progress)
+
+        # progress.print が呼ばれていることを確認
+        mock_progress.print.assert_called()
+
+
+class TestPrintResultWithProgress:
+    """_print_result の progress 付きテスト"""
+
+    def test_print_result_with_progress(self, mocker):
+        """progress を渡す場合"""
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        mock_progress = mocker.MagicMock(spec=py_project.progress.ProgressManager)
+
+        result = handlers_base.ApplyResult(status="updated")
+        applier._print_result(console, "pyproject", result, dry_run=False, progress=mock_progress)
+
+        # progress.print が呼ばれていることを確認
+        mock_progress.print.assert_called()
+
+
+class TestPrintSummaryWithProgress:
+    """_print_summary の progress 付きテスト"""
+
+    def test_print_summary_with_progress(self, mocker):
+        """progress を渡す場合（経過時間表示）"""
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        mock_progress = mocker.MagicMock(spec=py_project.progress.ProgressManager)
+        mock_progress._start_time = 0  # 現在時刻との差で経過時間が計算される
+
+        summary = applier.ApplySummary(
+            created=1,
+            updated=2,
+            projects_processed=1,
+        )
+
+        applier._print_summary(console, summary, dry_run=False, progress=mock_progress)
+
+        result = output.getvalue()
+        # 経過時間が表示される
+        assert "経過時間" in result
+
+
+class TestApplyWithNoneOptions:
+    """options=None のテスト"""
+
+    def test_apply_with_none_options(self, sample_config, tmp_project, tmp_templates):
+        """options=None の場合はデフォルト値が使われる"""
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        summary = applier.apply_configs(
+            config=sample_config,
+            options=None,  # 明示的に None を渡す
+            console=console,
+        )
+
+        # デフォルトは dry_run=True なので確認モードが表示される
+        assert "確認モード" in output.getvalue()
+        assert summary.projects_processed == 1
+
+
+class TestShowDiffNoDiffWithProgress:
+    """show_diff モードで差分なし + progress のテスト"""
+
+    def test_show_diff_no_changes_with_progress(self, tmp_project, tmp_templates, mocker):
+        """差分なしで progress がある場合"""
+        import py_project.handlers.template_copy as template_copy
+
+        # gitignore をテンプレートと同じ内容で作成（差分なしの状態）
+        handler = template_copy.GitignoreHandler()
+        config = py_project.config.Config(
+            defaults=py_project.config.Defaults(configs=[]),
+            projects=[],
+        )
+        context = handlers_base.ApplyContext(
+            config=config,
+            template_dir=tmp_templates,
+            dry_run=False,
+            backup=False,
+        )
+        project = py_project.config.Project(name="test-project", path=str(tmp_project))
+        content = handler.render_template(project, context)
+        (tmp_project / ".gitignore").write_text(content)
+
+        full_config = py_project.config.Config(
+            template_dir=str(tmp_templates),
+            defaults=py_project.config.Defaults(configs=["gitignore"]),
+            projects=[project],
+        )
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        mock_progress = mocker.MagicMock(spec=py_project.progress.ProgressManager)
+        mock_progress._start_time = 0
+
+        # show_diff=True で差分なし + progress
+        options = py_project.config.ApplyOptions(show_diff=True, dry_run=True)
+        applier.apply_configs(
+            config=full_config,
+            options=options,
+            console=console,
+            progress=mock_progress,
+        )
+
+        # progress.print が "up to date" で呼ばれていることを確認
+        calls = [str(call) for call in mock_progress.print.call_args_list]
+        assert any("up to date" in call for call in calls)
+
+
+class TestShowDiffAndApply:
+    """show_diff + apply モードのテスト（dry_run=False）"""
+
+    def test_show_diff_and_apply(self, sample_config, tmp_project, tmp_templates):
+        """差分表示しつつ適用も行う"""
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        # show_diff=True かつ dry_run=False で実際に適用
+        options = py_project.config.ApplyOptions(show_diff=True, dry_run=False)
+        summary = applier.apply_configs(
+            config=sample_config,
+            options=options,
+            console=console,
+        )
+
+        # 適用が行われる
+        assert summary.projects_processed == 1
+        assert summary.updated >= 1 or summary.created >= 1
+
+    def test_show_diff_and_apply_with_progress(self, sample_config, tmp_project, tmp_templates, mocker):
+        """show_diff + apply + progress"""
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        mock_progress = mocker.MagicMock(spec=py_project.progress.ProgressManager)
+        mock_progress._start_time = 0
+
+        # show_diff=True かつ dry_run=False で実際に適用
+        options = py_project.config.ApplyOptions(show_diff=True, dry_run=False)
+        summary = applier.apply_configs(
+            config=sample_config,
+            options=options,
+            console=console,
+            progress=mock_progress,
+        )
+
+        # 適用が行われる
+        assert summary.projects_processed == 1
+        # progress.print が呼ばれている
+        mock_progress.print.assert_called()
