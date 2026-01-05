@@ -252,11 +252,8 @@ def _process_project(
     project_name = project.name
     project_path = project.get_path()
 
-    # TTY環境では詳細出力を抑制
-    if progress:
-        progress.print(f"[bold blue]{project_name}[/bold blue] ({project_path})")
-    else:
-        console.print(f"[bold blue]{project_name}[/bold blue] ({project_path})")
+    # プロジェクト名を表示（TTY/非TTY 両方で表示）
+    console.print(f"[bold blue]{project_name}[/bold blue] ({project_path})")
 
     # プロジェクトディレクトリの存在確認
     if not project_path.exists():
