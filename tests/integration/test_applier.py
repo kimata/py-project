@@ -50,8 +50,8 @@ class TestApplyConfigs:
 
         # ファイルは変更されない
         assert (tmp_project / "pyproject.toml").read_text() == original_pyproject
-        # 出力に "Dry run" が含まれる
-        assert "Dry run" in output.getvalue()
+        # 出力に "確認モード" が含まれる
+        assert "確認モード" in output.getvalue()
 
     def test_apply_specific_project(self, tmp_path, tmp_templates):
         """特定プロジェクトのみ適用"""
@@ -495,7 +495,7 @@ class TestPrintSummary:
         applier._print_summary(console, summary, dry_run=False)
 
         result = output.getvalue()
-        assert "Skipped" in result
+        assert "スキップ" in result
 
     def test_print_summary_with_errors(self):
         """エラーを含むサマリ表示"""
@@ -511,11 +511,11 @@ class TestPrintSummary:
         applier._print_summary(console, summary, dry_run=False)
 
         result = output.getvalue()
-        assert "Errors" in result
+        assert "エラー" in result
         assert "Error 1" in result
 
     def test_print_summary_dry_run_with_changes(self):
-        """ドライランで変更がある場合"""
+        """確認モードで変更がある場合"""
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
@@ -531,7 +531,7 @@ class TestPrintSummary:
         assert "--apply" in result
 
     def test_print_summary_apply_success(self):
-        """適用成功時の Done! 表示"""
+        """適用成功時の 完了！ 表示"""
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
@@ -544,7 +544,7 @@ class TestPrintSummary:
         applier._print_summary(console, summary, dry_run=False)
 
         result = output.getvalue()
-        assert "Done!" in result
+        assert "完了！" in result
 
 
 class TestRunUvSync:

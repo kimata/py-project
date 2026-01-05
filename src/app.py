@@ -40,6 +40,7 @@ import py_project.applier
 import py_project.config
 import py_project.dep_updater
 import py_project.handlers
+import py_project.progress
 
 _SCHEMA_PATH = pathlib.Path(__file__).parent.parent / "schema" / "config.schema"
 
@@ -51,24 +52,31 @@ def execute(
     config_types: list[str] | None = None,
 ) -> int:
     console = rich.console.Console()
+    progress = py_project.progress.ProgressManager(console)
 
-    summary = py_project.applier.apply_configs(
-        config=config,
-        options=options,
-        projects=projects,
-        config_types=config_types,
-        console=console,
-    )
+    try:
+        progress.start()
 
-    return summary.errors
+        summary = py_project.applier.apply_configs(
+            config=config,
+            options=options,
+            projects=projects,
+            config_types=config_types,
+            console=console,
+            progress=progress,
+        )
+
+        return summary.errors
+    finally:
+        progress.stop()
 
 
 def show_config_types() -> None:
     """設定タイプ一覧を表示"""
     console = rich.console.Console()
-    table = rich.table.Table(title="Available Config Types")
-    table.add_column("Name", style="cyan")
-    table.add_column("Description")
+    table = rich.table.Table(title="設定タイプ一覧")
+    table.add_column("名前", style="cyan")
+    table.add_column("説明")
 
     descriptions = {
         "pre-commit": "pre-commit 設定ファイル",
@@ -92,16 +100,16 @@ def show_config_types() -> None:
 def show_projects(config: py_project.config.Config) -> None:
     """プロジェクト一覧を表示"""
     console = rich.console.Console()
-    table = rich.table.Table(title="Configured Projects")
-    table.add_column("Name", style="cyan")
-    table.add_column("Path")
-    table.add_column("Configs")
+    table = rich.table.Table(title="プロジェクト一覧")
+    table.add_column("名前", style="cyan")
+    table.add_column("パス")
+    table.add_column("設定タイプ")
 
     default_configs = config.defaults.configs
 
     for proj in config.projects:
         configs = proj.configs if proj.configs is not None else default_configs
-        configs_str = ", ".join(configs) if configs else "(defaults)"
+        configs_str = ", ".join(configs) if configs else "(デフォルト)"
 
         table.add_row(proj.name, proj.path, configs_str)
 

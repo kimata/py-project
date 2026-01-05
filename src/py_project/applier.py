@@ -1,19 +1,37 @@
 """設定適用ロジック"""
 
+from __future__ import annotations
+
 import dataclasses
 import difflib
 import logging
 import pathlib
 import subprocess
+from typing import TYPE_CHECKING
 
+import rich.box
 import rich.console
+import rich.panel
 import rich.table
 
 import py_project.config
 import py_project.differ
 import py_project.handlers
 
+if TYPE_CHECKING:
+    import py_project.progress
+
 logger = logging.getLogger(__name__)
+
+
+@dataclasses.dataclass
+class ChangeDetail:
+    """個別の変更詳細"""
+
+    project: str
+    config_type: str
+    status: str
+    message: str = ""
 
 
 @dataclasses.dataclass
@@ -28,6 +46,7 @@ class ApplySummary:
         errors: エラー数
         projects_processed: 設定を適用したプロジェクト数（ディレクトリが存在したもののみ）
         error_messages: エラーメッセージのリスト
+        changes: 変更詳細のリスト（created, updated, error のみ記録）
 
     """
 
@@ -38,6 +57,7 @@ class ApplySummary:
     errors: int = 0
     projects_processed: int = 0
     error_messages: list[str] = dataclasses.field(default_factory=list)
+    changes: list[ChangeDetail] = dataclasses.field(default_factory=list)
 
 
 @dataclasses.dataclass
@@ -50,6 +70,7 @@ class ProcessContext:
         config_types: 対象設定タイプのリスト（None の場合は全て）
         summary: 適用結果サマリ（更新される）
         console: Rich Console インスタンス
+        progress: プログレスマネージャ（オプション）
 
     """
 
@@ -58,6 +79,7 @@ class ProcessContext:
     config_types: list[str] | None
     summary: ApplySummary
     console: rich.console.Console
+    progress: py_project.progress.ProgressManager | None = None
 
 
 def get_project_configs(
@@ -121,6 +143,7 @@ def apply_configs(
     projects: list[str] | None = None,
     config_types: list[str] | None = None,
     console: rich.console.Console | None = None,
+    progress: py_project.progress.ProgressManager | None = None,
 ) -> ApplySummary:
     """設定を適用
 
@@ -130,6 +153,7 @@ def apply_configs(
         projects: 対象プロジェクト名のリスト（None の場合は全て）
         config_types: 対象設定タイプのリスト（None の場合は全て）
         console: Rich Console インスタンス
+        progress: プログレスマネージャ（オプション）
 
     Returns:
         適用結果サマリ
@@ -160,11 +184,18 @@ def apply_configs(
         backup=options.backup,
     )
 
-    # モード表示
-    if options.dry_run:
-        console.print("[yellow]🔍 Dry run mode[/yellow] (use --apply to apply changes)\n")
+    # モード表示（非TTY環境でのみ表示）
+    if progress:
+        progress.print(
+            "[yellow]🔍 確認モード[/yellow]（--apply で実際に適用）\n"
+            if options.dry_run
+            else "[green]🚀 設定を適用中...[/green]\n"
+        )
     else:
-        console.print("[green]🚀 Applying configurations...[/green]\n")
+        if options.dry_run:
+            console.print("[yellow]🔍 確認モード[/yellow]（--apply で実際に適用）\n")
+        else:
+            console.print("[green]🚀 設定を適用中...[/green]\n")
 
     # プロセスコンテキスト作成
     proc_ctx = ProcessContext(
@@ -173,18 +204,33 @@ def apply_configs(
         config_types=config_types,
         summary=summary,
         console=console,
+        progress=progress,
     )
 
+    # 対象プロジェクトのリストを作成
+    target_projects = [p for p in config.projects if projects is None or p.name in projects]
+
+    # プログレスバーを設定
+    if progress:
+        progress.set_progress_bar("プロジェクト", len(target_projects))
+
     # 各プロジェクトを処理
-    for project in config.projects:
-        # プロジェクトフィルタ
-        if projects and project.name not in projects:
-            continue
+    for project in target_projects:
+        if progress:
+            progress.set_status(f"処理中: {project.name}")
 
         _process_project(project, proc_ctx)
 
+        if progress:
+            progress.update_progress_bar("プロジェクト")
+
+    # プログレスバーを削除
+    if progress:
+        progress.remove_progress_bar("プロジェクト")
+        progress.set_status("完了！")
+
     # サマリ表示
-    _print_summary(console, summary, dry_run=options.dry_run)
+    _print_summary(console, summary, dry_run=options.dry_run, progress=progress)
 
     return summary
 
@@ -200,15 +246,24 @@ def _process_project(
     config_types = proc_ctx.config_types
     summary = proc_ctx.summary
     console = proc_ctx.console
+    progress = proc_ctx.progress
     defaults = context.config.defaults
 
     project_name = project.name
     project_path = project.get_path()
-    console.print(f"[bold blue]{project_name}[/bold blue] ({project_path})")
+
+    # TTY環境では詳細出力を抑制
+    if progress:
+        progress.print(f"[bold blue]{project_name}[/bold blue] ({project_path})")
+    else:
+        console.print(f"[bold blue]{project_name}[/bold blue] ({project_path})")
 
     # プロジェクトディレクトリの存在確認
     if not project_path.exists():
-        console.print("  [red]! プロジェクトディレクトリが見つかりません[/red]")
+        if progress:
+            progress.print("  [red]! プロジェクトディレクトリが見つかりません[/red]")
+        else:
+            console.print("  [red]! プロジェクトディレクトリが見つかりません[/red]")
         summary.errors += 1
         summary.error_messages.append(f"{project_name}: ディレクトリが見つかりません")
         return
@@ -218,22 +273,31 @@ def _process_project(
     # 適用する設定タイプを取得
     project_configs = get_project_configs(project, defaults)
 
+    # 対象設定タイプをフィルタ
+    target_configs = [c for c in project_configs if config_types is None or c in config_types]
+
     # pyproject が更新されたかどうかを追跡
     pyproject_updated = False
 
     # git add 対象のファイルリスト
     files_to_add: list[pathlib.Path] = []
 
-    # 各設定タイプを処理
-    for config_type in project_configs:
-        # 設定タイプフィルタ
-        if config_types and config_type not in config_types:
-            continue
+    # 設定タイプ用プログレスバーを設定
+    config_bar_name = f"  {project_name}"
+    if progress:
+        progress.set_progress_bar(config_bar_name, len(target_configs))
 
+    # 各設定タイプを処理
+    for config_type in target_configs:
         handler_class = py_project.handlers.HANDLERS.get(config_type)
         if handler_class is None:
-            console.print(f"  [red]! {config_type:15} : 未知の設定タイプ[/red]")
+            if progress:
+                progress.print(f"  [red]! {config_type:15} : 未知の設定タイプ[/red]")
+            else:
+                console.print(f"  [red]! {config_type:15} : 未知の設定タイプ[/red]")
             summary.errors += 1
+            if progress:
+                progress.update_progress_bar(config_bar_name)
             continue
 
         handler = handler_class()
@@ -242,17 +306,25 @@ def _process_project(
         if options.show_diff:
             diff_text = handler.diff(project, context)
             if diff_text:
-                console.print(f"  [cyan]~ {config_type:15}[/cyan]")
+                if progress:
+                    progress.print(f"  [cyan]~ {config_type:15}[/cyan]")
+                else:
+                    console.print(f"  [cyan]~ {config_type:15}[/cyan]")
                 py_project.differ.print_diff(diff_text, console)
             else:
-                console.print(f"  [green]✓ {config_type:15} : up to date[/green]")
+                if progress:
+                    progress.print(f"  [green]✓ {config_type:15} : up to date[/green]")
+                else:
+                    console.print(f"  [green]✓ {config_type:15} : up to date[/green]")
             # --diff のみで --apply なしの場合はスキップ
             if options.dry_run:
+                if progress:
+                    progress.update_progress_bar(config_bar_name)
                 continue
 
         # 適用
         result = handler.apply(project, context)
-        _print_result(console, config_type, result, dry_run=options.dry_run)
+        _print_result(console, config_type, result, dry_run=options.dry_run, progress=progress)
         _update_summary(summary, result, project_name, config_type)
 
         # pyproject または my-py-lib が更新されたかチェック
@@ -264,15 +336,25 @@ def _process_project(
             output_path = handler.get_output_path(project)
             files_to_add.append(output_path)
 
+        if progress:
+            progress.update_progress_bar(config_bar_name)
+
+    # 設定タイプ用プログレスバーを削除
+    if progress:
+        progress.remove_progress_bar(config_bar_name)
+
     # pyproject.toml が更新された場合は uv sync を実行
     if pyproject_updated and not options.dry_run and options.run_sync:
-        _run_uv_sync(project_path, console)
+        _run_uv_sync(project_path, console, progress)
 
     # git add を実行
     if files_to_add:
-        _run_git_add(project_path, files_to_add, console)
+        _run_git_add(project_path, files_to_add, console, progress)
 
-    console.print()
+    if progress:
+        progress.print()
+    else:
+        console.print()
 
 
 def _print_result(
@@ -281,22 +363,28 @@ def _print_result(
     result: py_project.handlers.base.ApplyResult,
     *,
     dry_run: bool,
+    progress: py_project.progress.ProgressManager | None = None,
 ) -> None:
     """適用結果を表示"""
     status_display = {
-        "created": ("[green]+[/green]", "will be created" if dry_run else "created"),
-        "updated": ("[cyan]~[/cyan]", "will be updated" if dry_run else "updated"),
-        "unchanged": ("[green]✓[/green]", "up to date"),
-        "skipped": ("[yellow]-[/yellow]", "skipped"),
-        "error": ("[red]![/red]", "error"),
+        "created": ("[green]+[/green]", "作成予定" if dry_run else "作成"),
+        "updated": ("[cyan]~[/cyan]", "更新予定" if dry_run else "更新"),
+        "unchanged": ("[green]✓[/green]", "変更なし"),
+        "skipped": ("[yellow]-[/yellow]", "スキップ"),
+        "error": ("[red]![/red]", "エラー"),
     }
 
     symbol, text = status_display.get(result.status, ("[white]?[/white]", result.status))
 
     if result.message:
-        console.print(f"  {symbol} {config_type:15} : {text} ({result.message})")
+        msg = f"  {symbol} {config_type:15} : {text} ({result.message})"
     else:
-        console.print(f"  {symbol} {config_type:15} : {text}")
+        msg = f"  {symbol} {config_type:15} : {text}"
+
+    if progress:
+        progress.print(msg)
+    else:
+        console.print(msg)
 
 
 def _update_summary(
@@ -308,23 +396,37 @@ def _update_summary(
     """サマリを更新"""
     if result.status == "created":
         summary.created += 1
+        summary.changes.append(ChangeDetail(project_name, config_type, "created", result.message or ""))
     elif result.status == "updated":
         summary.updated += 1
+        summary.changes.append(ChangeDetail(project_name, config_type, "updated", result.message or ""))
     elif result.status == "unchanged":
         summary.unchanged += 1
     elif result.status == "skipped":
         summary.skipped += 1
     elif result.status == "error":
         summary.errors += 1
+        summary.changes.append(ChangeDetail(project_name, config_type, "error", result.message or ""))
         if result.message:
             summary.error_messages.append(f"{project_name}/{config_type}: {result.message}")
     else:
         logger.warning("未知のステータス: %s (%s/%s)", result.status, project_name, config_type)
 
 
-def _run_uv_sync(project_path: pathlib.Path, console: rich.console.Console) -> None:
+def _run_uv_sync(
+    project_path: pathlib.Path,
+    console: rich.console.Console,
+    progress: py_project.progress.ProgressManager | None = None,
+) -> None:
     """Uv sync を実行"""
-    console.print("  [dim]Running uv sync...[/dim]")
+
+    def _print(msg: str) -> None:
+        if progress:
+            progress.print(msg)
+        else:
+            console.print(msg)
+
+    _print("  [dim]Running uv sync...[/dim]")
     try:
         result = subprocess.run(
             ["uv", "sync"],  # noqa: S607
@@ -335,16 +437,16 @@ def _run_uv_sync(project_path: pathlib.Path, console: rich.console.Console) -> N
             check=False,
         )
         if result.returncode == 0:
-            console.print("  [green]✓ uv sync completed[/green]")
+            _print("  [green]✓ uv sync completed[/green]")
         else:
-            console.print("  [red]! uv sync failed[/red]")
+            _print("  [red]! uv sync failed[/red]")
             if result.stderr:
                 for line in result.stderr.strip().split("\n")[:5]:
-                    console.print(f"    {line}")
+                    _print(f"    {line}")
     except subprocess.TimeoutExpired:
-        console.print("  [red]! uv sync timed out[/red]")
+        _print("  [red]! uv sync timed out[/red]")
     except FileNotFoundError:
-        console.print("  [yellow]! uv command not found[/yellow]")
+        _print("  [yellow]! uv command not found[/yellow]")
 
 
 def _is_git_repo(project_path: pathlib.Path) -> bool:
@@ -366,10 +468,17 @@ def _run_git_add(
     project_path: pathlib.Path,
     files: list[pathlib.Path],
     console: rich.console.Console,
+    progress: py_project.progress.ProgressManager | None = None,
 ) -> None:
     """Git add を実行"""
     if not _is_git_repo(project_path):
         return
+
+    def _print(msg: str) -> None:
+        if progress:
+            progress.print(msg)
+        else:
+            console.print(msg)
 
     # 相対パスに変換
     relative_files = []
@@ -389,41 +498,142 @@ def _run_git_add(
             check=False,
         )
         if result.returncode == 0:
-            console.print(f"  [dim]git add: {', '.join(relative_files)}[/dim]")
+            _print(f"  [dim]git add: {', '.join(relative_files)}[/dim]")
         else:
-            console.print(f"  [red]! git add failed: {result.stderr.strip()}[/red]")
+            _print(f"  [red]! git add failed: {result.stderr.strip()}[/red]")
     except subprocess.TimeoutExpired:
-        console.print("  [red]! git add timed out[/red]")
+        _print("  [red]! git add timed out[/red]")
     except FileNotFoundError:
         pass  # git not installed, silently skip
 
 
-def _print_summary(console: rich.console.Console, summary: ApplySummary, *, dry_run: bool) -> None:
+def _print_summary(
+    console: rich.console.Console,
+    summary: ApplySummary,
+    *,
+    dry_run: bool,
+    progress: py_project.progress.ProgressManager | None = None,
+) -> None:
     """サマリを表示"""
-    table = rich.table.Table(show_header=False, box=None)
-    table.add_column("Key", style="dim")
-    table.add_column("Value")
+    import time
 
-    table.add_row("Projects", str(summary.projects_processed))
-    table.add_row("Created", f"[green]{summary.created}[/green]")
-    table.add_row("Updated", f"[cyan]{summary.updated}[/cyan]")
-    table.add_row("Unchanged", str(summary.unchanged))
+    from rich.console import Group
+
+    # 統計テーブル（横並び）
+    stats_table = rich.table.Table(
+        box=rich.box.ROUNDED,
+        show_header=True,
+        header_style="bold",
+        padding=(0, 1),
+    )
+    stats_table.add_column("📁 プロジェクト", justify="center", style="bold")
+    stats_table.add_column("✨ 作成", justify="center", style="green")
+    stats_table.add_column("🔄 更新", justify="center", style="cyan")
+    stats_table.add_column("✓ 変更なし", justify="center", style="dim")
 
     if summary.skipped > 0:
-        table.add_row("Skipped", f"[yellow]{summary.skipped}[/yellow]")
-
+        stats_table.add_column("⏭️ スキップ", justify="center", style="yellow")
     if summary.errors > 0:
-        table.add_row("Errors", f"[red]{summary.errors}[/red]")
+        stats_table.add_column("❌ エラー", justify="center", style="red bold")
 
-    console.print("[bold]Summary[/bold]")
-    console.print(table)
+    # 行を追加
+    row = [
+        str(summary.projects_processed),
+        str(summary.created),
+        str(summary.updated),
+        str(summary.unchanged),
+    ]
+    if summary.skipped > 0:
+        row.append(str(summary.skipped))
+    if summary.errors > 0:
+        row.append(str(summary.errors))
 
-    if summary.error_messages:
-        console.print("\n[red bold]Errors:[/red bold]")
-        for msg in summary.error_messages:
-            console.print(f"  - {msg}")
+    stats_table.add_row(*row)
 
+    # 経過時間
+    elapsed_str = ""
+    if progress:
+        elapsed = time.time() - progress._start_time
+        minutes, seconds = divmod(int(elapsed), 60)
+        elapsed_str = f"⏱️  経過時間: {minutes:02d}:{seconds:02d}"
+
+    # ステータスメッセージ
     if dry_run and (summary.created > 0 or summary.updated > 0):
-        console.print("\n[yellow]Run with --apply to apply these changes[/yellow]")
-    elif not dry_run and summary.errors == 0:
-        console.print("\n[green]✨ Done![/green]")
+        status_msg = "[yellow]📋 --apply で変更を適用[/yellow]"
+    elif summary.errors > 0:
+        status_msg = f"[red bold]❌ {summary.errors} 件のエラーで完了[/red bold]"
+    else:
+        status_msg = "[green]✨ 完了！[/green]"
+
+    # パネル内のコンテンツを構築
+    content_parts: list[rich.table.Table | str] = [stats_table]
+
+    # 変更詳細テーブル（幅が十分ある場合のみ表示）
+    min_width_for_changes = 80
+    if summary.changes and console.width >= min_width_for_changes:
+        content_parts.append("")
+        content_parts.append("[bold]📝 変更内容:[/bold]")
+
+        changes_table = rich.table.Table(
+            box=rich.box.SIMPLE,
+            show_header=True,
+            header_style="bold dim",
+            padding=(0, 1),
+            expand=False,
+        )
+        changes_table.add_column("プロジェクト", style="cyan", no_wrap=True)
+        changes_table.add_column("設定タイプ", style="white", no_wrap=True)
+        changes_table.add_column("状態", justify="center", no_wrap=True)
+        changes_table.add_column("詳細", style="dim")
+
+        status_style = {
+            "created": "[green]+ 作成[/green]",
+            "updated": "[cyan]~ 更新[/cyan]",
+            "error": "[red]! エラー[/red]",
+        }
+
+        for change in summary.changes:
+            changes_table.add_row(
+                change.project,
+                change.config_type,
+                status_style.get(change.status, change.status),
+                change.message if change.message else "",
+            )
+
+        content_parts.append(changes_table)
+
+    # エラーメッセージがある場合
+    # 変更詳細テーブルが表示されていない場合、または changes に含まれないエラーがある場合は表示
+    show_error_messages = summary.error_messages and (
+        console.width < min_width_for_changes or not summary.changes
+    )
+    if show_error_messages:
+        error_table = rich.table.Table(box=None, show_header=False, padding=(0, 0))
+        error_table.add_column("Error", style="red")
+        for msg in summary.error_messages:
+            error_table.add_row(f"  • {msg}")
+        content_parts.append("")
+        content_parts.append("[red bold]エラー:[/red bold]")
+        content_parts.append(error_table)
+
+    # 経過時間とステータス
+    footer_parts = []
+    if elapsed_str:
+        footer_parts.append(elapsed_str)
+    footer_parts.append(status_msg)
+
+    content_parts.append("")
+    content_parts.append("  ".join(footer_parts))
+
+    panel_content = Group(*content_parts)
+
+    # Panel で囲む
+    panel = rich.panel.Panel(
+        panel_content,
+        title="[bold]📊 サマリー[/bold]",
+        border_style="blue",
+        padding=(1, 2),
+    )
+
+    console.print()
+    console.print(panel)
