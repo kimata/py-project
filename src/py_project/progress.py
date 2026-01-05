@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     pass
 
 # ステータスバーの色定義
-_STATUS_STYLE_NORMAL = "bold #FFFFFF on #3776AB"  # Python ブルー
+_STATUS_STYLE_NORMAL = "bold #FFFFFF on #6366F1"  # インディゴ
 _STATUS_STYLE_ERROR = "bold white on red"
 
 
