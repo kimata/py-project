@@ -797,12 +797,15 @@ class TestGenerateCommitMessage:
 
 
 class TestRunGitCommit:
-    """_run_git_commit のテスト"""
+    """_run_git_commit のテスト
+
+    Note: stash の処理は _process_project で行われるため、
+    _run_git_commit のテストでは stash 関連のテストは含まない。
+
+    """
 
     def test_run_git_commit_success(self, tmp_path, mocker):
-        """git commit 成功（他の変更なし）"""
-        mocker.patch.object(applier, "_is_git_repo", return_value=True)
-        mocker.patch.object(applier, "_has_uncommitted_changes", return_value=False)
+        """git commit 成功"""
         mock_run = mocker.patch("subprocess.run")
         mock_run.return_value.returncode = 0
 
@@ -816,59 +819,8 @@ class TestRunGitCommit:
         assert "git commit" in result
         assert "file1.txt" in result
 
-    def test_run_git_commit_with_stash(self, tmp_path, mocker):
-        """他の変更がある場合は stash して commit"""
-        mocker.patch.object(applier, "_is_git_repo", return_value=True)
-        mocker.patch.object(applier, "_has_uncommitted_changes", return_value=True)
-        mock_stash = mocker.patch.object(applier, "_run_git_stash", return_value=True)
-        mock_stash_pop = mocker.patch.object(applier, "_run_git_stash_pop")
-        mock_run = mocker.patch("subprocess.run")
-        mock_run.return_value.returncode = 0
-
-        output = io.StringIO()
-        console = rich.console.Console(file=output, force_terminal=False)
-
-        files_info = [(tmp_path / "file1.txt", "config-type")]
-        applier._run_git_commit(tmp_path, files_info, console)
-
-        mock_stash.assert_called_once()
-        mock_stash_pop.assert_called_once()
-
-    def test_run_git_commit_stash_failure(self, tmp_path, mocker):
-        """stash に失敗した場合は commit をスキップ"""
-        mocker.patch.object(applier, "_is_git_repo", return_value=True)
-        mocker.patch.object(applier, "_has_uncommitted_changes", return_value=True)
-        mocker.patch.object(applier, "_run_git_stash", return_value=False)
-        mock_run = mocker.patch("subprocess.run")
-
-        output = io.StringIO()
-        console = rich.console.Console(file=output, force_terminal=False)
-
-        files_info = [(tmp_path / "file1.txt", "config-type")]
-        applier._run_git_commit(tmp_path, files_info, console)
-
-        # subprocess.run（git add/commit）は呼ばれない
-        mock_run.assert_not_called()
-        assert "スキップ" in output.getvalue()
-
-    def test_run_git_commit_not_git_repo(self, tmp_path, mocker):
-        """Git リポジトリでない場合はスキップ"""
-        mocker.patch.object(applier, "_is_git_repo", return_value=False)
-        mock_run = mocker.patch("subprocess.run")
-
-        output = io.StringIO()
-        console = rich.console.Console(file=output, force_terminal=False)
-
-        files_info = [(tmp_path / "file1.txt", "config-type")]
-        applier._run_git_commit(tmp_path, files_info, console)
-
-        mock_run.assert_not_called()
-        assert output.getvalue() == ""
-
     def test_run_git_commit_add_failure(self, tmp_path, mocker):
         """git add 失敗"""
-        mocker.patch.object(applier, "_is_git_repo", return_value=True)
-        mocker.patch.object(applier, "_has_uncommitted_changes", return_value=False)
         mock_run = mocker.patch("subprocess.run")
         mock_run.return_value.returncode = 1
         mock_run.return_value.stderr = "fatal: error"
@@ -885,8 +837,6 @@ class TestRunGitCommit:
         """プロジェクト外のファイルの場合はフルパスで commit"""
         import pathlib
 
-        mocker.patch.object(applier, "_is_git_repo", return_value=True)
-        mocker.patch.object(applier, "_has_uncommitted_changes", return_value=False)
         mock_run = mocker.patch("subprocess.run")
         mock_run.return_value.returncode = 0
 
@@ -1174,8 +1124,6 @@ class TestRunGitCommitWithProgress:
     def test_run_git_commit_with_progress(self, tmp_path, mocker):
         """progress を渡す場合"""
 
-        mocker.patch.object(applier, "_is_git_repo", return_value=True)
-        mocker.patch.object(applier, "_has_uncommitted_changes", return_value=False)
         mock_run = mocker.patch("subprocess.run")
         mock_run.return_value.returncode = 0
 

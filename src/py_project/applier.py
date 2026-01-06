@@ -279,6 +279,16 @@ def _process_project(
     # git commit 対象のファイル情報リスト (パス, config_type)
     files_to_commit: list[tuple[pathlib.Path, str]] = []
 
+    # git commit オプションが有効な場合、処理前に既存の変更を stash
+    stashed = False
+    if (
+        options.git_commit
+        and not options.dry_run
+        and _is_git_repo(project_path)
+        and _has_uncommitted_changes(project_path)
+    ):
+        stashed = _run_git_stash(project_path, console, progress)
+
     # 設定タイプ用プログレスバーを設定
     config_bar_name = f"  {project_name}"
     if progress:
@@ -347,6 +357,10 @@ def _process_project(
     # git commit を実行
     if files_to_commit:
         _run_git_commit(project_path, files_to_commit, console, progress)
+
+    # stash した場合は復元
+    if stashed:
+        _run_git_stash_pop(project_path, console, progress)
 
     if progress:
         progress.print()
@@ -574,13 +588,7 @@ def _run_git_commit(
     console: rich.console.Console,
     progress: my_lib.cui_progress.ProgressManager | None = None,
 ) -> None:
-    """Git add & commit を実行
-
-    他の変更がある場合は stash で退避し、commit 後に復元する。
-
-    """
-    if not _is_git_repo(project_path):
-        return
+    """Git add & commit を実行"""
 
     def _print(msg: str) -> None:
         if progress:
@@ -597,14 +605,6 @@ def _run_git_commit(
             relative_files.append((str(file_path), config_type))
 
     file_paths = [f[0] for f in relative_files]
-
-    # 他の変更があるか確認し、あれば stash
-    stashed = False
-    if _has_uncommitted_changes(project_path):
-        stashed = _run_git_stash(project_path, console, progress)
-        if not stashed:
-            _print("  [yellow]! stash に失敗したため commit をスキップ[/yellow]")
-            return
 
     try:
         # git add
@@ -640,10 +640,6 @@ def _run_git_commit(
         _print("  [red]! git commit timed out[/red]")
     except FileNotFoundError:
         pass  # git not installed, silently skip
-    finally:
-        # stash した場合は復元
-        if stashed:
-            _run_git_stash_pop(project_path, console, progress)
 
 
 def _print_summary(
