@@ -32,6 +32,7 @@ import pathlib
 import sys
 
 import my_lib.config
+import my_lib.cui_progress
 import my_lib.logger
 import rich.console
 import rich.table
@@ -40,7 +41,6 @@ import py_project.applier
 import py_project.config
 import py_project.dep_updater
 import py_project.handlers
-import py_project.progress
 
 _SCHEMA_PATH = pathlib.Path(__file__).parent.parent / "schema" / "config.schema"
 
@@ -52,7 +52,10 @@ def execute(
     config_types: list[str] | None = None,
 ) -> int:
     console = rich.console.Console()
-    progress = py_project.progress.ProgressManager(console)
+    progress = my_lib.cui_progress.ProgressManager(
+        console=console,
+        title=" 🐍 py-project ",
+    )
 
     try:
         progress.start()

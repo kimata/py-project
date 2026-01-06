@@ -7,12 +7,12 @@ applier.py の統合テスト
 import io
 import textwrap
 
+import my_lib.cui_progress
 import rich.console
 
 import py_project.applier as applier
 import py_project.config
 import py_project.handlers.base as handlers_base
-import py_project.progress
 
 
 class TestApplyConfigs:
@@ -918,7 +918,7 @@ class TestApplyWithProgress:
         console = rich.console.Console(file=output, force_terminal=False)
 
         # ProgressManager のモック
-        mock_progress = mocker.MagicMock(spec=py_project.progress.ProgressManager)
+        mock_progress = mocker.MagicMock(spec=my_lib.cui_progress.ProgressManager)
         mock_progress._start_time = 0  # 経過時間計算用
 
         options = py_project.config.ApplyOptions(dry_run=False, run_sync=False)
@@ -952,7 +952,7 @@ class TestApplyWithProgress:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        mock_progress = mocker.MagicMock(spec=py_project.progress.ProgressManager)
+        mock_progress = mocker.MagicMock(spec=my_lib.cui_progress.ProgressManager)
         mock_progress._start_time = 0
 
         options = py_project.config.ApplyOptions(dry_run=False)
@@ -985,7 +985,7 @@ class TestApplyWithProgress:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        mock_progress = mocker.MagicMock(spec=py_project.progress.ProgressManager)
+        mock_progress = mocker.MagicMock(spec=my_lib.cui_progress.ProgressManager)
         mock_progress._start_time = 0
 
         options = py_project.config.ApplyOptions(dry_run=False)
@@ -1007,7 +1007,7 @@ class TestApplyWithProgress:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        mock_progress = mocker.MagicMock(spec=py_project.progress.ProgressManager)
+        mock_progress = mocker.MagicMock(spec=my_lib.cui_progress.ProgressManager)
         mock_progress._start_time = 0
 
         options = py_project.config.ApplyOptions(show_diff=True, dry_run=True)
@@ -1034,7 +1034,7 @@ class TestRunUvSyncWithProgress:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        mock_progress = mocker.MagicMock(spec=py_project.progress.ProgressManager)
+        mock_progress = mocker.MagicMock(spec=my_lib.cui_progress.ProgressManager)
 
         applier._run_uv_sync(tmp_project, console, progress=mock_progress)
 
@@ -1055,7 +1055,7 @@ class TestRunGitAddWithProgress:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        mock_progress = mocker.MagicMock(spec=py_project.progress.ProgressManager)
+        mock_progress = mocker.MagicMock(spec=my_lib.cui_progress.ProgressManager)
 
         files = [tmp_path / "file1.txt"]
         applier._run_git_add(tmp_path, files, console, progress=mock_progress)
@@ -1073,7 +1073,7 @@ class TestPrintResultWithProgress:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        mock_progress = mocker.MagicMock(spec=py_project.progress.ProgressManager)
+        mock_progress = mocker.MagicMock(spec=my_lib.cui_progress.ProgressManager)
 
         result = handlers_base.ApplyResult(status="updated")
         applier._print_result(console, "pyproject", result, dry_run=False, progress=mock_progress)
@@ -1091,7 +1091,7 @@ class TestPrintSummaryWithProgress:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        mock_progress = mocker.MagicMock(spec=py_project.progress.ProgressManager)
+        mock_progress = mocker.MagicMock(spec=my_lib.cui_progress.ProgressManager)
         mock_progress._start_time = 0  # 現在時刻との差で経過時間が計算される
 
         summary = applier.ApplySummary(
@@ -1158,7 +1158,7 @@ class TestShowDiffNoDiffWithProgress:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        mock_progress = mocker.MagicMock(spec=py_project.progress.ProgressManager)
+        mock_progress = mocker.MagicMock(spec=my_lib.cui_progress.ProgressManager)
         mock_progress._start_time = 0
 
         # show_diff=True で差分なし + progress
@@ -1201,7 +1201,7 @@ class TestShowDiffAndApply:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        mock_progress = mocker.MagicMock(spec=py_project.progress.ProgressManager)
+        mock_progress = mocker.MagicMock(spec=my_lib.cui_progress.ProgressManager)
         mock_progress._start_time = 0
 
         # show_diff=True かつ dry_run=False で実際に適用

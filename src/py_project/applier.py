@@ -19,7 +19,7 @@ import py_project.differ
 import py_project.handlers
 
 if TYPE_CHECKING:
-    import py_project.progress
+    import my_lib.cui_progress
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ class ProcessContext:
     config_types: list[str] | None
     summary: ApplySummary
     console: rich.console.Console
-    progress: py_project.progress.ProgressManager | None = None
+    progress: my_lib.cui_progress.ProgressManager | None = None
 
 
 def get_project_configs(
@@ -143,7 +143,7 @@ def apply_configs(
     projects: list[str] | None = None,
     config_types: list[str] | None = None,
     console: rich.console.Console | None = None,
-    progress: py_project.progress.ProgressManager | None = None,
+    progress: my_lib.cui_progress.ProgressManager | None = None,
 ) -> ApplySummary:
     """設定を適用
 
@@ -360,7 +360,7 @@ def _print_result(
     result: py_project.handlers.base.ApplyResult,
     *,
     dry_run: bool,
-    progress: py_project.progress.ProgressManager | None = None,
+    progress: my_lib.cui_progress.ProgressManager | None = None,
 ) -> None:
     """適用結果を表示"""
     status_display = {
@@ -413,7 +413,7 @@ def _update_summary(
 def _run_uv_sync(
     project_path: pathlib.Path,
     console: rich.console.Console,
-    progress: py_project.progress.ProgressManager | None = None,
+    progress: my_lib.cui_progress.ProgressManager | None = None,
 ) -> None:
     """Uv sync を実行"""
 
@@ -465,7 +465,7 @@ def _run_git_add(
     project_path: pathlib.Path,
     files: list[pathlib.Path],
     console: rich.console.Console,
-    progress: py_project.progress.ProgressManager | None = None,
+    progress: my_lib.cui_progress.ProgressManager | None = None,
 ) -> None:
     """Git add を実行"""
     if not _is_git_repo(project_path):
@@ -509,7 +509,7 @@ def _print_summary(
     summary: ApplySummary,
     *,
     dry_run: bool,
-    progress: py_project.progress.ProgressManager | None = None,
+    progress: my_lib.cui_progress.ProgressManager | None = None,
 ) -> None:
     """サマリを表示"""
     import time
