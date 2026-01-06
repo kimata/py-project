@@ -276,8 +276,8 @@ def _process_project(
     # pyproject が更新されたかどうかを追跡
     pyproject_updated = False
 
-    # git add 対象のファイルリスト
-    files_to_add: list[pathlib.Path] = []
+    # git commit 対象のファイル情報リスト (パス, config_type)
+    files_to_commit: list[tuple[pathlib.Path, str]] = []
 
     # 設定タイプ用プログレスバーを設定
     config_bar_name = f"  {project_name}"
@@ -328,10 +328,10 @@ def _process_project(
         if config_type in ("pyproject", "my-py-lib") and result.status == "updated":
             pyproject_updated = True
 
-        # git add 対象のファイルを追加
-        if options.git_add and result.status in ("created", "updated") and not options.dry_run:
+        # git commit 対象のファイルを追加
+        if options.git_commit and result.status in ("created", "updated") and not options.dry_run:
             output_path = handler.get_output_path(project)
-            files_to_add.append(output_path)
+            files_to_commit.append((output_path, config_type))
 
         if progress:
             progress.update_progress_bar(config_bar_name)
@@ -344,9 +344,9 @@ def _process_project(
     if pyproject_updated and not options.dry_run and options.run_sync:
         _run_uv_sync(project_path, console, progress)
 
-    # git add を実行
-    if files_to_add:
-        _run_git_add(project_path, files_to_add, console, progress)
+    # git commit を実行
+    if files_to_commit:
+        _run_git_commit(project_path, files_to_commit, console, progress)
 
     if progress:
         progress.print()
@@ -461,13 +461,124 @@ def _is_git_repo(project_path: pathlib.Path) -> bool:
         return False
 
 
-def _run_git_add(
+def _has_uncommitted_changes(project_path: pathlib.Path) -> bool:
+    """未コミットの変更があるか確認"""
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain"],  # noqa: S607
+            cwd=project_path,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        return bool(result.stdout.strip())
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return False
+
+
+def _run_git_stash(
     project_path: pathlib.Path,
-    files: list[pathlib.Path],
+    console: rich.console.Console,
+    progress: my_lib.cui_progress.ProgressManager | None = None,
+) -> bool:
+    """Git stash を実行
+
+    Returns:
+        stash が成功したかどうか
+
+    """
+
+    def _print(msg: str) -> None:
+        if progress:
+            progress.print(msg)
+        else:
+            console.print(msg)
+
+    try:
+        result = subprocess.run(
+            ["git", "stash", "push", "-m", "py-project: temporary stash"],  # noqa: S607
+            cwd=project_path,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        if result.returncode == 0:
+            _print("  [dim]git stash: 既存の変更を一時退避[/dim]")
+            return True
+        _print(f"  [red]! git stash failed: {result.stderr.strip()}[/red]")
+        return False
+    except subprocess.TimeoutExpired:
+        _print("  [red]! git stash timed out[/red]")
+        return False
+    except FileNotFoundError:
+        return False
+
+
+def _run_git_stash_pop(
+    project_path: pathlib.Path,
     console: rich.console.Console,
     progress: my_lib.cui_progress.ProgressManager | None = None,
 ) -> None:
-    """Git add を実行"""
+    """Git stash pop を実行"""
+
+    def _print(msg: str) -> None:
+        if progress:
+            progress.print(msg)
+        else:
+            console.print(msg)
+
+    try:
+        result = subprocess.run(
+            ["git", "stash", "pop"],  # noqa: S607
+            cwd=project_path,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        if result.returncode == 0:
+            _print("  [dim]git stash pop: 退避した変更を復元[/dim]")
+        else:
+            _print(f"  [yellow]! git stash pop failed: {result.stderr.strip()}[/yellow]")
+    except subprocess.TimeoutExpired:
+        _print("  [red]! git stash pop timed out[/red]")
+    except FileNotFoundError:
+        pass
+
+
+def _generate_commit_message(files_info: list[tuple[str, str]]) -> str:
+    """Commit メッセージを生成
+
+    Args:
+        files_info: (ファイル名, config_type) のリスト
+
+    Returns:
+        commit メッセージ
+
+    """
+    lines = []
+    for filename, config_type in files_info:
+        lines.append(f"- {filename}: {config_type} を更新")
+
+    lines.append("")
+    lines.append("🤖 Generated with [py-project](https://github.com/kimata/py-project)")
+
+    return "\n".join(lines)
+
+
+def _run_git_commit(
+    project_path: pathlib.Path,
+    files_info: list[tuple[pathlib.Path, str]],
+    console: rich.console.Console,
+    progress: my_lib.cui_progress.ProgressManager | None = None,
+) -> None:
+    """Git add & commit を実行
+
+    他の変更がある場合は stash で退避し、commit 後に復元する。
+
+    """
     if not _is_git_repo(project_path):
         return
 
@@ -478,30 +589,61 @@ def _run_git_add(
             console.print(msg)
 
     # 相対パスに変換
-    relative_files = []
-    for file_path in files:
+    relative_files: list[tuple[str, str]] = []
+    for file_path, config_type in files_info:
         try:
-            relative_files.append(str(file_path.relative_to(project_path)))
+            relative_files.append((str(file_path.relative_to(project_path)), config_type))
         except ValueError:
-            relative_files.append(str(file_path))
+            relative_files.append((str(file_path), config_type))
+
+    file_paths = [f[0] for f in relative_files]
+
+    # 他の変更があるか確認し、あれば stash
+    stashed = False
+    if _has_uncommitted_changes(project_path):
+        stashed = _run_git_stash(project_path, console, progress)
+        if not stashed:
+            _print("  [yellow]! stash に失敗したため commit をスキップ[/yellow]")
+            return
 
     try:
-        result = subprocess.run(  # noqa: S603
-            ["git", "add", *relative_files],  # noqa: S607
+        # git add
+        add_result = subprocess.run(  # noqa: S603
+            ["git", "add", *file_paths],  # noqa: S607
             cwd=project_path,
             capture_output=True,
             text=True,
             timeout=30,
             check=False,
         )
-        if result.returncode == 0:
-            _print(f"  [dim]git add: {', '.join(relative_files)}[/dim]")
+        if add_result.returncode != 0:
+            _print(f"  [red]! git add failed: {add_result.stderr.strip()}[/red]")
+            return
+
+        # commit メッセージを生成
+        commit_message = _generate_commit_message(relative_files)
+
+        # git commit
+        commit_result = subprocess.run(  # noqa: S603
+            ["git", "commit", "-m", commit_message],  # noqa: S607
+            cwd=project_path,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        if commit_result.returncode == 0:
+            _print(f"  [green]✓ git commit: {', '.join(file_paths)}[/green]")
         else:
-            _print(f"  [red]! git add failed: {result.stderr.strip()}[/red]")
+            _print(f"  [red]! git commit failed: {commit_result.stderr.strip()}[/red]")
     except subprocess.TimeoutExpired:
-        _print("  [red]! git add timed out[/red]")
+        _print("  [red]! git commit timed out[/red]")
     except FileNotFoundError:
         pass  # git not installed, silently skip
+    finally:
+        # stash した場合は復元
+        if stashed:
+            _run_git_stash_pop(project_path, console, progress)
 
 
 def _print_summary(

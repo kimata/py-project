@@ -278,7 +278,7 @@ class TestApplyOptions:
         assert options.backup is False
         assert options.show_diff is False
         assert options.run_sync is True
-        assert options.git_add is False
+        assert options.git_commit is False
 
     def test_custom_values(self):
         """カスタム値のテスト"""
@@ -287,11 +287,11 @@ class TestApplyOptions:
             backup=True,
             show_diff=True,
             run_sync=False,
-            git_add=True,
+            git_commit=True,
         )
 
         assert options.dry_run is False
         assert options.backup is True
         assert options.show_diff is True
         assert options.run_sync is False
-        assert options.git_add is True
+        assert options.git_commit is True
