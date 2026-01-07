@@ -559,7 +559,10 @@ def _run_git_stash_pop(
     console: rich.console.Console,
     progress: my_lib.cui_progress.ProgressManager | None = None,
 ) -> None:
-    """Git stash pop を実行"""
+    """Git stash pop を実行
+
+    コンフリクトが発生した場合は、状態をクリーンアップして stash を削除する。
+    """
 
     def _print(msg: str) -> None:
         if progress:
@@ -579,7 +582,36 @@ def _run_git_stash_pop(
         if result.returncode == 0:
             _print("  [dim]git stash pop: 退避した変更を復元[/dim]")
         else:
-            _print(f"  [yellow]! git stash pop failed: {result.stderr.strip()}[/yellow]")
+            # コンフリクトが発生した場合はクリーンアップ
+            combined_output = result.stdout + result.stderr
+            if "CONFLICT" in combined_output or "overwritten by merge" in combined_output:
+                _print("  [yellow]! stash pop でコンフリクト発生、クリーンアップ中...[/yellow]")
+                # コンフリクトを解消（コミット済みの状態に戻す）
+                subprocess.run(
+                    ["git", "checkout", "--theirs", "."],  # noqa: S607
+                    cwd=project_path,
+                    capture_output=True,
+                    timeout=30,
+                    check=False,
+                )
+                subprocess.run(
+                    ["git", "reset", "HEAD"],  # noqa: S607
+                    cwd=project_path,
+                    capture_output=True,
+                    timeout=30,
+                    check=False,
+                )
+                # stash を削除（pop は失敗しても stash は残る）
+                subprocess.run(
+                    ["git", "stash", "drop"],  # noqa: S607
+                    cwd=project_path,
+                    capture_output=True,
+                    timeout=30,
+                    check=False,
+                )
+                _print("  [yellow]! 退避した変更は適用済みの内容と競合したため破棄されました[/yellow]")
+            else:
+                _print(f"  [yellow]! git stash pop failed: {result.stderr.strip()}[/yellow]")
     except subprocess.TimeoutExpired:
         _print("  [red]! git stash pop timed out[/red]")
     except FileNotFoundError:

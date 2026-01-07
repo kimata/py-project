@@ -756,10 +756,11 @@ class TestRunGitStashPop:
         assert "復元" in output.getvalue()
 
     def test_run_git_stash_pop_failure(self, tmp_path, mocker):
-        """git stash pop 失敗"""
+        """git stash pop 失敗（コンフリクト以外）"""
         mock_run = mocker.patch("subprocess.run")
         mock_run.return_value.returncode = 1
-        mock_run.return_value.stderr = "conflict"
+        mock_run.return_value.stdout = ""
+        mock_run.return_value.stderr = "some error"
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
@@ -767,6 +768,53 @@ class TestRunGitStashPop:
         applier._run_git_stash_pop(tmp_path, console)
 
         assert "stash pop failed" in output.getvalue()
+
+    def test_run_git_stash_pop_conflict(self, tmp_path, mocker):
+        """git stash pop でコンフリクト発生"""
+        mock_run = mocker.patch("subprocess.run")
+        # stash pop がコンフリクトで失敗、その後のクリーンアップは成功
+        mock_run.side_effect = [
+            mocker.MagicMock(
+                returncode=1,
+                stdout="CONFLICT (content): Merge conflict in file.txt",
+                stderr="",
+            ),
+            mocker.MagicMock(returncode=0),  # checkout --theirs
+            mocker.MagicMock(returncode=0),  # reset HEAD
+            mocker.MagicMock(returncode=0),  # stash drop
+        ]
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        applier._run_git_stash_pop(tmp_path, console)
+
+        output_text = output.getvalue()
+        assert "コンフリクト発生" in output_text
+        assert "破棄されました" in output_text
+
+    def test_run_git_stash_pop_overwritten_by_merge(self, tmp_path, mocker):
+        """git stash pop で overwritten by merge エラー"""
+        mock_run = mocker.patch("subprocess.run")
+        mock_run.side_effect = [
+            mocker.MagicMock(
+                returncode=1,
+                stdout="",
+                stderr="error: Your local changes would be overwritten by merge",
+            ),
+            mocker.MagicMock(returncode=0),  # checkout --theirs
+            mocker.MagicMock(returncode=0),  # reset HEAD
+            mocker.MagicMock(returncode=0),  # stash drop
+        ]
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        applier._run_git_stash_pop(tmp_path, console)
+
+        output_text = output.getvalue()
+        assert "コンフリクト発生" in output_text
+        assert "破棄されました" in output_text
 
 
 class TestGenerateCommitMessage:
