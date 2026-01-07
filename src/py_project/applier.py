@@ -279,10 +279,13 @@ def _process_project(
     # git commit 対象のファイル情報リスト (パス, config_type)
     files_to_commit: list[tuple[pathlib.Path, str]] = []
 
+    # git 操作が有効かどうか（git_push は git_commit を含む）
+    do_git_commit = options.git_commit or options.git_push
+
     # git commit オプションが有効な場合、処理前に既存の変更を stash
     stashed = False
     if (
-        options.git_commit
+        do_git_commit
         and not options.dry_run
         and _is_git_repo(project_path)
         and _has_uncommitted_changes(project_path)
@@ -339,7 +342,7 @@ def _process_project(
             pyproject_updated = True
 
         # git commit 対象のファイルを追加
-        if options.git_commit and result.status in ("created", "updated") and not options.dry_run:
+        if do_git_commit and result.status in ("created", "updated") and not options.dry_run:
             output_path = handler.get_output_path(project)
             files_to_commit.append((output_path, config_type))
 
@@ -351,12 +354,25 @@ def _process_project(
         progress.remove_progress_bar(config_bar_name)
 
     # pyproject.toml が更新された場合は uv sync を実行
+    uv_sync_success = False
     if pyproject_updated and not options.dry_run and options.run_sync:
-        _run_uv_sync(project_path, console, progress)
+        uv_sync_success = _run_uv_sync(project_path, console, progress)
+
+        # uv sync が成功した場合は uv.lock も commit 対象に追加
+        if uv_sync_success and do_git_commit:
+            uv_lock_path = project_path / "uv.lock"
+            if uv_lock_path.exists():
+                files_to_commit.append((uv_lock_path, "uv.lock"))
 
     # git commit を実行
     if files_to_commit:
-        _run_git_commit(project_path, files_to_commit, console, progress)
+        commit_success = _run_git_commit(
+            project_path, files_to_commit, console, progress, will_push=options.git_push
+        )
+
+        # push が有効で commit が成功した場合は push も実行
+        if options.git_push and commit_success:
+            _run_git_push(project_path, files_to_commit, console, progress)
 
     # stash した場合は復元
     if stashed:
@@ -428,8 +444,13 @@ def _run_uv_sync(
     project_path: pathlib.Path,
     console: rich.console.Console,
     progress: my_lib.cui_progress.ProgressManager | None = None,
-) -> None:
-    """Uv sync を実行"""
+) -> bool:
+    """Uv sync を実行
+
+    Returns:
+        sync が成功したかどうか
+
+    """
 
     def _print(msg: str) -> None:
         if progress:
@@ -449,15 +470,18 @@ def _run_uv_sync(
         )
         if result.returncode == 0:
             _print("  [green]✓ uv sync completed[/green]")
-        else:
-            _print("  [red]! uv sync failed[/red]")
-            if result.stderr:
-                for line in result.stderr.strip().split("\n")[:5]:
-                    _print(f"    {line}")
+            return True
+        _print("  [red]! uv sync failed[/red]")
+        if result.stderr:
+            for line in result.stderr.strip().split("\n")[:5]:
+                _print(f"    {line}")
+        return False
     except subprocess.TimeoutExpired:
         _print("  [red]! uv sync timed out[/red]")
+        return False
     except FileNotFoundError:
         _print("  [yellow]! uv command not found[/yellow]")
+        return False
 
 
 def _is_git_repo(project_path: pathlib.Path) -> bool:
@@ -587,8 +611,22 @@ def _run_git_commit(
     files_info: list[tuple[pathlib.Path, str]],
     console: rich.console.Console,
     progress: my_lib.cui_progress.ProgressManager | None = None,
-) -> None:
-    """Git add & commit を実行"""
+    *,
+    will_push: bool = False,
+) -> bool:
+    """Git add & commit を実行
+
+    Args:
+        project_path: プロジェクトのパス
+        files_info: (ファイルパス, config_type) のリスト
+        console: Rich Console インスタンス
+        progress: プログレスマネージャ（オプション）
+        will_push: この後 push する予定かどうか（ログメッセージ制御用）
+
+    Returns:
+        commit が成功したかどうか
+
+    """
 
     def _print(msg: str) -> None:
         if progress:
@@ -618,7 +656,7 @@ def _run_git_commit(
         )
         if add_result.returncode != 0:
             _print(f"  [red]! git add failed: {add_result.stderr.strip()}[/red]")
-            return
+            return False
 
         # commit メッセージを生成
         commit_message = _generate_commit_message(relative_files)
@@ -633,13 +671,71 @@ def _run_git_commit(
             check=False,
         )
         if commit_result.returncode == 0:
-            _print(f"  [green]✓ git commit: {', '.join(file_paths)}[/green]")
-        else:
-            _print(f"  [red]! git commit failed: {commit_result.stderr.strip()}[/red]")
+            # push する場合は commit のログを抑制（push のログでまとめて表示）
+            if not will_push:
+                _print(f"  [green]✓ git commit: {', '.join(file_paths)}[/green]")
+            return True
+        _print(f"  [red]! git commit failed: {commit_result.stderr.strip()}[/red]")
+        return False
     except subprocess.TimeoutExpired:
         _print("  [red]! git commit timed out[/red]")
+        return False
     except FileNotFoundError:
-        pass  # git not installed, silently skip
+        return False  # git not installed, silently skip
+
+
+def _run_git_push(
+    project_path: pathlib.Path,
+    files_info: list[tuple[pathlib.Path, str]],
+    console: rich.console.Console,
+    progress: my_lib.cui_progress.ProgressManager | None = None,
+) -> bool:
+    """Git push を実行
+
+    Args:
+        project_path: プロジェクトのパス
+        files_info: コミットしたファイル情報（ログ表示用）
+        console: Rich Console インスタンス
+        progress: プログレスマネージャ（オプション）
+
+    Returns:
+        push が成功したかどうか
+
+    """
+
+    def _print(msg: str) -> None:
+        if progress:
+            progress.print(msg)
+        else:
+            console.print(msg)
+
+    # 相対パスに変換
+    file_paths: list[str] = []
+    for file_path, _ in files_info:
+        try:
+            file_paths.append(str(file_path.relative_to(project_path)))
+        except ValueError:
+            file_paths.append(str(file_path))
+
+    try:
+        push_result = subprocess.run(
+            ["git", "push"],  # noqa: S607
+            cwd=project_path,
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+        if push_result.returncode == 0:
+            _print(f"  [green]✓ git commit & push: {', '.join(file_paths)}[/green]")
+            return True
+        _print(f"  [red]! git push failed: {push_result.stderr.strip()}[/red]")
+        return False
+    except subprocess.TimeoutExpired:
+        _print("  [red]! git push timed out[/red]")
+        return False
+    except FileNotFoundError:
+        return False  # git not installed, silently skip
 
 
 def _print_summary(

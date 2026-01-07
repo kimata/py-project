@@ -279,6 +279,7 @@ class TestApplyOptions:
         assert options.show_diff is False
         assert options.run_sync is True
         assert options.git_commit is False
+        assert options.git_push is False
 
     def test_custom_values(self):
         """カスタム値のテスト"""
@@ -288,6 +289,7 @@ class TestApplyOptions:
             show_diff=True,
             run_sync=False,
             git_commit=True,
+            git_push=False,
         )
 
         assert options.dry_run is False
@@ -295,3 +297,16 @@ class TestApplyOptions:
         assert options.show_diff is True
         assert options.run_sync is False
         assert options.git_commit is True
+        assert options.git_push is False
+
+    def test_git_push_option(self):
+        """git_push オプションのテスト"""
+        options = py_project.config.ApplyOptions(
+            dry_run=False,
+            git_push=True,
+        )
+
+        assert options.dry_run is False
+        assert options.git_push is True
+        # git_push は git_commit を含む（ロジックは applier 側で処理）
+        assert options.git_commit is False

@@ -3,7 +3,7 @@
 複数の Python プロジェクトに標準的な設定を一括適用します。
 
 Usage:
-  app.py [-c CONFIG] [-a] [-p PROJECT]... [-t CONFIG_TYPE]... [-d] [-b] [-v] [--no-sync] [--git-commit]
+  app.py [-c CONFIG] [-a] [-p PROJECT]... [-t TYPE]... [-d] [-b] [-v] [options]
   app.py [-c CONFIG] --validate
   app.py [-c CONFIG] --list-projects
   app.py --list-configs
@@ -19,6 +19,7 @@ Options:
   -v, --verbose                 詳細ログを出力します。
   --no-sync                     pyproject.toml 更新後に uv sync を実行しません。
   --git-commit                  更新したファイルを git add & commit します。
+  --git-push                    更新したファイルを git add & commit & push します。
   --validate                    設定ファイルの検証のみ行います。
   --list-projects               プロジェクト一覧を表示します。
   --list-configs                設定タイプ一覧を表示します。
@@ -134,6 +135,7 @@ if __name__ == "__main__":  # pragma: no cover
     verbose: bool = args["--verbose"]
     no_sync: bool = args["--no-sync"]
     git_commit_flag: bool = args["--git-commit"]
+    git_push_flag: bool = args["--git-push"]
     validate_only: bool = args["--validate"]
     list_projects_flag: bool = args["--list-projects"]
     list_configs_flag: bool = args["--list-configs"]
@@ -193,6 +195,7 @@ if __name__ == "__main__":  # pragma: no cover
         show_diff=show_diff,
         run_sync=not no_sync,
         git_commit=git_commit_flag,
+        git_push=git_push_flag,
     )
     ret_code = execute(
         config=config,

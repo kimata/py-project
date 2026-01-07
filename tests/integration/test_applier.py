@@ -573,10 +573,10 @@ class TestRunUvSync:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        applier._run_uv_sync(tmp_project, console)
+        result = applier._run_uv_sync(tmp_project, console)
 
-        result = output.getvalue()
-        assert "uv sync completed" in result
+        assert result is True
+        assert "uv sync completed" in output.getvalue()
 
     def test_run_uv_sync_failure_with_stderr(self, tmp_project, mocker):
         """uv sync 失敗（stderr あり）"""
@@ -587,11 +587,12 @@ class TestRunUvSync:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        applier._run_uv_sync(tmp_project, console)
+        result = applier._run_uv_sync(tmp_project, console)
 
-        result = output.getvalue()
-        assert "uv sync failed" in result
-        assert "Error message" in result
+        assert result is False
+        output_text = output.getvalue()
+        assert "uv sync failed" in output_text
+        assert "Error message" in output_text
 
     def test_run_uv_sync_failure_without_stderr(self, tmp_project, mocker):
         """uv sync 失敗（stderr なし）"""
@@ -602,10 +603,10 @@ class TestRunUvSync:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        applier._run_uv_sync(tmp_project, console)
+        result = applier._run_uv_sync(tmp_project, console)
 
-        result = output.getvalue()
-        assert "uv sync failed" in result
+        assert result is False
+        assert "uv sync failed" in output.getvalue()
 
     def test_run_uv_sync_timeout(self, tmp_project, mocker):
         """uv sync タイムアウト"""
@@ -616,10 +617,10 @@ class TestRunUvSync:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        applier._run_uv_sync(tmp_project, console)
+        result = applier._run_uv_sync(tmp_project, console)
 
-        result = output.getvalue()
-        assert "timed out" in result
+        assert result is False
+        assert "timed out" in output.getvalue()
 
     def test_run_uv_sync_not_found(self, tmp_project, mocker):
         """uv コマンドが見つからない"""
@@ -628,10 +629,10 @@ class TestRunUvSync:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        applier._run_uv_sync(tmp_project, console)
+        result = applier._run_uv_sync(tmp_project, console)
 
-        result = output.getvalue()
-        assert "uv command not found" in result
+        assert result is False
+        assert "uv command not found" in output.getvalue()
 
 
 class TestIsGitRepo:
@@ -813,11 +814,28 @@ class TestRunGitCommit:
         console = rich.console.Console(file=output, force_terminal=False)
 
         files_info = [(tmp_path / "file1.txt", "config-type")]
-        applier._run_git_commit(tmp_path, files_info, console)
+        result = applier._run_git_commit(tmp_path, files_info, console)
 
-        result = output.getvalue()
-        assert "git commit" in result
-        assert "file1.txt" in result
+        assert result is True
+        output_text = output.getvalue()
+        assert "git commit" in output_text
+        assert "file1.txt" in output_text
+
+    def test_run_git_commit_success_with_will_push(self, tmp_path, mocker):
+        """git commit 成功（will_push=True の場合はログ抑制）"""
+        mock_run = mocker.patch("subprocess.run")
+        mock_run.return_value.returncode = 0
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        files_info = [(tmp_path / "file1.txt", "config-type")]
+        result = applier._run_git_commit(tmp_path, files_info, console, will_push=True)
+
+        assert result is True
+        # will_push=True の場合は commit のログが出力されない
+        output_text = output.getvalue()
+        assert "git commit" not in output_text
 
     def test_run_git_commit_add_failure(self, tmp_path, mocker):
         """git add 失敗"""
@@ -829,9 +847,55 @@ class TestRunGitCommit:
         console = rich.console.Console(file=output, force_terminal=False)
 
         files_info = [(tmp_path / "file1.txt", "config-type")]
-        applier._run_git_commit(tmp_path, files_info, console)
+        result = applier._run_git_commit(tmp_path, files_info, console)
 
+        assert result is False
         assert "git add failed" in output.getvalue()
+
+    def test_run_git_commit_commit_failure(self, tmp_path, mocker):
+        """git commit 失敗"""
+        mock_run = mocker.patch("subprocess.run")
+        # 1回目の add は成功、2回目の commit は失敗
+        mock_run.side_effect = [
+            mocker.MagicMock(returncode=0),
+            mocker.MagicMock(returncode=1, stderr="commit failed"),
+        ]
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        files_info = [(tmp_path / "file1.txt", "config-type")]
+        result = applier._run_git_commit(tmp_path, files_info, console)
+
+        assert result is False
+        assert "git commit failed" in output.getvalue()
+
+    def test_run_git_commit_timeout(self, tmp_path, mocker):
+        """git commit タイムアウト"""
+        import subprocess
+
+        mocker.patch("subprocess.run", side_effect=subprocess.TimeoutExpired("git", 30))
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        files_info = [(tmp_path / "file1.txt", "config-type")]
+        result = applier._run_git_commit(tmp_path, files_info, console)
+
+        assert result is False
+        assert "git commit timed out" in output.getvalue()
+
+    def test_run_git_commit_git_not_found(self, tmp_path, mocker):
+        """git コマンドが見つからない"""
+        mocker.patch("subprocess.run", side_effect=FileNotFoundError())
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        files_info = [(tmp_path / "file1.txt", "config-type")]
+        result = applier._run_git_commit(tmp_path, files_info, console)
+
+        assert result is False
 
     def test_run_git_commit_outside_project(self, tmp_path, mocker):
         """プロジェクト外のファイルの場合はフルパスで commit"""
@@ -845,11 +909,89 @@ class TestRunGitCommit:
 
         outside_file = pathlib.Path("/some/other/path/file.txt")
         files_info = [(outside_file, "config-type")]
-        applier._run_git_commit(tmp_path, files_info, console)
+        result = applier._run_git_commit(tmp_path, files_info, console)
 
-        result = output.getvalue()
-        assert "git commit" in result
-        assert "/some/other/path/file.txt" in result
+        assert result is True
+        output_text = output.getvalue()
+        assert "git commit" in output_text
+        assert "/some/other/path/file.txt" in output_text
+
+
+class TestRunGitPush:
+    """_run_git_push のテスト"""
+
+    def test_run_git_push_success(self, tmp_path, mocker):
+        """git push 成功"""
+        mock_run = mocker.patch("subprocess.run")
+        mock_run.return_value.returncode = 0
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        files_info = [(tmp_path / "file1.txt", "config-type")]
+        result = applier._run_git_push(tmp_path, files_info, console)
+
+        assert result is True
+        output_text = output.getvalue()
+        assert "git commit & push" in output_text
+        assert "file1.txt" in output_text
+
+    def test_run_git_push_failure(self, tmp_path, mocker):
+        """git push 失敗"""
+        mock_run = mocker.patch("subprocess.run")
+        mock_run.return_value.returncode = 1
+        mock_run.return_value.stderr = "permission denied"
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        files_info = [(tmp_path / "file1.txt", "config-type")]
+        result = applier._run_git_push(tmp_path, files_info, console)
+
+        assert result is False
+        assert "git push failed" in output.getvalue()
+
+    def test_run_git_push_timeout(self, tmp_path, mocker):
+        """git push タイムアウト"""
+        import subprocess
+
+        mocker.patch("subprocess.run", side_effect=subprocess.TimeoutExpired("git", 60))
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        files_info = [(tmp_path / "file1.txt", "config-type")]
+        result = applier._run_git_push(tmp_path, files_info, console)
+
+        assert result is False
+        assert "git push timed out" in output.getvalue()
+
+    def test_run_git_push_git_not_found(self, tmp_path, mocker):
+        """git コマンドが見つからない"""
+        mocker.patch("subprocess.run", side_effect=FileNotFoundError())
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        files_info = [(tmp_path / "file1.txt", "config-type")]
+        result = applier._run_git_push(tmp_path, files_info, console)
+
+        assert result is False
+
+    def test_run_git_push_with_progress(self, tmp_path, mocker):
+        """progress を渡す場合"""
+        mock_run = mocker.patch("subprocess.run")
+        mock_run.return_value.returncode = 0
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+        mock_progress = mocker.MagicMock(spec=my_lib.cui_progress.ProgressManager)
+
+        files_info = [(tmp_path / "file1.txt", "config-type")]
+        result = applier._run_git_push(tmp_path, files_info, console, progress=mock_progress)
+
+        assert result is True
+        mock_progress.print.assert_called()
 
 
 class TestValidateProjects:
@@ -982,6 +1124,95 @@ class TestApplyWithGitCommit:
 
         # _run_git_commit は呼ばれない
         mock_git_commit.assert_not_called()
+
+
+class TestApplyWithGitPush:
+    """git_push オプションのテスト"""
+
+    def test_apply_with_git_push(self, sample_config, tmp_project, tmp_templates, mocker):
+        """git_push=True でファイルが git commit & push される"""
+        mocker.patch.object(applier, "_is_git_repo", return_value=True)
+        mocker.patch.object(applier, "_has_uncommitted_changes", return_value=False)
+        mock_run = mocker.patch("subprocess.run")
+        mock_run.return_value.returncode = 0
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        options = py_project.config.ApplyOptions(dry_run=False, git_push=True, run_sync=False)
+        applier.apply_configs(
+            config=sample_config,
+            options=options,
+            console=console,
+        )
+
+        result = output.getvalue()
+        # git commit & push が実行される
+        assert "git commit & push" in result
+
+    def test_apply_with_git_push_implies_git_commit(self, sample_config, tmp_project, tmp_templates, mocker):
+        """git_push=True は git_commit も実行する（git_commit=False でも）"""
+        mocker.patch.object(applier, "_is_git_repo", return_value=True)
+        mocker.patch.object(applier, "_has_uncommitted_changes", return_value=False)
+        mock_git_commit = mocker.patch.object(applier, "_run_git_commit", return_value=True)
+        mock_git_push = mocker.patch.object(applier, "_run_git_push", return_value=True)
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        # git_commit=False でも git_push=True なら commit & push が実行される
+        options = py_project.config.ApplyOptions(
+            dry_run=False, git_commit=False, git_push=True, run_sync=False
+        )
+        applier.apply_configs(
+            config=sample_config,
+            options=options,
+            console=console,
+        )
+
+        # _run_git_commit と _run_git_push が呼ばれる
+        mock_git_commit.assert_called()
+        mock_git_push.assert_called()
+
+    def test_apply_with_git_push_dry_run(self, sample_config, tmp_project, tmp_templates, mocker):
+        """dry_run=True では git_push は実行されない"""
+        mock_git_commit = mocker.patch.object(applier, "_run_git_commit")
+        mock_git_push = mocker.patch.object(applier, "_run_git_push")
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        options = py_project.config.ApplyOptions(dry_run=True, git_push=True)
+        applier.apply_configs(
+            config=sample_config,
+            options=options,
+            console=console,
+        )
+
+        # _run_git_commit も _run_git_push も呼ばれない
+        mock_git_commit.assert_not_called()
+        mock_git_push.assert_not_called()
+
+    def test_apply_with_git_push_commit_fails(self, sample_config, tmp_project, tmp_templates, mocker):
+        """commit が失敗した場合は push は実行されない"""
+        mocker.patch.object(applier, "_is_git_repo", return_value=True)
+        mocker.patch.object(applier, "_has_uncommitted_changes", return_value=False)
+        mock_git_commit = mocker.patch.object(applier, "_run_git_commit", return_value=False)
+        mock_git_push = mocker.patch.object(applier, "_run_git_push")
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        options = py_project.config.ApplyOptions(dry_run=False, git_push=True, run_sync=False)
+        applier.apply_configs(
+            config=sample_config,
+            options=options,
+            console=console,
+        )
+
+        # _run_git_commit は呼ばれるが _run_git_push は呼ばれない
+        mock_git_commit.assert_called()
+        mock_git_push.assert_not_called()
 
 
 class TestApplyWithProgress:

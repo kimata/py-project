@@ -17,6 +17,7 @@ class ApplyOptions:
         show_diff: 差分を詳細表示
         run_sync: pyproject.toml 更新後に uv sync を実行
         git_commit: 更新したファイルを git add & commit
+        git_push: 更新したファイルを git add & commit & push
 
     """
 
@@ -25,6 +26,7 @@ class ApplyOptions:
     show_diff: bool = False
     run_sync: bool = True
     git_commit: bool = False
+    git_push: bool = False
 
 
 @dataclasses.dataclass
