@@ -13,27 +13,28 @@ py-project は、複数の Python プロジェクトに標準的な設定ファ�
 uv sync
 
 # ヘルプ表示
-uv run src/app.py -h
+uv run py-project -h
 
 # ドライラン（デフォルト）
-uv run src/app.py
+uv run py-project
 
 # 実際に適用
-uv run src/app.py --apply
+uv run py-project --apply
 
 # 特定プロジェクトのみ
-uv run src/app.py -p プロジェクト名
+uv run py-project -p プロジェクト名
 
 # 差分表示
-uv run src/app.py -d
+uv run py-project -d
 ```
 
 ## アーキテクチャ
 
 ```
 src/
-├── app.py                      # エントリポイント（docopt CLI）
 └── py_project/
+    ├── __main__.py             # エントリポイント
+    ├── cli.py                  # CLI（docopt）
     ├── applier.py              # 設定適用ロジック
     ├── differ.py               # 差分表示
     └── handlers/               # 設定タイプハンドラ
@@ -61,8 +62,8 @@ import py_project.handlers.base as handlers_base
 ### CLI
 
 - docopt を使用
-- エントリポイントは `src/app.py`
-- `if __name__ == "__main__":` で引数解析
+- pyproject.toml の `[project.scripts]` で `py-project` コマンドを定義
+- エントリポイントは `src/py_project/__main__.py` → `cli.py:main()`
 
 ### ハンドラ追加手順
 
@@ -107,7 +108,7 @@ import py_project.handlers.base as handlers_base
 **重要**: 本プロジェクトの `pyproject.toml` 等を直接編集しないこと。以下の手順で修正すること：
 
 1. `templates/` 配下のテンプレートを更新
-2. `uv run src/app.py -p py-project --apply` で適用
+2. `uv run py-project -p py-project --apply` で適用
 3. `uv sync` で依存関係を更新
 
 **重要**: テンプレートを修正する際は、何を変更したいのかを説明し、確認を取ること。

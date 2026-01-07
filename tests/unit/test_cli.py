@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 # ruff: noqa: S101
 """
-app.py のテスト
+cli.py のテスト
 """
 
+import py_project.cli
 import py_project.config
 import py_project.handlers
 
@@ -13,10 +14,8 @@ class TestExecute:
 
     def test_execute_success(self, sample_config):
         """正常実行"""
-        import app
-
         options = py_project.config.ApplyOptions(dry_run=True)
-        ret_code = app.execute(
+        ret_code = py_project.cli.execute(
             config=sample_config,
             options=options,
         )
@@ -25,10 +24,8 @@ class TestExecute:
 
     def test_execute_with_project_filter(self, sample_config):
         """プロジェクトフィルタ"""
-        import app
-
         options = py_project.config.ApplyOptions(dry_run=True)
-        ret_code = app.execute(
+        ret_code = py_project.cli.execute(
             config=sample_config,
             options=options,
             projects=["test-project"],
@@ -38,10 +35,8 @@ class TestExecute:
 
     def test_execute_with_config_type_filter(self, sample_config):
         """設定タイプフィルタ"""
-        import app
-
         options = py_project.config.ApplyOptions(dry_run=True)
-        ret_code = app.execute(
+        ret_code = py_project.cli.execute(
             config=sample_config,
             options=options,
             config_types=["pyproject"],
@@ -55,9 +50,7 @@ class TestShowConfigTypes:
 
     def test_show_config_types(self, capsys):
         """設定タイプ一覧表示"""
-        import app
-
-        app.show_config_types()
+        py_project.cli.show_config_types()
 
         # 出力が行われたことを確認（Rich は stderr/stdout に出力）
         # Rich console の出力をキャプチャするのは難しいので、
@@ -78,15 +71,11 @@ class TestShowProjects:
 
     def test_show_projects(self, sample_config):
         """プロジェクト一覧表示"""
-        import app
-
         # エラーなく実行できることを確認
-        app.show_projects(sample_config)
+        py_project.cli.show_projects(sample_config)
 
     def test_show_projects_with_defaults(self, tmp_project, tmp_templates):
         """デフォルト設定でのプロジェクト表示"""
-        import app
-
         config = py_project.config.Config(
             defaults=py_project.config.Defaults(
                 configs=["pyproject"],
@@ -100,12 +89,10 @@ class TestShowProjects:
         )
 
         # エラーなく実行できることを確認
-        app.show_projects(config)
+        py_project.cli.show_projects(config)
 
     def test_show_projects_with_custom_configs(self, tmp_project, tmp_templates):
         """プロジェクト固有設定でのプロジェクト表示"""
-        import app
-
         config = py_project.config.Config(
             defaults=py_project.config.Defaults(
                 configs=["pyproject"],
@@ -120,16 +107,14 @@ class TestShowProjects:
         )
 
         # エラーなく実行できることを確認
-        app.show_projects(config)
+        py_project.cli.show_projects(config)
 
     def test_show_projects_empty(self):
         """空のプロジェクト一覧"""
-        import app
-
         config = py_project.config.Config(
             defaults=py_project.config.Defaults(configs=[]),
             projects=[],
         )
 
         # エラーなく実行できることを確認
-        app.show_projects(config)
+        py_project.cli.show_projects(config)

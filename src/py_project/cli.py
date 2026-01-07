@@ -3,11 +3,11 @@
 複数の Python プロジェクトに標準的な設定を一括適用します。
 
 Usage:
-  app.py [-c CONFIG] [-a] [-p PROJECT]... [-t TYPE]... [-d] [-b] [-v] [options]
-  app.py [-c CONFIG] --validate
-  app.py [-c CONFIG] --list-projects
-  app.py --list-configs
-  app.py [-c CONFIG] --update-deps [-a]
+  py-project [-c CONFIG] [-a] [-p PROJECT]... [-t TYPE]... [-d] [-b] [-v] [options]
+  py-project [-c CONFIG] --validate
+  py-project [-c CONFIG] --list-projects
+  py-project --list-configs
+  py-project [-c CONFIG] --update-deps [-a]
 
 Options:
   -c CONFIG, --config CONFIG    CONFIG を設定ファイルとして読み込みます。[default: config.yaml]
@@ -43,7 +43,7 @@ import py_project.config
 import py_project.dep_updater
 import py_project.handlers
 
-_SCHEMA_PATH = pathlib.Path(__file__).parent.parent / "schema" / "config.schema"
+_SCHEMA_CONFIG = "schema/config.schema"
 
 
 def execute(
@@ -52,6 +52,18 @@ def execute(
     projects: list[str] | None = None,
     config_types: list[str] | None = None,
 ) -> int:
+    """設定を適用する
+
+    Args:
+        config: アプリケーション設定
+        options: 適用オプション
+        projects: 対象プロジェクト名のリスト
+        config_types: 対象設定タイプのリスト
+
+    Returns:
+        エラー数（0 なら成功）
+
+    """
     console = rich.console.Console()
     progress = my_lib.cui_progress.ProgressManager(
         console=console,
@@ -120,11 +132,14 @@ def show_projects(config: py_project.config.Config) -> None:
     console.print(table)
 
 
-######################################################################
-if __name__ == "__main__":  # pragma: no cover
+def main() -> None:
+    """CLI エントリポイント"""
     import docopt
 
-    args = docopt.docopt(__doc__)  # type: ignore[arg-type]
+    if __doc__ is None:
+        raise RuntimeError("__doc__ is not set")
+
+    args = docopt.docopt(__doc__)
 
     config_file: str = args["--config"]
     apply_mode: bool = args["--apply"]
@@ -153,7 +168,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     # 設定ファイル読み込み
     try:
-        config_dict = my_lib.config.load(config_file, str(_SCHEMA_PATH))
+        config_dict = my_lib.config.load(config_file, pathlib.Path(_SCHEMA_CONFIG))
     except my_lib.config.ConfigFileNotFoundError as e:
         console.print(f"[red]設定ファイルが見つかりません: {e}[/red]")
         sys.exit(1)
@@ -205,3 +220,7 @@ if __name__ == "__main__":  # pragma: no cover
     )
 
     sys.exit(ret_code)
+
+
+if __name__ == "__main__":
+    main()
