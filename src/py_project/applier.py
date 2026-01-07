@@ -627,6 +627,7 @@ def _run_git_commit(
         commit が成功したかどうか
 
     """
+    max_retries = 3  # pre-commit がファイルを修正した場合のリトライ回数
 
     def _print(msg: str) -> None:
         if progress:
@@ -645,37 +646,60 @@ def _run_git_commit(
     file_paths = [f[0] for f in relative_files]
 
     try:
-        # git add
-        add_result = subprocess.run(  # noqa: S603
-            ["git", "add", *file_paths],  # noqa: S607
-            cwd=project_path,
-            capture_output=True,
-            text=True,
-            timeout=30,
-            check=False,
-        )
-        if add_result.returncode != 0:
-            _print(f"  [red]! git add failed: {add_result.stderr.strip()}[/red]")
+        for attempt in range(max_retries):
+            # git add
+            add_result = subprocess.run(  # noqa: S603
+                ["git", "add", *file_paths],  # noqa: S607
+                cwd=project_path,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
+            )
+            if add_result.returncode != 0:
+                _print(f"  [red]! git add failed: {add_result.stderr.strip()}[/red]")
+                return False
+
+            # commit メッセージを生成
+            commit_message = _generate_commit_message(relative_files)
+
+            # git commit
+            commit_result = subprocess.run(  # noqa: S603
+                ["git", "commit", "-m", commit_message],  # noqa: S607
+                cwd=project_path,
+                capture_output=True,
+                text=True,
+                timeout=60,
+                check=False,
+            )
+            if commit_result.returncode == 0:
+                # push する場合は commit のログを抑制（push のログでまとめて表示）
+                if not will_push:
+                    _print(f"  [green]✓ git commit: {', '.join(file_paths)}[/green]")
+                return True
+
+            # pre-commit がファイルを修正した場合、リトライ
+            # "files were modified by this hook" というメッセージを検出
+            combined_output = commit_result.stdout + commit_result.stderr
+            if "files were modified by this hook" in combined_output:
+                if attempt < max_retries - 1:
+                    _print("  [dim]pre-commit がファイルを修正、再コミット中...[/dim]")
+                    # 全ての変更されたファイルを add（pre-commit が修正したファイルも含む）
+                    subprocess.run(
+                        ["git", "add", "-u"],  # noqa: S607
+                        cwd=project_path,
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                        check=False,
+                    )
+                    continue
+                _print("  [red]! pre-commit によるファイル修正後もコミットに失敗[/red]")
+                return False
+
+            _print(f"  [red]! git commit failed: {commit_result.stderr.strip()}[/red]")
             return False
 
-        # commit メッセージを生成
-        commit_message = _generate_commit_message(relative_files)
-
-        # git commit
-        commit_result = subprocess.run(  # noqa: S603
-            ["git", "commit", "-m", commit_message],  # noqa: S607
-            cwd=project_path,
-            capture_output=True,
-            text=True,
-            timeout=30,
-            check=False,
-        )
-        if commit_result.returncode == 0:
-            # push する場合は commit のログを抑制（push のログでまとめて表示）
-            if not will_push:
-                _print(f"  [green]✓ git commit: {', '.join(file_paths)}[/green]")
-            return True
-        _print(f"  [red]! git commit failed: {commit_result.stderr.strip()}[/red]")
         return False
     except subprocess.TimeoutExpired:
         _print("  [red]! git commit timed out[/red]")

@@ -916,6 +916,72 @@ class TestRunGitCommit:
         assert "git commit" in output_text
         assert "/some/other/path/file.txt" in output_text
 
+    def test_run_git_commit_precommit_retry(self, tmp_path, mocker):
+        """pre-commit がファイルを修正した場合にリトライする"""
+        mock_run = mocker.patch("subprocess.run")
+        # 1回目: add 成功, commit 失敗（pre-commit がファイル修正）
+        # 2回目: add -u 成功
+        # 3回目: add 成功, commit 成功
+        mock_run.side_effect = [
+            mocker.MagicMock(returncode=0),  # add
+            mocker.MagicMock(
+                returncode=1,
+                stdout="files were modified by this hook",
+                stderr="",
+            ),  # commit
+            mocker.MagicMock(returncode=0),  # add -u
+            mocker.MagicMock(returncode=0),  # add
+            mocker.MagicMock(returncode=0),  # commit
+        ]
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        files_info = [(tmp_path / "file1.txt", "config-type")]
+        result = applier._run_git_commit(tmp_path, files_info, console)
+
+        assert result is True
+        output_text = output.getvalue()
+        assert "pre-commit がファイルを修正" in output_text
+        assert "git commit" in output_text
+
+    def test_run_git_commit_precommit_retry_max_retries(self, tmp_path, mocker):
+        """pre-commit リトライが最大回数に達した場合"""
+        mock_run = mocker.patch("subprocess.run")
+        # 全ての commit 試行が pre-commit によるファイル修正で失敗
+        mock_run.side_effect = [
+            mocker.MagicMock(returncode=0),  # add
+            mocker.MagicMock(
+                returncode=1,
+                stdout="files were modified by this hook",
+                stderr="",
+            ),  # commit
+            mocker.MagicMock(returncode=0),  # add -u
+            mocker.MagicMock(returncode=0),  # add
+            mocker.MagicMock(
+                returncode=1,
+                stdout="files were modified by this hook",
+                stderr="",
+            ),  # commit
+            mocker.MagicMock(returncode=0),  # add -u
+            mocker.MagicMock(returncode=0),  # add
+            mocker.MagicMock(
+                returncode=1,
+                stdout="files were modified by this hook",
+                stderr="",
+            ),  # commit
+        ]
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False)
+
+        files_info = [(tmp_path / "file1.txt", "config-type")]
+        result = applier._run_git_commit(tmp_path, files_info, console)
+
+        assert result is False
+        output_text = output.getvalue()
+        assert "pre-commit によるファイル修正後もコミットに失敗" in output_text
+
 
 class TestRunGitPush:
     """_run_git_push のテスト"""
