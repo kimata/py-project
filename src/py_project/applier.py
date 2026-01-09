@@ -628,7 +628,10 @@ def _generate_commit_message(files_info: list[tuple[str, str]]) -> str:
         commit メッセージ
 
     """
-    lines = []
+    # 1行目: 概要
+    lines = ["chore: 設定ファイルを更新", ""]
+
+    # 詳細
     for filename, config_type in files_info:
         lines.append(f"- {filename}: {config_type} を更新")
 
