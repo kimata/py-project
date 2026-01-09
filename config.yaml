@@ -9,6 +9,7 @@ defaults:
         - pre-commit
         - ruff
         - gitignore
+        - dockerignore
         - renovate
         - my-py-lib
         - gitlab-ci
@@ -76,6 +77,9 @@ projects:
 
     - name: modes-sensing
       path: ~/github/modes-sensing
+
+    - name: server-list
+      path: ~/github/server-list
 
     - name: rsudp
       path: ~/github/rsudp

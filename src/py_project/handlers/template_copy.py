@@ -175,31 +175,41 @@ class PythonVersionHandler(TemplateCopyHandler):
     output_file = ".python-version"
 
 
-class DockerignoreHandler(TemplateCopyHandler):
-    """dockerignore 設定ハンドラ"""
+class IgnoreFileHandler(TemplateCopyHandler):
+    """ignore ファイル系ハンドラの基底クラス（extra_lines 機能付き）"""
 
-    template_subdir = "dockerignore"
-    template_file = ".dockerignore"
-    output_file = ".dockerignore"
-
-
-class GitignoreHandler(TemplateCopyHandler):
-    """gitignore 設定ハンドラ"""
-
-    template_subdir = "gitignore"
-    template_file = ".gitignore"
-    output_file = ".gitignore"
+    # サブクラスでオーバーライド：プロジェクトのオプション属性名
+    options_attr: str = ""
 
     def render_template(self, project: py_project.config.Project, context: handlers_base.ApplyContext) -> str:
         """テンプレートをレンダリングし、extra_lines を追加"""
         content = super().render_template(project, context)
 
         # extra_lines がある場合は末尾に追加
-        if project.gitignore and project.gitignore.extra_lines:
-            extra = "\n".join(project.gitignore.extra_lines)
+        options = getattr(project, self.options_attr, None)
+        if options and options.extra_lines:
+            extra = "\n".join(options.extra_lines)
             content = content.rstrip("\n") + "\n" + extra + "\n"
 
         return content
+
+
+class DockerignoreHandler(IgnoreFileHandler):
+    """dockerignore 設定ハンドラ"""
+
+    template_subdir = "dockerignore"
+    template_file = ".dockerignore"
+    output_file = ".dockerignore"
+    options_attr = "dockerignore"
+
+
+class GitignoreHandler(IgnoreFileHandler):
+    """gitignore 設定ハンドラ"""
+
+    template_subdir = "gitignore"
+    template_file = ".gitignore"
+    output_file = ".gitignore"
+    options_attr = "gitignore"
 
 
 class RenovateHandler(TemplateCopyHandler):

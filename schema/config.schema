@@ -139,6 +139,9 @@
         },
         "gitignore": {
           "$ref": "#/$defs/gitignoreOptions"
+        },
+        "dockerignore": {
+          "$ref": "#/$defs/dockerignoreOptions"
         }
       },
       "additionalProperties": false
@@ -150,6 +153,20 @@
         "extra_lines": {
           "type": "array",
           "description": "テンプレートの末尾に追加する行（例: !config.yaml）",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "dockerignoreOptions": {
+      "type": "object",
+      "description": "dockerignore 設定タイプのオプション",
+      "properties": {
+        "extra_lines": {
+          "type": "array",
+          "description": "テンプレートの末尾に追加する行",
           "items": {
             "type": "string"
           }

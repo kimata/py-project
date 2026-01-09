@@ -106,6 +106,23 @@ class GitignoreOptions:
 
 
 @dataclasses.dataclass
+class DockerignoreOptions:
+    """dockerignore 設定タイプのオプション
+
+    Attributes:
+        extra_lines: テンプレートの末尾に追加する行
+
+    """
+
+    extra_lines: list[str] = dataclasses.field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, typing.Any]) -> DockerignoreOptions:
+        """辞書から DockerignoreOptions を生成"""
+        return cls(extra_lines=data.get("extra_lines", []))
+
+
+@dataclasses.dataclass
 class Defaults:
     """全プロジェクト共通のデフォルト設定
 
@@ -150,6 +167,7 @@ class Project:
         pyproject: pyproject.toml 設定タイプのオプション
         gitlab_ci: gitlab-ci 設定タイプのオプション
         gitignore: gitignore 設定タイプのオプション
+        dockerignore: dockerignore 設定タイプのオプション
 
     """
 
@@ -162,6 +180,7 @@ class Project:
     pyproject: PyprojectOptions | None = None
     gitlab_ci: GitlabCiOptions | None = None
     gitignore: GitignoreOptions | None = None
+    dockerignore: DockerignoreOptions | None = None
 
     def get_path(self) -> pathlib.Path:
         """展開されたパスを取得"""
@@ -179,6 +198,9 @@ class Project:
         gitignore = None
         if "gitignore" in data:
             gitignore = GitignoreOptions.from_dict(data["gitignore"])
+        dockerignore = None
+        if "dockerignore" in data:
+            dockerignore = DockerignoreOptions.from_dict(data["dockerignore"])
         return cls(
             name=data["name"],
             path=data["path"],
@@ -189,6 +211,7 @@ class Project:
             pyproject=pyproject,
             gitlab_ci=gitlab_ci,
             gitignore=gitignore,
+            dockerignore=dockerignore,
         )
 
 
