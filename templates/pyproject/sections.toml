@@ -23,6 +23,7 @@ dev = [
     "types-pytz>=2025.2.0",
     "types-paramiko>=4.0.0",
     "types-pyyaml>=6.0.12",
+    "types-requests>=2.32.0",
 ]
 
 [tool.uv]
