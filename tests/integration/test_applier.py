@@ -821,27 +821,30 @@ class TestGenerateCommitMessage:
     """_generate_commit_message のテスト"""
 
     def test_generate_commit_message_single_file(self):
-        """単一ファイルの commit メッセージ"""
-        files_info = [("pyproject.toml", "pyproject")]
+        """単一ファイルの commit メッセージ（message なし）"""
+        files_info = [("pyproject.toml", "pyproject", "")]
 
         result = applier._generate_commit_message(files_info)
 
-        assert "- pyproject.toml: pyproject を更新" in result
+        assert "- pyproject.toml: pyproject を同期" in result
         assert "🤖 Generated with [py-project]" in result
 
     def test_generate_commit_message_multiple_files(self):
-        """複数ファイルの commit メッセージ"""
+        """複数ファイルの commit メッセージ（message あり・なし混合）"""
         files_info = [
-            ("pyproject.toml", "pyproject"),
-            (".pre-commit-config.yaml", "pre-commit"),
-            (".ruff.toml", "ruff"),
+            ("pyproject.toml", "my-py-lib", "7481d562 -> b273ff7b"),
+            (".pre-commit-config.yaml", "pre-commit", ""),
+            ("uv.lock", "uv.lock", "my-lib を更新"),
         ]
 
         result = applier._generate_commit_message(files_info)
 
-        assert "- pyproject.toml: pyproject を更新" in result
-        assert "- .pre-commit-config.yaml: pre-commit を更新" in result
-        assert "- .ruff.toml: ruff を更新" in result
+        # my-py-lib は pyproject.toml と異なるので config_type が含まれる
+        assert "- pyproject.toml: my-py-lib 7481d562 -> b273ff7b" in result
+        # message なしは「を同期」
+        assert "- .pre-commit-config.yaml: pre-commit を同期" in result
+        # uv.lock は config_type が uv.lock なので省略される
+        assert "- uv.lock: my-lib を更新" in result
         assert "🤖 Generated with [py-project]" in result
 
 
@@ -861,7 +864,7 @@ class TestRunGitCommit:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        files_info = [(tmp_path / "file1.txt", "config-type")]
+        files_info = [(tmp_path / "file1.txt", "config-type", "")]
         result = applier._run_git_commit(tmp_path, files_info, console)
 
         assert result is True
@@ -877,7 +880,7 @@ class TestRunGitCommit:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        files_info = [(tmp_path / "file1.txt", "config-type")]
+        files_info = [(tmp_path / "file1.txt", "config-type", "")]
         result = applier._run_git_commit(tmp_path, files_info, console, will_push=True)
 
         assert result is True
@@ -894,7 +897,7 @@ class TestRunGitCommit:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        files_info = [(tmp_path / "file1.txt", "config-type")]
+        files_info = [(tmp_path / "file1.txt", "config-type", "")]
         result = applier._run_git_commit(tmp_path, files_info, console)
 
         assert result is False
@@ -912,7 +915,7 @@ class TestRunGitCommit:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        files_info = [(tmp_path / "file1.txt", "config-type")]
+        files_info = [(tmp_path / "file1.txt", "config-type", "")]
         result = applier._run_git_commit(tmp_path, files_info, console)
 
         assert result is False
@@ -927,7 +930,7 @@ class TestRunGitCommit:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        files_info = [(tmp_path / "file1.txt", "config-type")]
+        files_info = [(tmp_path / "file1.txt", "config-type", "")]
         result = applier._run_git_commit(tmp_path, files_info, console)
 
         assert result is False
@@ -940,7 +943,7 @@ class TestRunGitCommit:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        files_info = [(tmp_path / "file1.txt", "config-type")]
+        files_info = [(tmp_path / "file1.txt", "config-type", "")]
         result = applier._run_git_commit(tmp_path, files_info, console)
 
         assert result is False
@@ -956,7 +959,7 @@ class TestRunGitCommit:
         console = rich.console.Console(file=output, force_terminal=False)
 
         outside_file = pathlib.Path("/some/other/path/file.txt")
-        files_info = [(outside_file, "config-type")]
+        files_info = [(outside_file, "config-type", "")]
         result = applier._run_git_commit(tmp_path, files_info, console)
 
         assert result is True
@@ -985,7 +988,7 @@ class TestRunGitCommit:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        files_info = [(tmp_path / "file1.txt", "config-type")]
+        files_info = [(tmp_path / "file1.txt", "config-type", "")]
         result = applier._run_git_commit(tmp_path, files_info, console)
 
         assert result is True
@@ -1023,7 +1026,7 @@ class TestRunGitCommit:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        files_info = [(tmp_path / "file1.txt", "config-type")]
+        files_info = [(tmp_path / "file1.txt", "config-type", "")]
         result = applier._run_git_commit(tmp_path, files_info, console)
 
         assert result is False
@@ -1042,7 +1045,7 @@ class TestRunGitPush:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        files_info = [(tmp_path / "file1.txt", "config-type")]
+        files_info = [(tmp_path / "file1.txt", "config-type", "")]
         result = applier._run_git_push(tmp_path, files_info, console)
 
         assert result is True
@@ -1059,7 +1062,7 @@ class TestRunGitPush:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        files_info = [(tmp_path / "file1.txt", "config-type")]
+        files_info = [(tmp_path / "file1.txt", "config-type", "")]
         result = applier._run_git_push(tmp_path, files_info, console)
 
         assert result is False
@@ -1074,7 +1077,7 @@ class TestRunGitPush:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        files_info = [(tmp_path / "file1.txt", "config-type")]
+        files_info = [(tmp_path / "file1.txt", "config-type", "")]
         result = applier._run_git_push(tmp_path, files_info, console)
 
         assert result is False
@@ -1087,7 +1090,7 @@ class TestRunGitPush:
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
 
-        files_info = [(tmp_path / "file1.txt", "config-type")]
+        files_info = [(tmp_path / "file1.txt", "config-type", "")]
         result = applier._run_git_push(tmp_path, files_info, console)
 
         assert result is False
@@ -1101,7 +1104,7 @@ class TestRunGitPush:
         console = rich.console.Console(file=output, force_terminal=False)
         mock_progress = mocker.MagicMock(spec=my_lib.cui_progress.ProgressManager)
 
-        files_info = [(tmp_path / "file1.txt", "config-type")]
+        files_info = [(tmp_path / "file1.txt", "config-type", "")]
         result = applier._run_git_push(tmp_path, files_info, console, progress=mock_progress)
 
         assert result is True
@@ -1477,7 +1480,7 @@ class TestRunGitCommitWithProgress:
 
         mock_progress = mocker.MagicMock(spec=my_lib.cui_progress.ProgressManager)
 
-        files_info = [(tmp_path / "file1.txt", "config-type")]
+        files_info = [(tmp_path / "file1.txt", "config-type", "")]
         applier._run_git_commit(tmp_path, files_info, console, progress=mock_progress)
 
         # progress.print が呼ばれていることを確認

@@ -276,8 +276,8 @@ def _process_project(
     # pyproject が更新されたかどうかを追跡
     pyproject_updated = False
 
-    # git commit 対象のファイル情報リスト (パス, config_type)
-    files_to_commit: list[tuple[pathlib.Path, str]] = []
+    # git commit 対象のファイル情報リスト (パス, config_type, message)
+    files_to_commit: list[tuple[pathlib.Path, str, str]] = []
 
     # git 操作が有効かどうか（git_push は git_commit を含む）
     do_git_commit = options.git_commit or options.git_push
@@ -344,7 +344,7 @@ def _process_project(
         # git commit 対象のファイルを追加
         if do_git_commit and result.status in ("created", "updated") and not options.dry_run:
             output_path = handler.get_output_path(project)
-            files_to_commit.append((output_path, config_type))
+            files_to_commit.append((output_path, config_type, result.message or ""))
 
         if progress:
             progress.update_progress_bar(config_bar_name)
@@ -362,7 +362,8 @@ def _process_project(
         if uv_sync_success and do_git_commit:
             uv_lock_path = project_path / "uv.lock"
             if uv_lock_path.exists():
-                files_to_commit.append((uv_lock_path, "uv.lock"))
+                uv_lock_message = _get_uv_lock_changes(project_path)
+                files_to_commit.append((uv_lock_path, "uv.lock", uv_lock_message))
 
     # git commit を実行
     if files_to_commit:
@@ -618,11 +619,100 @@ def _run_git_stash_pop(
         pass
 
 
-def _generate_commit_message(files_info: list[tuple[str, str]]) -> str:
+def _parse_uv_lock_packages(content: str) -> dict[str, str]:
+    """uv.lock からパッケージ名とバージョンの辞書を取得
+
+    Args:
+        content: uv.lock ファイルの内容
+
+    Returns:
+        {パッケージ名: バージョン} の辞書
+
+    """
+    import re
+
+    packages: dict[str, str] = {}
+    current_name: str | None = None
+
+    for line in content.splitlines():
+        # [[package]] セクションの name を検出
+        name_match = re.match(r'^name\s*=\s*"([^"]+)"', line)
+        if name_match:
+            current_name = name_match.group(1)
+            continue
+
+        # version を検出
+        version_match = re.match(r'^version\s*=\s*"([^"]+)"', line)
+        if version_match and current_name:
+            packages[current_name] = version_match.group(1)
+            current_name = None
+
+    return packages
+
+
+def _get_uv_lock_changes(project_path: pathlib.Path) -> str:
+    """uv.lock の変更内容を取得
+
+    Args:
+        project_path: プロジェクトのパス
+
+    Returns:
+        変更内容の文字列（例: "my-lib, selenium を更新"）
+
+    """
+    uv_lock_path = project_path / "uv.lock"
+    if not uv_lock_path.exists():
+        return ""
+
+    # 現在の uv.lock を読み込み
+    new_content = uv_lock_path.read_text()
+    new_packages = _parse_uv_lock_packages(new_content)
+
+    # git show で古い uv.lock を取得
+    try:
+        result = subprocess.run(
+            ["git", "show", "HEAD:uv.lock"],  # noqa: S607
+            cwd=project_path,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        if result.returncode != 0:
+            # 新規ファイルの場合
+            return ""
+        old_content = result.stdout
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return ""
+
+    old_packages = _parse_uv_lock_packages(old_content)
+
+    # 変更を検出
+    added = [name for name, _ in new_packages.items() if name not in old_packages]
+    updated = [
+        name
+        for name, version in new_packages.items()
+        if name in old_packages and old_packages[name] != version
+    ]
+    removed = [name for name in old_packages if name not in new_packages]
+
+    # メッセージを構築
+    parts: list[str] = []
+    if added:
+        parts.append(f"{', '.join(sorted(added))} を追加")
+    if updated:
+        parts.append(f"{', '.join(sorted(updated))} を更新")
+    if removed:
+        parts.append(f"{', '.join(sorted(removed))} を削除")
+
+    return "; ".join(parts) if parts else ""
+
+
+def _generate_commit_message(files_info: list[tuple[str, str, str]]) -> str:
     """Commit メッセージを生成
 
     Args:
-        files_info: (ファイル名, config_type) のリスト
+        files_info: (ファイル名, config_type, message) のリスト
 
     Returns:
         commit メッセージ
@@ -632,8 +722,15 @@ def _generate_commit_message(files_info: list[tuple[str, str]]) -> str:
     lines = ["chore: 設定ファイルを更新", ""]
 
     # 詳細
-    for filename, config_type in files_info:
-        lines.append(f"- {filename}: {config_type} を更新")
+    for filename, config_type, message in files_info:
+        if message:
+            # config_type がファイル名と異なる場合は含める（例: pyproject.toml に対する my-py-lib）
+            if config_type and config_type != "uv.lock" and not filename.endswith(config_type):
+                lines.append(f"- {filename}: {config_type} {message}")
+            else:
+                lines.append(f"- {filename}: {message}")
+        else:
+            lines.append(f"- {filename}: {config_type} を同期")
 
     lines.append("")
     lines.append("🤖 Generated with [py-project](https://github.com/kimata/py-project)")
@@ -643,7 +740,7 @@ def _generate_commit_message(files_info: list[tuple[str, str]]) -> str:
 
 def _run_git_commit(
     project_path: pathlib.Path,
-    files_info: list[tuple[pathlib.Path, str]],
+    files_info: list[tuple[pathlib.Path, str, str]],
     console: rich.console.Console,
     progress: my_lib.cui_progress.ProgressManager | None = None,
     *,
@@ -653,7 +750,7 @@ def _run_git_commit(
 
     Args:
         project_path: プロジェクトのパス
-        files_info: (ファイルパス, config_type) のリスト
+        files_info: (ファイルパス, config_type, message) のリスト
         console: Rich Console インスタンス
         progress: プログレスマネージャ（オプション）
         will_push: この後 push する予定かどうか（ログメッセージ制御用）
@@ -671,12 +768,12 @@ def _run_git_commit(
             console.print(msg)
 
     # 相対パスに変換
-    relative_files: list[tuple[str, str]] = []
-    for file_path, config_type in files_info:
+    relative_files: list[tuple[str, str, str]] = []
+    for file_path, config_type, message in files_info:
         try:
-            relative_files.append((str(file_path.relative_to(project_path)), config_type))
+            relative_files.append((str(file_path.relative_to(project_path)), config_type, message))
         except ValueError:
-            relative_files.append((str(file_path), config_type))
+            relative_files.append((str(file_path), config_type, message))
 
     file_paths = [f[0] for f in relative_files]
 
@@ -745,7 +842,7 @@ def _run_git_commit(
 
 def _run_git_push(
     project_path: pathlib.Path,
-    files_info: list[tuple[pathlib.Path, str]],
+    files_info: list[tuple[pathlib.Path, str, str]],
     console: rich.console.Console,
     progress: my_lib.cui_progress.ProgressManager | None = None,
 ) -> bool:
@@ -770,7 +867,7 @@ def _run_git_push(
 
     # 相対パスに変換
     file_paths: list[str] = []
-    for file_path, _ in files_info:
+    for file_path, _, _ in files_info:
         try:
             file_paths.append(str(file_path.relative_to(project_path)))
         except ValueError:
