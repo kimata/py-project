@@ -6,6 +6,7 @@ requires-python = ">=3.11"
 name = "aenum"
 version = "3.1.16"
 source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/09/7a/61ed58e8be9e30c3fe518899cc78c284896d246d51381bab59b5db11e1f3/aenum-3.1.16.tar.gz", hash = "sha256:bfaf9589bdb418ee3a986d85750c7318d9d2839c1b1a1d6fe8fc53ec201cf140", size = 137693, upload-time = "2026-01-12T22:34:38.819Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e3/52/6ad8f63ec8da1bf40f96996d25d5b650fdd38f5975f8c813732c47388f18/aenum-3.1.16-py3-none-any.whl", hash = "sha256:9035092855a98e41b66e3d0998bd7b96280e85ceb3a04cc035636138a1943eaf", size = 165627, upload-time = "2025-04-25T03:17:58.89Z" },
 ]
@@ -1285,7 +1286,7 @@ wheels = [
 [[package]]
 name = "my-lib"
 version = "0.2.0"
-source = { git = "https://github.com/kimata/my-py-lib?rev=f7251a5d834cf8201f59e367f94871800f000c01#f7251a5d834cf8201f59e367f94871800f000c01" }
+source = { git = "https://github.com/kimata/my-py-lib?rev=7481d562fbb6f355525ec8b09d59977ed88e0c60#7481d562fbb6f355525ec8b09d59977ed88e0c60" }
 dependencies = [
     { name = "coloredlogs" },
     { name = "docopt-ng" },
@@ -1601,7 +1602,7 @@ dev = [
 requires-dist = [
     { name = "docopt", specifier = ">=0.6" },
     { name = "jinja2", specifier = ">=3.1" },
-    { name = "my-lib", git = "https://github.com/kimata/my-py-lib?rev=f7251a5d834cf8201f59e367f94871800f000c01" },
+    { name = "my-lib", git = "https://github.com/kimata/my-py-lib?rev=7481d562fbb6f355525ec8b09d59977ed88e0c60" },
     { name = "rich", specifier = ">=14.0" },
     { name = "ruamel-yaml", specifier = ">=0.18" },
     { name = "tomlkit", specifier = ">=0.13" },
