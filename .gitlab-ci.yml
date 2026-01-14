@@ -13,24 +13,10 @@ stages:
     - test
     - renovate
 
-test-prepare:
-    stage: pre-test
-
-    script:
-        - uv sync --locked --no-editable
-
-    cache:
-        - key:
-              files:
-                  - uv.lock
-          paths:
-              - $UV_CACHE_DIR
-
 test-typecheck:
     stage: test
 
-    needs:
-        - test-prepare
+    needs: []
 
     script:
         - uv run python -m pyright src/
@@ -46,8 +32,7 @@ test-typecheck:
 test-pytest:
     stage: test
 
-    needs:
-        - test-prepare
+    needs: []
 
     script:
         - uv run pytest
