@@ -7,7 +7,7 @@ Usage:
   py-project [-c CONFIG] --validate
   py-project [-c CONFIG] --list-projects
   py-project --list-configs
-  py-project [-c CONFIG] --update-deps [-a]
+  py-project [-c CONFIG] --update-deps [-a] [-d] [--include-projects] [--include-config] [-p PROJECT]...
 
 Options:
   -c CONFIG, --config CONFIG    CONFIG を設定ファイルとして読み込みます。[default: config.yaml]
@@ -23,7 +23,9 @@ Options:
   --validate                    設定ファイルの検証のみ行います。
   --list-projects               プロジェクト一覧を表示します。
   --list-configs                設定タイプ一覧を表示します。
-  --update-deps                 テンプレートの依存関係を最新バージョンに更新します。
+  --update-deps                 依存関係を最新バージョンに更新します。
+  --include-projects            プロジェクトの dependencies も更新対象にします。
+  --include-config              config.yaml の extra_dev_deps も更新対象にします。
 """
 
 from __future__ import annotations
@@ -155,6 +157,8 @@ def main() -> None:
     list_projects_flag: bool = args["--list-projects"]
     list_configs_flag: bool = args["--list-configs"]
     update_deps_flag: bool = args["--update-deps"]
+    include_projects_flag: bool = args["--include-projects"]
+    include_config_flag: bool = args["--include-config"]
 
     log_level = logging.DEBUG if verbose else logging.INFO
     my_lib.logger.init("py-project", level=log_level)
@@ -194,13 +198,63 @@ def main() -> None:
 
     # 依存関係更新
     if update_deps_flag:
-        template_dir = config.get_template_dir()
-        template_path = template_dir / "pyproject" / "sections.toml"
-        py_project.dep_updater.update_template_deps(
-            template_path=template_path,
-            dry_run=not apply_mode,
-            console=console,
-        )
+        results: list[py_project.dep_updater.FileUpdateResult] = []
+
+        # -p が指定された場合はプロジェクトのみ（テンプレートは更新しない）
+        update_template = projects is None
+
+        # テンプレートの dependency-groups.dev を更新
+        if update_template:
+            template_dir = config.get_template_dir()
+            template_path = template_dir / "pyproject" / "sections.toml"
+            console.print("[bold]━━━ テンプレート (sections.toml) ━━━[/bold]")
+            py_project.dep_updater.update_template_deps(
+                template_path=template_path,
+                dry_run=not apply_mode,
+                console=console,
+            )
+
+        # プロジェクトの dependencies を更新
+        if include_projects_flag or projects is not None:
+            target_projects = [p for p in config.projects if projects is None or p.name in projects]
+
+            for proj in target_projects:
+                result = py_project.dep_updater.update_project_deps(
+                    project=proj,
+                    dry_run=not apply_mode,
+                    console=console,
+                )
+                if result is not None:
+                    results.append(result)
+
+        # config.yaml の extra_dev_deps を更新
+        if include_config_flag:
+            console.print("\n[bold]━━━ 設定ファイル (config.yaml) ━━━[/bold]")
+            result = py_project.dep_updater.update_config_deps(
+                config_path=pathlib.Path(config_file),
+                projects=projects,
+                dry_run=not apply_mode,
+                console=console,
+            )
+            if result is not None:
+                results.append(result)
+
+        # 差分表示
+        if show_diff and results:
+            console.print("\n[bold]━━━ 差分 ━━━[/bold]\n")
+            for result in results:
+                diff_text = py_project.dep_updater.format_diff(result)
+                console.print(diff_text)
+                console.print()
+
+        # サマリー
+        console.print()
+        if not apply_mode:
+            total_updates = sum(sum(1 for u in r.updates if u.updated) for r in results)
+            if total_updates > 0:
+                console.print(f"[yellow]🔍 合計 {total_updates} 個の依存関係が更新可能です[/yellow]")
+                console.print("[dim]--apply を指定すると実際に更新されます[/dim]")
+
         sys.exit(0)
 
     # 設定適用
