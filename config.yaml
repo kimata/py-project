@@ -84,6 +84,9 @@ projects:
     - name: rsudp
       path: ~/github/rsudp
 
+    - name: dupdel
+      path: ~/github/dupdel
+
     - name: py-project
       path: ~/github/py-project
       gitignore:
