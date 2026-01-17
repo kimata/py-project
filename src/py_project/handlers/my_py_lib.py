@@ -1,6 +1,5 @@
 """my-py-lib 依存関係更新ハンドラ"""
 
-import difflib
 import logging
 import pathlib
 import re
@@ -91,14 +90,7 @@ class MyPyLibHandler(handlers_base.ConfigHandler):
 
         new_content = self.update_dependency(content, latest_hash)
 
-        # 差分を生成
-        diff = difflib.unified_diff(
-            content.splitlines(keepends=True),
-            new_content.splitlines(keepends=True),
-            fromfile="a/pyproject.toml",
-            tofile="b/pyproject.toml",
-        )
-        return "".join(diff)
+        return self.generate_diff(content, new_content, "pyproject.toml")
 
     def apply(
         self, project: py_project.config.Project, context: handlers_base.ApplyContext
@@ -108,7 +100,7 @@ class MyPyLibHandler(handlers_base.ConfigHandler):
 
         if not output_path.exists():
             return handlers_base.ApplyResult(
-                status="skipped",
+                status=handlers_base.ApplyStatus.SKIPPED,
                 message=f"pyproject.toml が見つかりません: {output_path}",
             )
 
@@ -117,23 +109,23 @@ class MyPyLibHandler(handlers_base.ConfigHandler):
 
         if current_hash is None:
             return handlers_base.ApplyResult(
-                status="skipped",
+                status=handlers_base.ApplyStatus.SKIPPED,
                 message="my-py-lib の依存関係が見つかりません",
             )
 
         latest_hash = self.get_latest_commit_hash()
         if latest_hash is None:
             return handlers_base.ApplyResult(
-                status="error",
+                status=handlers_base.ApplyStatus.ERROR,
                 message="最新コミットハッシュの取得に失敗",
             )
 
         if current_hash == latest_hash:
-            return handlers_base.ApplyResult(status="unchanged")
+            return handlers_base.ApplyResult(status=handlers_base.ApplyStatus.UNCHANGED)
 
         if context.dry_run:
             return handlers_base.ApplyResult(
-                status="updated",
+                status=handlers_base.ApplyStatus.UPDATED,
                 message=f"{current_hash[:8]} -> {latest_hash[:8]}",
             )
 
@@ -152,6 +144,6 @@ class MyPyLibHandler(handlers_base.ConfigHandler):
         )
 
         return handlers_base.ApplyResult(
-            status="updated",
+            status=handlers_base.ApplyStatus.UPDATED,
             message=f"{current_hash[:8]} -> {latest_hash[:8]}",
         )

@@ -6,6 +6,7 @@ import dataclasses
 import json
 import pathlib
 import re
+import urllib.error
 import urllib.request
 
 import rich.console
@@ -32,7 +33,7 @@ def _get_latest_version(package: str) -> str | None:
         with urllib.request.urlopen(url, timeout=10) as response:  # noqa: S310
             data = json.loads(response.read().decode())
             return data["info"]["version"]
-    except Exception:
+    except (urllib.error.URLError, json.JSONDecodeError, KeyError):
         return None
 
 
@@ -91,8 +92,6 @@ def update_template_deps(
     content = template_path.read_text()
     doc = tomlkit.parse(content)
 
-    updates: list[DepUpdate] = []
-
     # dependency-groups.dev を処理
     dep_groups = doc.get("dependency-groups", {})
     dev_deps = dep_groups.get("dev", [])
@@ -103,48 +102,7 @@ def update_template_deps(
 
     console.print("[bold]📦 依存関係のバージョンをチェック中...[/bold]\n")
 
-    new_deps = []
-    for dep in dev_deps:
-        parsed = _parse_dependency(str(dep))
-        if parsed is None:
-            new_deps.append(dep)
-            continue
-
-        package, current_version = parsed
-        console.print(f"  🔍 {package}...", end="")
-
-        latest = _get_latest_version(package)
-        if latest is None:
-            console.print(" [yellow]取得失敗[/yellow]")
-            new_deps.append(dep)
-            continue
-
-        # バージョンを正規化
-        normalized_latest = _normalize_version(latest)
-
-        if normalized_latest != current_version:
-            console.print(f" [cyan]⬆️  {current_version} → {normalized_latest}[/cyan]")
-            new_dep = _format_dependency(package, normalized_latest)
-            new_deps.append(new_dep)
-            updates.append(
-                DepUpdate(
-                    package=package,
-                    current=current_version,
-                    latest=normalized_latest,
-                    updated=True,
-                )
-            )
-        else:
-            console.print(" [green]✅ 最新[/green]")
-            new_deps.append(dep)
-            updates.append(
-                DepUpdate(
-                    package=package,
-                    current=current_version,
-                    latest=normalized_latest,
-                    updated=False,
-                )
-            )
+    new_deps, updates = _check_and_update_deps(list(dev_deps), console)
 
     console.print()
 

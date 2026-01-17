@@ -1,6 +1,5 @@
 """テンプレートファイルをコピーするハンドラ"""
 
-import difflib
 import logging
 import pathlib
 
@@ -75,17 +74,7 @@ class TemplateCopyHandler(handlers_base.ConfigHandler):
 
         current_content = output_path.read_text()
 
-        if current_content == new_content:
-            return None
-
-        # 差分を生成
-        diff = difflib.unified_diff(
-            current_content.splitlines(keepends=True),
-            new_content.splitlines(keepends=True),
-            fromfile=f"a/{output_path.name}",
-            tofile=f"b/{output_path.name}",
-        )
-        return "".join(diff)
+        return self.generate_diff(current_content, new_content, output_path.name)
 
     def apply(
         self, project: py_project.config.Project, context: handlers_base.ApplyContext
@@ -96,7 +85,7 @@ class TemplateCopyHandler(handlers_base.ConfigHandler):
 
         if not template_path.exists():
             return handlers_base.ApplyResult(
-                status="error",
+                status=handlers_base.ApplyStatus.ERROR,
                 message=f"テンプレートが見つかりません: {template_path}",
             )
 
@@ -106,7 +95,7 @@ class TemplateCopyHandler(handlers_base.ConfigHandler):
         is_valid, error_msg = self.validate(new_content)
         if not is_valid:
             return handlers_base.ApplyResult(
-                status="error",
+                status=handlers_base.ApplyStatus.ERROR,
                 message=f"バリデーション失敗: {error_msg}",
             )
 
@@ -115,10 +104,12 @@ class TemplateCopyHandler(handlers_base.ConfigHandler):
         if not is_new:
             current_content = output_path.read_text()
             if current_content == new_content:
-                return handlers_base.ApplyResult(status="unchanged")
+                return handlers_base.ApplyResult(status=handlers_base.ApplyStatus.UNCHANGED)
 
         if context.dry_run:
-            return handlers_base.ApplyResult(status="created" if is_new else "updated")
+            return handlers_base.ApplyResult(
+                status=handlers_base.ApplyStatus.CREATED if is_new else handlers_base.ApplyStatus.UPDATED
+            )
 
         # バックアップ作成
         if context.backup and not is_new:
@@ -128,7 +119,9 @@ class TemplateCopyHandler(handlers_base.ConfigHandler):
         output_path.write_text(new_content)
         logger.debug("%s を%sしました: %s", self.name, "作成" if is_new else "更新", output_path)
 
-        return handlers_base.ApplyResult(status="created" if is_new else "updated")
+        return handlers_base.ApplyResult(
+            status=handlers_base.ApplyStatus.CREATED if is_new else handlers_base.ApplyStatus.UPDATED
+        )
 
 
 class PreCommitHandler(TemplateCopyHandler):

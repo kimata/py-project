@@ -19,6 +19,3 @@ HANDLERS: dict[str, type[handlers_base.ConfigHandler]] = {
     "my-py-lib": handlers_my_py_lib.MyPyLibHandler,
     "gitlab-ci": handlers_gitlab_ci.GitLabCIHandler,
 }
-
-# サブモジュールを公開
-base = handlers_base

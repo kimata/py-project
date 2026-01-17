@@ -1,18 +1,20 @@
 """設定タイプハンドラの基底クラス"""
 
+import abc
+import dataclasses
+import difflib
+import enum
 import json
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from enum import Enum
-from pathlib import Path
+import pathlib
 
 import tomlkit
+import tomlkit.exceptions
 import yaml
 
 import py_project.config
 
 
-class FormatType(Enum):
+class FormatType(enum.Enum):
     """テンプレートの書式タイプ"""
 
     YAML = "yaml"
@@ -21,7 +23,17 @@ class FormatType(Enum):
     TEXT = "text"
 
 
-@dataclass
+class ApplyStatus(enum.Enum):
+    """適用結果のステータス"""
+
+    CREATED = "created"
+    UPDATED = "updated"
+    UNCHANGED = "unchanged"
+    ERROR = "error"
+    SKIPPED = "skipped"
+
+
+@dataclasses.dataclass
 class ApplyContext:
     """適用時のコンテキスト情報
 
@@ -34,50 +46,50 @@ class ApplyContext:
     """
 
     config: py_project.config.Config
-    template_dir: Path
+    template_dir: pathlib.Path
     dry_run: bool
     backup: bool
 
 
-@dataclass
+@dataclasses.dataclass
 class ApplyResult:
     """適用結果"""
 
-    status: str  # "created" | "updated" | "unchanged" | "error" | "skipped"
+    status: ApplyStatus
     message: str | None = None  # エラーメッセージ等
 
 
-class ConfigHandler(ABC):
+class ConfigHandler(abc.ABC):
     """設定タイプのハンドラ基底クラス"""
 
     format_type: FormatType = FormatType.TEXT  # デフォルトはプレーンテキスト
 
     @property
-    @abstractmethod
+    @abc.abstractmethod
     def name(self) -> str:
         """設定タイプ名"""
         ...  # pragma: no cover
 
-    @abstractmethod
+    @abc.abstractmethod
     def apply(self, project: py_project.config.Project, context: ApplyContext) -> ApplyResult:
         """設定を適用"""
         ...  # pragma: no cover
 
-    @abstractmethod
+    @abc.abstractmethod
     def diff(self, project: py_project.config.Project, context: ApplyContext) -> str | None:
         """差分を取得（変更がない場合は None）"""
         ...  # pragma: no cover
 
-    @abstractmethod
-    def get_output_path(self, project: py_project.config.Project) -> Path:
+    @abc.abstractmethod
+    def get_output_path(self, project: py_project.config.Project) -> pathlib.Path:
         """出力ファイルのパスを取得"""
         ...  # pragma: no cover
 
-    def get_project_path(self, project: py_project.config.Project) -> Path:
+    def get_project_path(self, project: py_project.config.Project) -> pathlib.Path:
         """プロジェクトのパスを取得（~を展開）"""
         return project.get_path()
 
-    def create_backup(self, file_path: Path) -> Path | None:
+    def create_backup(self, file_path: pathlib.Path) -> pathlib.Path | None:
         """バックアップを作成"""
         if not file_path.exists():
             return None
@@ -108,5 +120,22 @@ class ConfigHandler(ABC):
             elif self.format_type == FormatType.JSON:
                 json.loads(content)
             return (True, None)
-        except Exception as e:
+        except (yaml.YAMLError, tomlkit.exceptions.TOMLKitError, json.JSONDecodeError) as e:
             return (False, str(e))
+
+    def generate_diff(
+        self,
+        current_content: str,
+        new_content: str,
+        filename: str,
+    ) -> str | None:
+        """差分を生成（変更がない場合は None）"""
+        if current_content == new_content:
+            return None
+        diff = difflib.unified_diff(
+            current_content.splitlines(keepends=True),
+            new_content.splitlines(keepends=True),
+            fromfile=f"a/{filename}",
+            tofile=f"b/{filename}",
+        )
+        return "".join(diff)

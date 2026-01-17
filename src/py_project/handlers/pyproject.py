@@ -2,7 +2,6 @@
 # mypy: disable-error-code="assignment,union-attr,operator,arg-type,index"
 # NOTE: tomlkit の型定義が不完全なため、一部の型エラーを無視
 
-import difflib
 import logging
 import pathlib
 import typing
@@ -208,17 +207,7 @@ class PyprojectHandler(handlers_base.ConfigHandler):
         new_content = _normalize_toml(new_content)
         current_content = output_path.read_text()
 
-        if current_content == new_content:
-            return None
-
-        # 差分を生成
-        diff = difflib.unified_diff(
-            current_content.splitlines(keepends=True),
-            new_content.splitlines(keepends=True),
-            fromfile="a/pyproject.toml",
-            tofile="b/pyproject.toml",
-        )
-        return "".join(diff)
+        return self.generate_diff(current_content, new_content, "pyproject.toml")
 
     def apply(
         self, project: py_project.config.Project, context: handlers_base.ApplyContext
@@ -229,13 +218,13 @@ class PyprojectHandler(handlers_base.ConfigHandler):
 
         if not template_path.exists():
             return handlers_base.ApplyResult(
-                status="error",
+                status=handlers_base.ApplyStatus.ERROR,
                 message=f"テンプレートが見つかりません: {template_path}",
             )
 
         if not output_path.exists():
             return handlers_base.ApplyResult(
-                status="skipped",
+                status=handlers_base.ApplyStatus.SKIPPED,
                 message=f"pyproject.toml が見つかりません: {output_path}",
             )
 
@@ -249,17 +238,17 @@ class PyprojectHandler(handlers_base.ConfigHandler):
         is_valid, error_msg = self.validate(new_content)
         if not is_valid:  # pragma: no cover
             return handlers_base.ApplyResult(
-                status="error",
+                status=handlers_base.ApplyStatus.ERROR,
                 message=f"バリデーション失敗: {error_msg}",
             )
 
         current_content = output_path.read_text()
 
         if current_content == new_content:
-            return handlers_base.ApplyResult(status="unchanged")
+            return handlers_base.ApplyResult(status=handlers_base.ApplyStatus.UNCHANGED)
 
         if context.dry_run:
-            return handlers_base.ApplyResult(status="updated")
+            return handlers_base.ApplyResult(status=handlers_base.ApplyStatus.UPDATED)
 
         # バックアップ作成
         if context.backup:
@@ -269,4 +258,4 @@ class PyprojectHandler(handlers_base.ConfigHandler):
         output_path.write_text(new_content)
         logger.debug("pyproject.toml を更新しました: %s", output_path)
 
-        return handlers_base.ApplyResult(status="updated")
+        return handlers_base.ApplyResult(status=handlers_base.ApplyStatus.UPDATED)

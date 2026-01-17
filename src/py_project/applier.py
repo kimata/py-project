@@ -7,7 +7,7 @@ import difflib
 import logging
 import pathlib
 import subprocess
-from typing import TYPE_CHECKING
+import typing
 
 import rich.box
 import rich.console
@@ -17,11 +17,36 @@ import rich.table
 import py_project.config
 import py_project.differ
 import py_project.handlers
+import py_project.handlers.base as handlers_base
 
-if TYPE_CHECKING:
+if typing.TYPE_CHECKING:
     import my_lib.cui_progress
 
 logger = logging.getLogger(__name__)
+
+
+def _create_printer(
+    console: rich.console.Console,
+    progress: my_lib.cui_progress.ProgressManager | None,
+) -> typing.Callable[[str], None]:
+    """progress/console に応じた print 関数を返す"""
+
+    def printer(msg: str) -> None:
+        if progress:
+            progress.print(msg)
+        else:
+            console.print(msg)
+
+    return printer
+
+
+@dataclasses.dataclass
+class GitCommitFile:
+    """Git commit 対象ファイルの情報"""
+
+    path: pathlib.Path
+    config_type: str
+    message: str
 
 
 @dataclasses.dataclass
@@ -74,7 +99,7 @@ class ProcessContext:
 
     """
 
-    context: py_project.handlers.base.ApplyContext
+    context: handlers_base.ApplyContext
     options: py_project.config.ApplyOptions
     config_types: list[str] | None
     summary: ApplySummary
@@ -177,7 +202,7 @@ def apply_configs(
         _validate_projects(projects, available_projects)
 
     # コンテキスト作成
-    context = py_project.handlers.base.ApplyContext(
+    context = handlers_base.ApplyContext(
         config=config,
         template_dir=template_dir,
         dry_run=options.dry_run,
@@ -185,17 +210,12 @@ def apply_configs(
     )
 
     # モード表示（非TTY環境でのみ表示）
-    if progress:
-        progress.print(
-            "[yellow]🔍 確認モード[/yellow]（--apply で実際に適用）\n"
-            if options.dry_run
-            else "[green]🚀 設定を適用中...[/green]\n"
-        )
-    else:
-        if options.dry_run:
-            console.print("[yellow]🔍 確認モード[/yellow]（--apply で実際に適用）\n")
-        else:
-            console.print("[green]🚀 設定を適用中...[/green]\n")
+    _print = _create_printer(console, progress)
+    _print(
+        "[yellow]🔍 確認モード[/yellow]（--apply で実際に適用）\n"
+        if options.dry_run
+        else "[green]🚀 設定を適用中...[/green]\n"
+    )
 
     # プロセスコンテキスト作成
     proc_ctx = ProcessContext(
@@ -249,6 +269,9 @@ def _process_project(
     progress = proc_ctx.progress
     defaults = context.config.defaults
 
+    # 共通の print 関数を作成
+    _print = _create_printer(console, progress)
+
     project_name = project.name
     project_path = project.get_path()
 
@@ -257,10 +280,7 @@ def _process_project(
 
     # プロジェクトディレクトリの存在確認
     if not project_path.exists():
-        if progress:
-            progress.print("  [red]! プロジェクトディレクトリが見つかりません[/red]")
-        else:
-            console.print("  [red]! プロジェクトディレクトリが見つかりません[/red]")
+        _print("  [red]! プロジェクトディレクトリが見つかりません[/red]")
         summary.errors += 1
         summary.error_messages.append(f"{project_name}: ディレクトリが見つかりません")
         return
@@ -276,8 +296,8 @@ def _process_project(
     # pyproject が更新されたかどうかを追跡
     pyproject_updated = False
 
-    # git commit 対象のファイル情報リスト (パス, config_type, message)
-    files_to_commit: list[tuple[pathlib.Path, str, str]] = []
+    # git commit 対象のファイル情報リスト
+    files_to_commit: list[GitCommitFile] = []
 
     # git 操作が有効かどうか（git_push は git_commit を含む）
     do_git_commit = options.git_commit or options.git_push
@@ -301,10 +321,7 @@ def _process_project(
     for config_type in target_configs:
         handler_class = py_project.handlers.HANDLERS.get(config_type)
         if handler_class is None:
-            if progress:
-                progress.print(f"  [red]! {config_type:15} : 未知の設定タイプ[/red]")
-            else:
-                console.print(f"  [red]! {config_type:15} : 未知の設定タイプ[/red]")
+            _print(f"  [red]! {config_type:15} : 未知の設定タイプ[/red]")
             summary.errors += 1
             if progress:
                 progress.update_progress_bar(config_bar_name)
@@ -316,16 +333,10 @@ def _process_project(
         if options.show_diff:
             diff_text = handler.diff(project, context)
             if diff_text:
-                if progress:
-                    progress.print(f"  [cyan]~ {config_type:15}[/cyan]")
-                else:
-                    console.print(f"  [cyan]~ {config_type:15}[/cyan]")
+                _print(f"  [cyan]~ {config_type:15}[/cyan]")
                 py_project.differ.print_diff(diff_text, console)
             else:
-                if progress:
-                    progress.print(f"  [green]✓ {config_type:15} : up to date[/green]")
-                else:
-                    console.print(f"  [green]✓ {config_type:15} : up to date[/green]")
+                _print(f"  [green]✓ {config_type:15} : up to date[/green]")
             # --diff のみで --apply なしの場合はスキップ
             if options.dry_run:
                 if progress:
@@ -338,13 +349,19 @@ def _process_project(
         _update_summary(summary, result, project_name, config_type)
 
         # pyproject または my-py-lib が更新されたかチェック
-        if config_type in ("pyproject", "my-py-lib") and result.status == "updated":
+        if config_type in ("pyproject", "my-py-lib") and result.status == handlers_base.ApplyStatus.UPDATED:
             pyproject_updated = True
 
         # git commit 対象のファイルを追加
-        if do_git_commit and result.status in ("created", "updated") and not options.dry_run:
+        if (
+            do_git_commit
+            and result.status in (handlers_base.ApplyStatus.CREATED, handlers_base.ApplyStatus.UPDATED)
+            and not options.dry_run
+        ):
             output_path = handler.get_output_path(project)
-            files_to_commit.append((output_path, config_type, result.message or ""))
+            files_to_commit.append(
+                GitCommitFile(path=output_path, config_type=config_type, message=result.message or "")
+            )
 
         if progress:
             progress.update_progress_bar(config_bar_name)
@@ -363,7 +380,9 @@ def _process_project(
             uv_lock_path = project_path / "uv.lock"
             if uv_lock_path.exists():
                 uv_lock_message = _get_uv_lock_changes(project_path)
-                files_to_commit.append((uv_lock_path, "uv.lock", uv_lock_message))
+                files_to_commit.append(
+                    GitCommitFile(path=uv_lock_path, config_type="uv.lock", message=uv_lock_message)
+                )
 
     # git commit を実行
     if files_to_commit:
@@ -379,66 +398,63 @@ def _process_project(
     if stashed:
         _run_git_stash_pop(project_path, console, progress)
 
-    if progress:
-        progress.print()
-    else:
-        console.print()
+    _print("")
 
 
 def _print_result(
     console: rich.console.Console,
     config_type: str,
-    result: py_project.handlers.base.ApplyResult,
+    result: handlers_base.ApplyResult,
     *,
     dry_run: bool,
     progress: my_lib.cui_progress.ProgressManager | None = None,
 ) -> None:
     """適用結果を表示"""
+    _print = _create_printer(console, progress)
+
+    ApplyStatus = handlers_base.ApplyStatus
     status_display = {
-        "created": ("[green]+[/green]", "作成予定" if dry_run else "作成"),
-        "updated": ("[cyan]~[/cyan]", "更新予定" if dry_run else "更新"),
-        "unchanged": ("[green]✓[/green]", "変更なし"),
-        "skipped": ("[yellow]-[/yellow]", "スキップ"),
-        "error": ("[red]![/red]", "エラー"),
+        ApplyStatus.CREATED: ("[green]+[/green]", "作成予定" if dry_run else "作成"),
+        ApplyStatus.UPDATED: ("[cyan]~[/cyan]", "更新予定" if dry_run else "更新"),
+        ApplyStatus.UNCHANGED: ("[green]✓[/green]", "変更なし"),
+        ApplyStatus.SKIPPED: ("[yellow]-[/yellow]", "スキップ"),
+        ApplyStatus.ERROR: ("[red]![/red]", "エラー"),
     }
 
-    symbol, text = status_display.get(result.status, ("[white]?[/white]", result.status))
+    symbol, text = status_display[result.status]
 
     if result.message:
         msg = f"  {symbol} {config_type:15} : {text} ({result.message})"
     else:
         msg = f"  {symbol} {config_type:15} : {text}"
 
-    if progress:
-        progress.print(msg)
-    else:
-        console.print(msg)
+    _print(msg)
 
 
 def _update_summary(
     summary: ApplySummary,
-    result: py_project.handlers.base.ApplyResult,
+    result: handlers_base.ApplyResult,
     project_name: str,
     config_type: str,
 ) -> None:
     """サマリを更新"""
-    if result.status == "created":
-        summary.created += 1
-        summary.changes.append(ChangeDetail(project_name, config_type, "created", result.message or ""))
-    elif result.status == "updated":
-        summary.updated += 1
-        summary.changes.append(ChangeDetail(project_name, config_type, "updated", result.message or ""))
-    elif result.status == "unchanged":
-        summary.unchanged += 1
-    elif result.status == "skipped":
-        summary.skipped += 1
-    elif result.status == "error":
-        summary.errors += 1
-        summary.changes.append(ChangeDetail(project_name, config_type, "error", result.message or ""))
-        if result.message:
-            summary.error_messages.append(f"{project_name}/{config_type}: {result.message}")
-    else:
-        logger.warning("未知のステータス: %s (%s/%s)", result.status, project_name, config_type)
+    ApplyStatus = handlers_base.ApplyStatus
+    match result.status:
+        case ApplyStatus.CREATED:
+            summary.created += 1
+            summary.changes.append(ChangeDetail(project_name, config_type, "created", result.message or ""))
+        case ApplyStatus.UPDATED:
+            summary.updated += 1
+            summary.changes.append(ChangeDetail(project_name, config_type, "updated", result.message or ""))
+        case ApplyStatus.UNCHANGED:
+            summary.unchanged += 1
+        case ApplyStatus.SKIPPED:
+            summary.skipped += 1
+        case ApplyStatus.ERROR:
+            summary.errors += 1
+            summary.changes.append(ChangeDetail(project_name, config_type, "error", result.message or ""))
+            if result.message:
+                summary.error_messages.append(f"{project_name}/{config_type}: {result.message}")
 
 
 def _run_uv_sync(
@@ -452,12 +468,7 @@ def _run_uv_sync(
         sync が成功したかどうか
 
     """
-
-    def _print(msg: str) -> None:
-        if progress:
-            progress.print(msg)
-        else:
-            console.print(msg)
+    _print = _create_printer(console, progress)
 
     _print("  [dim]Running uv sync...[/dim]")
     try:
@@ -527,12 +538,7 @@ def _run_git_stash(
         stash が成功したかどうか
 
     """
-
-    def _print(msg: str) -> None:
-        if progress:
-            progress.print(msg)
-        else:
-            console.print(msg)
+    _print = _create_printer(console, progress)
 
     try:
         result = subprocess.run(
@@ -564,12 +570,7 @@ def _run_git_stash_pop(
 
     コンフリクトが発生した場合は、状態をクリーンアップして stash を削除する。
     """
-
-    def _print(msg: str) -> None:
-        if progress:
-            progress.print(msg)
-        else:
-            console.print(msg)
+    _print = _create_printer(console, progress)
 
     try:
         result = subprocess.run(
@@ -708,11 +709,11 @@ def _get_uv_lock_changes(project_path: pathlib.Path) -> str:
     return "; ".join(parts) if parts else ""
 
 
-def _generate_commit_message(files_info: list[tuple[str, str, str]]) -> str:
+def _generate_commit_message(files_info: list[GitCommitFile]) -> str:
     """Commit メッセージを生成
 
     Args:
-        files_info: (ファイル名, config_type, message) のリスト
+        files_info: GitCommitFile のリスト
 
     Returns:
         commit メッセージ
@@ -722,7 +723,10 @@ def _generate_commit_message(files_info: list[tuple[str, str, str]]) -> str:
     lines = ["chore: 設定ファイルを更新", ""]
 
     # 詳細
-    for filename, config_type, message in files_info:
+    for file_info in files_info:
+        filename = file_info.path.name
+        config_type = file_info.config_type
+        message = file_info.message
         if message:
             # config_type がファイル名と異なる場合は含める（例: pyproject.toml に対する my-py-lib）
             if config_type and config_type != "uv.lock" and not filename.endswith(config_type):
@@ -740,7 +744,7 @@ def _generate_commit_message(files_info: list[tuple[str, str, str]]) -> str:
 
 def _run_git_commit(
     project_path: pathlib.Path,
-    files_info: list[tuple[pathlib.Path, str, str]],
+    files_info: list[GitCommitFile],
     console: rich.console.Console,
     progress: my_lib.cui_progress.ProgressManager | None = None,
     *,
@@ -750,7 +754,7 @@ def _run_git_commit(
 
     Args:
         project_path: プロジェクトのパス
-        files_info: (ファイルパス, config_type, message) のリスト
+        files_info: GitCommitFile のリスト
         console: Rich Console インスタンス
         progress: プログレスマネージャ（オプション）
         will_push: この後 push する予定かどうか（ログメッセージ制御用）
@@ -760,22 +764,20 @@ def _run_git_commit(
 
     """
     max_retries = 3  # pre-commit がファイルを修正した場合のリトライ回数
-
-    def _print(msg: str) -> None:
-        if progress:
-            progress.print(msg)
-        else:
-            console.print(msg)
+    _print = _create_printer(console, progress)
 
     # 相対パスに変換
-    relative_files: list[tuple[str, str, str]] = []
-    for file_path, config_type, message in files_info:
+    relative_files: list[GitCommitFile] = []
+    for file_info in files_info:
         try:
-            relative_files.append((str(file_path.relative_to(project_path)), config_type, message))
+            relative_path = file_info.path.relative_to(project_path)
         except ValueError:
-            relative_files.append((str(file_path), config_type, message))
+            relative_path = file_info.path
+        relative_files.append(
+            GitCommitFile(path=relative_path, config_type=file_info.config_type, message=file_info.message)
+        )
 
-    file_paths = [f[0] for f in relative_files]
+    file_paths = [str(f.path) for f in relative_files]
 
     try:
         for attempt in range(max_retries):
@@ -852,7 +854,7 @@ def _run_git_commit(
 
 def _run_git_push(
     project_path: pathlib.Path,
-    files_info: list[tuple[pathlib.Path, str, str]],
+    files_info: list[GitCommitFile],
     console: rich.console.Console,
     progress: my_lib.cui_progress.ProgressManager | None = None,
 ) -> bool:
@@ -860,7 +862,7 @@ def _run_git_push(
 
     Args:
         project_path: プロジェクトのパス
-        files_info: コミットしたファイル情報（ログ表示用）
+        files_info: GitCommitFile のリスト（ログ表示用）
         console: Rich Console インスタンス
         progress: プログレスマネージャ（オプション）
 
@@ -868,20 +870,15 @@ def _run_git_push(
         push が成功したかどうか
 
     """
-
-    def _print(msg: str) -> None:
-        if progress:
-            progress.print(msg)
-        else:
-            console.print(msg)
+    _print = _create_printer(console, progress)
 
     # 相対パスに変換
     file_paths: list[str] = []
-    for file_path, _, _ in files_info:
+    for file_info in files_info:
         try:
-            file_paths.append(str(file_path.relative_to(project_path)))
+            file_paths.append(str(file_info.path.relative_to(project_path)))
         except ValueError:
-            file_paths.append(str(file_path))
+            file_paths.append(str(file_info.path))
 
     try:
         push_result = subprocess.run(
