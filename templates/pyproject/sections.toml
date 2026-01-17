@@ -111,13 +111,7 @@ reportIndexIssue = false
 reportGeneralTypeIssues = false
 
 [tool.ty]
-# tomlkit 等の型定義が不完全なライブラリ向け
 [tool.ty.rules]
-not-subscriptable = "ignore"
-unsupported-operator = "ignore"
-invalid-assignment = "ignore"
-invalid-argument-type = "ignore"
-not-iterable = "ignore"
 
 [tool.ruff]
 line-length = 110
