@@ -8,6 +8,7 @@ import pathlib
 import typing
 
 import tomlkit
+import tomlkit.container
 
 import py_project.config
 import py_project.handlers.base as handlers_base
@@ -72,11 +73,11 @@ class PyprojectHandler(handlers_base.ConfigHandler):
     def set_nested_value(self, doc: tomlkit.TOMLDocument, key_path: str, value: typing.Any) -> None:
         """ドット区切りのキーパスで値を設定"""
         keys = key_path.split(".")
-        current = doc
+        current: tomlkit.TOMLDocument | tomlkit.container.Container = doc
         for key in keys[:-1]:
             if key not in current:
                 current[key] = tomlkit.table()
-            current = current[key]
+            current = typing.cast(tomlkit.container.Container, current[key])
         current[keys[-1]] = value
 
     def merge_pyproject(
@@ -110,22 +111,24 @@ class PyprojectHandler(handlers_base.ConfigHandler):
         if "tool" in template:
             if "tool" not in result:
                 result["tool"] = tomlkit.table()
-            for tool_key in template["tool"]:
+            template_tool = typing.cast(tomlkit.container.Container, template["tool"])
+            result_tool = typing.cast(tomlkit.container.Container, result["tool"])
+            for tool_key in template_tool:
                 tool_path = f"tool.{tool_key}"
                 # 保持するセクションはスキップ
                 if any(tool_path == ps or tool_path.startswith(ps + ".") for ps in preserve_sections):
                     continue
                 # サブセクションをマージ
-                if tool_key in result["tool"]:
+                if tool_key in result_tool:
                     # 既存のサブセクションを更新
-                    preserve_sub = []
+                    preserve_sub: list[str] = []
                     if tool_key == "hatch":
                         preserve_sub = ["build"]  # tool.hatch.build は保持
                     elif tool_key == "mypy":
                         preserve_sub = ["packages", "overrides"]
-                    self._merge_section(result["tool"], template["tool"], tool_key, preserve_sub)
+                    self._merge_section(result_tool, template_tool, tool_key, preserve_sub)
                 else:
-                    result["tool"][tool_key] = template["tool"][tool_key]
+                    result_tool[tool_key] = template_tool[tool_key]
 
         # 追加の開発依存をマージ
         if extra_dev_deps:
@@ -141,8 +144,8 @@ class PyprojectHandler(handlers_base.ConfigHandler):
 
     def _merge_section(
         self,
-        result: tomlkit.TOMLDocument | dict,
-        template: tomlkit.TOMLDocument | dict,
+        result: tomlkit.TOMLDocument | tomlkit.container.Container,
+        template: tomlkit.TOMLDocument | tomlkit.container.Container,
         section: str,
         preserve_fields: list[str],
     ) -> None:
@@ -154,20 +157,23 @@ class PyprojectHandler(handlers_base.ConfigHandler):
             result[section] = template[section]
             return
 
+        result_section = typing.cast(tomlkit.container.Container, result[section])
+        template_section = typing.cast(tomlkit.container.Container, template[section])
+
         # 保持するフィールドを保存
-        preserved = {}
+        preserved: dict[str, typing.Any] = {}
         for field in preserve_fields:
-            if field in result[section]:
-                preserved[field] = result[section][field]
+            if field in result_section:
+                preserved[field] = result_section[field]
 
         # テンプレートの内容で更新
-        for key in template[section]:
+        for key in template_section:
             if key not in preserve_fields:
-                result[section][key] = template[section][key]
+                result_section[key] = template_section[key]
 
         # 保持したフィールドを復元
         for field, value in preserved.items():
-            result[section][field] = value
+            result_section[field] = value
 
     def generate_merged_content(
         self, project: py_project.config.Project, context: handlers_base.ApplyContext

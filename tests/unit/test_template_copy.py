@@ -236,6 +236,7 @@ class TestTemplateCopyErrors:
 
         diff = handler.diff(project, context)
 
+        assert diff is not None
         assert "テンプレートが見つかりません" in diff
 
     def test_apply_missing_template(self, tmp_path, tmp_project, sample_config):
@@ -253,6 +254,7 @@ class TestTemplateCopyErrors:
         result = handler.apply(project, context)
 
         assert result.status == "error"
+        assert result.message is not None
         assert "テンプレートが見つかりません" in result.message
 
     def test_apply_validation_failure(self, tmp_path):
@@ -283,6 +285,7 @@ class TestTemplateCopyErrors:
         result = handler.apply(project, context)
 
         assert result.status == "error"
+        assert result.message is not None
         assert "バリデーション失敗" in result.message
 
 
@@ -431,4 +434,5 @@ class TestJSONValidation:
         result = handler.apply(project, context)
 
         assert result.status == "error"
+        assert result.message is not None
         assert "バリデーション失敗" in result.message

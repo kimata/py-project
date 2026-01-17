@@ -190,6 +190,7 @@ class TestMyPyLibHandler:
         result = handler.apply(project, apply_context)
 
         assert result.status == "updated"
+        assert result.message is not None
         assert "abcd1234" in result.message  # old hash
         assert "12345678" in result.message  # new hash (truncated)
 
@@ -249,6 +250,7 @@ class TestMyPyLibHandlerErrors:
 
         diff = handler.diff(project, apply_context)
 
+        assert diff is not None
         assert "pyproject.toml が見つかりません" in diff
 
     def test_diff_hash_fetch_failure(self, tmp_project_with_my_lib, apply_context, mocker):
@@ -262,6 +264,7 @@ class TestMyPyLibHandlerErrors:
 
         diff = handler.diff(project, apply_context)
 
+        assert diff is not None
         assert "最新コミットハッシュの取得に失敗" in diff
 
     def test_apply_missing_pyproject(self, tmp_path, apply_context):
@@ -274,6 +277,7 @@ class TestMyPyLibHandlerErrors:
         result = handler.apply(project, apply_context)
 
         assert result.status == "skipped"
+        assert result.message is not None
         assert "pyproject.toml が見つかりません" in result.message
 
     def test_apply_hash_fetch_failure(self, tmp_project_with_my_lib, apply_context, mocker):
@@ -288,6 +292,7 @@ class TestMyPyLibHandlerErrors:
         result = handler.apply(project, apply_context)
 
         assert result.status == "error"
+        assert result.message is not None
         assert "最新コミットハッシュの取得に失敗" in result.message
 
     def test_apply_with_backup(self, tmp_project_with_my_lib, mocker):
