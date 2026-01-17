@@ -5,7 +5,7 @@ description = "複数の Python プロジェクトに標準的な設定を一括
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "my-lib @ git+https://github.com/kimata/my-py-lib@1d54e8ebb3542df37dfb50055d9b5bf684e80f65",
+    "my-lib @ git+https://github.com/kimata/my-py-lib@02f45329179fd6354204f61ba0d9720e8b5be72a",
     "docopt>=0.6",
     "jinja2>=3.1",
     "rich>=14.0",
@@ -102,11 +102,6 @@ reportMissingImports = false
 [tool.ty]
 # tomlkit 等の型定義が不完全なライブラリ向け
 [tool.ty.rules]
-not-subscriptable = "ignore"
-unsupported-operator = "ignore"
-invalid-assignment = "ignore"
-invalid-argument-type = "ignore"
-not-iterable = "ignore"
 
 [dependency-groups]
 dev = [
