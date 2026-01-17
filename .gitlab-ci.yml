@@ -25,6 +25,8 @@ test-typecheck:
         - key:
               files:
                   - uv.lock
+          fallback_keys:
+              - uv-cache-${CI_PROJECT_ID}
           paths:
               - ${UV_CACHE_DIR}
 
@@ -42,6 +44,8 @@ test-pytest:
         - key:
               files:
                   - uv.lock
+          fallback_keys:
+              - uv-cache-${CI_PROJECT_ID}
           paths:
               - ${UV_CACHE_DIR}
 
@@ -74,7 +78,7 @@ renovate:
         - renovate --platform gitlab --token ${RENOVATE_TOKEN} --endpoint ${CI_SERVER_URL}/api/v4 ${CI_PROJECT_PATH}
 
     cache:
-        key: renovate-cache
+        key: ${CI_JOB_NAME}-${CI_PROJECT_ID}
         paths:
             - ${RENOVATE_CACHE_DIR}
 
