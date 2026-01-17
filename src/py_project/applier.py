@@ -817,8 +817,18 @@ def _run_git_commit(
                 if attempt < max_retries - 1:
                     _print("  [dim]pre-commit がファイルを修正、再コミット中...[/dim]")
                     # 全ての変更されたファイルを add（pre-commit が修正したファイルも含む）
+                    # 注: git add -u は追跡されているファイルのみを対象とするため、
+                    #     新規作成されたファイルを含む元のファイルリストも再度追加する
                     subprocess.run(
                         ["git", "add", "-u"],  # noqa: S607
+                        cwd=project_path,
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                        check=False,
+                    )
+                    subprocess.run(  # noqa: S603
+                        ["git", "add", *file_paths],  # noqa: S607
                         cwd=project_path,
                         capture_output=True,
                         text=True,

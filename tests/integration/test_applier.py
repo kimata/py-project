@@ -971,18 +971,19 @@ class TestRunGitCommit:
         """pre-commit がファイルを修正した場合にリトライする"""
         mock_run = mocker.patch("subprocess.run")
         # 1回目: add 成功, commit 失敗（pre-commit がファイル修正）
-        # 2回目: add -u 成功
-        # 3回目: add 成功, commit 成功
+        # リトライ: add -u 成功, add 成功
+        # 2回目: add 成功, commit 成功
         mock_run.side_effect = [
-            mocker.MagicMock(returncode=0),  # add
+            mocker.MagicMock(returncode=0),  # add (1回目のループ)
             mocker.MagicMock(
                 returncode=1,
                 stdout="files were modified by this hook",
                 stderr="",
-            ),  # commit
-            mocker.MagicMock(returncode=0),  # add -u
-            mocker.MagicMock(returncode=0),  # add
-            mocker.MagicMock(returncode=0),  # commit
+            ),  # commit (失敗)
+            mocker.MagicMock(returncode=0),  # add -u (リトライ処理)
+            mocker.MagicMock(returncode=0),  # add (リトライ処理、ファイルリスト)
+            mocker.MagicMock(returncode=0),  # add (2回目のループ)
+            mocker.MagicMock(returncode=0),  # commit (成功)
         ]
 
         output = io.StringIO()
@@ -1000,27 +1001,33 @@ class TestRunGitCommit:
         """pre-commit リトライが最大回数に達した場合"""
         mock_run = mocker.patch("subprocess.run")
         # 全ての commit 試行が pre-commit によるファイル修正で失敗
+        # max_retries=3 なので、3回ループする
         mock_run.side_effect = [
+            # 1回目のループ (attempt=0)
             mocker.MagicMock(returncode=0),  # add
             mocker.MagicMock(
                 returncode=1,
                 stdout="files were modified by this hook",
                 stderr="",
-            ),  # commit
-            mocker.MagicMock(returncode=0),  # add -u
+            ),  # commit (失敗)
+            mocker.MagicMock(returncode=0),  # add -u (リトライ)
+            mocker.MagicMock(returncode=0),  # add (リトライ、ファイルリスト)
+            # 2回目のループ (attempt=1)
             mocker.MagicMock(returncode=0),  # add
             mocker.MagicMock(
                 returncode=1,
                 stdout="files were modified by this hook",
                 stderr="",
-            ),  # commit
-            mocker.MagicMock(returncode=0),  # add -u
+            ),  # commit (失敗)
+            mocker.MagicMock(returncode=0),  # add -u (リトライ)
+            mocker.MagicMock(returncode=0),  # add (リトライ、ファイルリスト)
+            # 3回目のループ (attempt=2, max_retries-1=2 なのでリトライしない)
             mocker.MagicMock(returncode=0),  # add
             mocker.MagicMock(
                 returncode=1,
                 stdout="files were modified by this hook",
                 stderr="",
-            ),  # commit
+            ),  # commit (失敗、最終試行)
         ]
 
         output = io.StringIO()
