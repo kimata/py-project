@@ -6,12 +6,14 @@ import dataclasses
 import json
 import pathlib
 import re
+import typing
 import urllib.error
 import urllib.request
 
 import rich.console
 import ruamel.yaml
 import tomlkit
+import tomlkit.container
 
 import py_project.config
 
@@ -123,7 +125,7 @@ def update_template_deps(
     new_array.multiline(True)
     for dep in new_deps:
         new_array.append(str(dep))
-    doc["dependency-groups"]["dev"] = new_array
+    typing.cast(tomlkit.container.Container, doc["dependency-groups"])["dev"] = new_array
     template_path.write_text(tomlkit.dumps(doc))
 
     console.print(f"[green]✨ {updated_count} 個の依存関係を更新しました[/green]")
@@ -258,7 +260,7 @@ def update_project_deps(
     new_array.multiline(True)
     for dep in new_deps:
         new_array.append(dep)
-    doc["project"]["dependencies"] = new_array
+    typing.cast(tomlkit.container.Container, doc["project"])["dependencies"] = new_array
     new_content = tomlkit.dumps(doc)
 
     result = FileUpdateResult(

@@ -9,6 +9,7 @@ import pathlib
 import subprocess
 import typing
 
+import my_lib.cui_progress
 import rich.box
 import rich.console
 import rich.panel
@@ -19,23 +20,17 @@ import py_project.differ
 import py_project.handlers
 import py_project.handlers.base as handlers_base
 
-if typing.TYPE_CHECKING:
-    import my_lib.cui_progress
-
 logger = logging.getLogger(__name__)
 
 
 def _create_printer(
-    console: rich.console.Console,
-    progress: my_lib.cui_progress.ProgressManager | None,
+    progress: my_lib.cui_progress.ProgressManager | my_lib.cui_progress.NullProgressManager | None,
 ) -> typing.Callable[[str], None]:
-    """progress/console に応じた print 関数を返す"""
+    """progress の print 関数を返す（None の場合は何もしない）"""
 
     def printer(msg: str) -> None:
         if progress:
             progress.print(msg)
-        else:
-            console.print(msg)
 
     return printer
 
@@ -104,7 +99,7 @@ class ProcessContext:
     config_types: list[str] | None
     summary: ApplySummary
     console: rich.console.Console
-    progress: my_lib.cui_progress.ProgressManager | None = None
+    progress: my_lib.cui_progress.ProgressManager | my_lib.cui_progress.NullProgressManager
 
 
 def get_project_configs(
@@ -168,7 +163,7 @@ def apply_configs(
     projects: list[str] | None = None,
     config_types: list[str] | None = None,
     console: rich.console.Console | None = None,
-    progress: my_lib.cui_progress.ProgressManager | None = None,
+    progress: my_lib.cui_progress.ProgressManager | my_lib.cui_progress.NullProgressManager | None = None,
 ) -> ApplySummary:
     """設定を適用
 
@@ -188,6 +183,8 @@ def apply_configs(
         options = py_project.config.ApplyOptions()
     if console is None:
         console = rich.console.Console()
+    if progress is None:
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
     summary = ApplySummary()
 
@@ -210,7 +207,7 @@ def apply_configs(
     )
 
     # モード表示（非TTY環境でのみ表示）
-    _print = _create_printer(console, progress)
+    _print = _create_printer(progress)
     _print(
         "[yellow]🔍 確認モード[/yellow]（--apply で実際に適用）\n"
         if options.dry_run
@@ -231,23 +228,17 @@ def apply_configs(
     target_projects = [p for p in config.projects if projects is None or p.name in projects]
 
     # プログレスバーを設定
-    if progress:
-        progress.set_progress_bar("プロジェクト", len(target_projects))
+    progress.set_progress_bar("プロジェクト", len(target_projects))
 
     # 各プロジェクトを処理
     for project in target_projects:
-        if progress:
-            progress.set_status(f"処理中: {project.name}")
-
+        progress.set_status(f"処理中: {project.name}")
         _process_project(project, proc_ctx)
-
-        if progress:
-            progress.update_progress_bar("プロジェクト")
+        progress.update_progress_bar("プロジェクト")
 
     # プログレスバーを削除
-    if progress:
-        progress.remove_progress_bar("プロジェクト")
-        progress.set_status("完了！")
+    progress.remove_progress_bar("プロジェクト")
+    progress.set_status("完了！")
 
     # サマリ表示
     _print_summary(console, summary, dry_run=options.dry_run, progress=progress)
@@ -270,7 +261,7 @@ def _process_project(
     defaults = context.config.defaults
 
     # 共通の print 関数を作成
-    _print = _create_printer(console, progress)
+    _print = _create_printer(progress)
 
     project_name = project.name
     project_path = project.get_path()
@@ -314,8 +305,7 @@ def _process_project(
 
     # 設定タイプ用プログレスバーを設定
     config_bar_name = f"  {project_name}"
-    if progress:
-        progress.set_progress_bar(config_bar_name, len(target_configs))
+    progress.set_progress_bar(config_bar_name, len(target_configs))
 
     # 各設定タイプを処理
     for config_type in target_configs:
@@ -323,8 +313,7 @@ def _process_project(
         if handler_class is None:
             _print(f"  [red]! {config_type:15} : 未知の設定タイプ[/red]")
             summary.errors += 1
-            if progress:
-                progress.update_progress_bar(config_bar_name)
+            progress.update_progress_bar(config_bar_name)
             continue
 
         handler = handler_class()
@@ -339,8 +328,7 @@ def _process_project(
                 _print(f"  [green]✓ {config_type:15} : up to date[/green]")
             # --diff のみで --apply なしの場合はスキップ
             if options.dry_run:
-                if progress:
-                    progress.update_progress_bar(config_bar_name)
+                progress.update_progress_bar(config_bar_name)
                 continue
 
         # 適用
@@ -363,12 +351,10 @@ def _process_project(
                 GitCommitFile(path=output_path, config_type=config_type, message=result.message or "")
             )
 
-        if progress:
-            progress.update_progress_bar(config_bar_name)
+        progress.update_progress_bar(config_bar_name)
 
     # 設定タイプ用プログレスバーを削除
-    if progress:
-        progress.remove_progress_bar(config_bar_name)
+    progress.remove_progress_bar(config_bar_name)
 
     # pyproject.toml が更新された場合は uv sync を実行
     uv_sync_success = False
@@ -407,10 +393,10 @@ def _print_result(
     result: handlers_base.ApplyResult,
     *,
     dry_run: bool,
-    progress: my_lib.cui_progress.ProgressManager | None = None,
+    progress: my_lib.cui_progress.ProgressManager | my_lib.cui_progress.NullProgressManager | None = None,
 ) -> None:
     """適用結果を表示"""
-    _print = _create_printer(console, progress)
+    _print = _create_printer(progress)
 
     ApplyStatus = handlers_base.ApplyStatus
     status_display = {
@@ -460,7 +446,7 @@ def _update_summary(
 def _run_uv_sync(
     project_path: pathlib.Path,
     console: rich.console.Console,
-    progress: my_lib.cui_progress.ProgressManager | None = None,
+    progress: my_lib.cui_progress.ProgressManager | my_lib.cui_progress.NullProgressManager | None = None,
 ) -> bool:
     """Uv sync を実行
 
@@ -468,7 +454,7 @@ def _run_uv_sync(
         sync が成功したかどうか
 
     """
-    _print = _create_printer(console, progress)
+    _print = _create_printer(progress)
 
     _print("  [dim]Running uv sync...[/dim]")
     try:
@@ -530,7 +516,7 @@ def _has_uncommitted_changes(project_path: pathlib.Path) -> bool:
 def _run_git_stash(
     project_path: pathlib.Path,
     console: rich.console.Console,
-    progress: my_lib.cui_progress.ProgressManager | None = None,
+    progress: my_lib.cui_progress.ProgressManager | my_lib.cui_progress.NullProgressManager | None = None,
 ) -> bool:
     """Git stash を実行
 
@@ -538,7 +524,7 @@ def _run_git_stash(
         stash が成功したかどうか
 
     """
-    _print = _create_printer(console, progress)
+    _print = _create_printer(progress)
 
     try:
         result = subprocess.run(
@@ -564,13 +550,13 @@ def _run_git_stash(
 def _run_git_stash_pop(
     project_path: pathlib.Path,
     console: rich.console.Console,
-    progress: my_lib.cui_progress.ProgressManager | None = None,
+    progress: my_lib.cui_progress.ProgressManager | my_lib.cui_progress.NullProgressManager | None = None,
 ) -> None:
     """Git stash pop を実行
 
     コンフリクトが発生した場合は、状態をクリーンアップして stash を削除する。
     """
-    _print = _create_printer(console, progress)
+    _print = _create_printer(progress)
 
     try:
         result = subprocess.run(
@@ -746,7 +732,7 @@ def _run_git_commit(
     project_path: pathlib.Path,
     files_info: list[GitCommitFile],
     console: rich.console.Console,
-    progress: my_lib.cui_progress.ProgressManager | None = None,
+    progress: my_lib.cui_progress.ProgressManager | my_lib.cui_progress.NullProgressManager | None = None,
     *,
     will_push: bool = False,
 ) -> bool:
@@ -764,7 +750,7 @@ def _run_git_commit(
 
     """
     max_retries = 3  # pre-commit がファイルを修正した場合のリトライ回数
-    _print = _create_printer(console, progress)
+    _print = _create_printer(progress)
 
     # 相対パスに変換
     relative_files: list[GitCommitFile] = []
@@ -856,7 +842,7 @@ def _run_git_push(
     project_path: pathlib.Path,
     files_info: list[GitCommitFile],
     console: rich.console.Console,
-    progress: my_lib.cui_progress.ProgressManager | None = None,
+    progress: my_lib.cui_progress.ProgressManager | my_lib.cui_progress.NullProgressManager | None = None,
 ) -> bool:
     """Git push を実行
 
@@ -870,7 +856,7 @@ def _run_git_push(
         push が成功したかどうか
 
     """
-    _print = _create_printer(console, progress)
+    _print = _create_printer(progress)
 
     # 相対パスに変換
     file_paths: list[str] = []
@@ -906,7 +892,7 @@ def _print_summary(
     summary: ApplySummary,
     *,
     dry_run: bool,
-    progress: my_lib.cui_progress.ProgressManager | None = None,
+    progress: my_lib.cui_progress.ProgressManager | my_lib.cui_progress.NullProgressManager | None = None,
 ) -> None:
     """サマリを表示"""
     import time
