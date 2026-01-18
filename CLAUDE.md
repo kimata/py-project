@@ -85,6 +85,26 @@ import py_project.handlers.base as handlers_base
 
 - 構造化データは dataclass を使用
 - タプルよりも名前付きフィールドを持つ dataclass を優先
+- 辞書から dataclass への変換は `dacite.from_dict` を使用する
+
+    ```python
+    # スキーマ検証済みの辞書から dataclass を生成
+    import dacite
+
+    @dataclasses.dataclass
+    class Config:
+        projects: list[Project]
+        defaults: Defaults = dataclasses.field(default_factory=Defaults)
+
+        @classmethod
+        def from_dict(cls, data: dict[str, typing.Any]) -> "Config":
+            return dacite.from_dict(data_class=cls, data=data)
+    ```
+
+    - ネストした dataclass も自動変換される
+    - 各 dataclass に `from_dict` を手書きする必要がない
+    - JSON Schema で型が保証されているため、実行時の型チェックは不要
+
 - Protocol は構造的部分型が必要な場合にのみ使用（通常は ABC で十分）
 - 状態を表す文字列リテラルは Enum で定義する（例: `ApplyStatus`）
 - `| None` は Python の標準的イディオムとして許容
@@ -207,6 +227,7 @@ import py_project.handlers.base as handlers_base
 ## 依存関係
 
 - `my-lib`: 設定読み込み・ロギング
+- `dacite`: 辞書から dataclass への変換
 - `docopt`: CLI
 - `tomlkit`: TOML パース（フォーマット保持）
 - `jinja2`: テンプレート
