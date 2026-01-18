@@ -30,7 +30,7 @@ class TemplateCopyHandler(handlers_base.ConfigHandler):
         """テンプレートファイルのパスを取得"""
         # template_overrides でオーバーライドされているかチェック
         if self.name in project.template_overrides:
-            return pathlib.Path(project.template_overrides[self.name]).expanduser()
+            return py_project.config.expand_user_path(project.template_overrides[self.name])
 
         return context.template_dir / self.template_subdir / self.template_file
 
@@ -51,12 +51,12 @@ class TemplateCopyHandler(handlers_base.ConfigHandler):
 
         # テンプレート変数を構築
         defaults = context.config.defaults
-        vars_ = project.vars
+        template_vars = project.vars
 
         return template.render(
             project=project,
             defaults=defaults,
-            vars=vars_,
+            vars=template_vars,
         )
 
     def diff(self, project: py_project.config.Project, context: handlers_base.ApplyContext) -> str | None:
@@ -92,11 +92,11 @@ class TemplateCopyHandler(handlers_base.ConfigHandler):
         new_content = self.render_template(project, context)
 
         # バリデーション
-        is_valid, error_msg = self.validate(new_content)
-        if not is_valid:
+        validation = self.validate(new_content)
+        if not validation.is_valid:
             return handlers_base.ApplyResult(
                 status=handlers_base.ApplyStatus.ERROR,
-                message=f"バリデーション失敗: {error_msg}",
+                message=f"バリデーション失敗: {validation.error_message}",
             )
 
         is_new = not output_path.exists()
@@ -179,8 +179,8 @@ class IgnoreFileHandler(TemplateCopyHandler):
         content = super().render_template(project, context)
 
         # extra_lines がある場合は末尾に追加
-        options = getattr(project, self.options_attr, None)
-        if options and options.extra_lines:
+        options = getattr(project, self.options_attr)
+        if options.extra_lines:
             extra = "\n".join(options.extra_lines)
             content = content.rstrip("\n") + "\n" + extra + "\n"
 

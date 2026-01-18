@@ -1,11 +1,10 @@
 """設定適用ロジック"""
 
-from __future__ import annotations
-
 import dataclasses
 import difflib
 import logging
 import pathlib
+import re
 import subprocess
 import typing
 
@@ -22,17 +21,33 @@ import py_project.handlers.base as handlers_base
 
 logger = logging.getLogger(__name__)
 
+# 型エイリアス: ProgressManager または NullProgressManager
+ProgressType: typing.TypeAlias = my_lib.cui_progress.ProgressManager | my_lib.cui_progress.NullProgressManager
+
+# 型エイリアス: 対象リスト（プロジェクト名または設定タイプのリスト）
+TargetList: typing.TypeAlias = list[str] | None
+
 
 def _create_printer(
-    progress: my_lib.cui_progress.ProgressManager | my_lib.cui_progress.NullProgressManager | None,
+    progress: ProgressType,
 ) -> typing.Callable[[str], None]:
-    """progress の print 関数を返す（None の場合は何もしない）"""
+    """progress の print 関数を返す"""
 
     def printer(msg: str) -> None:
-        if progress:
-            progress.print(msg)
+        progress.print(msg)
 
     return printer
+
+
+def _to_relative_path(path: pathlib.Path, base: pathlib.Path) -> pathlib.Path:
+    """パスを base からの相対パスに変換
+
+    変換できない場合（パスが base 配下にない場合）は元のパスを返す。
+    """
+    try:
+        return path.relative_to(base)
+    except ValueError:
+        return path
 
 
 @dataclasses.dataclass
@@ -96,13 +111,13 @@ class ProcessContext:
 
     context: handlers_base.ApplyContext
     options: py_project.config.ApplyOptions
-    config_types: list[str] | None
+    config_types: TargetList
     summary: ApplySummary
     console: rich.console.Console
-    progress: my_lib.cui_progress.ProgressManager | my_lib.cui_progress.NullProgressManager
+    progress: ProgressType
 
 
-def get_project_configs(
+def _get_project_configs(
     project: py_project.config.Project, defaults: py_project.config.Defaults
 ) -> list[str]:
     """プロジェクトに適用する設定タイプのリストを取得
@@ -111,7 +126,7 @@ def get_project_configs(
     project.exclude_configs を除外した結果を返す。
     """
     # defaults.configs をベースにする
-    configs = list(defaults.configs)
+    configs = defaults.configs.copy()
 
     # project.configs があれば追加（重複排除）
     if project.configs:
@@ -160,10 +175,10 @@ def _validate_projects(
 def apply_configs(
     config: py_project.config.Config,
     options: py_project.config.ApplyOptions | None = None,
-    projects: list[str] | None = None,
-    config_types: list[str] | None = None,
+    projects: TargetList = None,
+    config_types: TargetList = None,
     console: rich.console.Console | None = None,
-    progress: my_lib.cui_progress.ProgressManager | my_lib.cui_progress.NullProgressManager | None = None,
+    progress: ProgressType | None = None,
 ) -> ApplySummary:
     """設定を適用
 
@@ -279,7 +294,7 @@ def _process_project(
     summary.projects_processed += 1
 
     # 適用する設定タイプを取得
-    project_configs = get_project_configs(project, defaults)
+    project_configs = _get_project_configs(project, defaults)
 
     # 対象設定タイプをフィルタ
     target_configs = [c for c in project_configs if config_types is None or c in config_types]
@@ -393,7 +408,7 @@ def _print_result(
     result: handlers_base.ApplyResult,
     *,
     dry_run: bool,
-    progress: my_lib.cui_progress.ProgressManager | my_lib.cui_progress.NullProgressManager | None = None,
+    progress: ProgressType,
 ) -> None:
     """適用結果を表示"""
     _print = _create_printer(progress)
@@ -446,7 +461,7 @@ def _update_summary(
 def _run_uv_sync(
     project_path: pathlib.Path,
     console: rich.console.Console,
-    progress: my_lib.cui_progress.ProgressManager | my_lib.cui_progress.NullProgressManager | None = None,
+    progress: ProgressType,
 ) -> bool:
     """Uv sync を実行
 
@@ -516,7 +531,7 @@ def _has_uncommitted_changes(project_path: pathlib.Path) -> bool:
 def _run_git_stash(
     project_path: pathlib.Path,
     console: rich.console.Console,
-    progress: my_lib.cui_progress.ProgressManager | my_lib.cui_progress.NullProgressManager | None = None,
+    progress: ProgressType,
 ) -> bool:
     """Git stash を実行
 
@@ -550,7 +565,7 @@ def _run_git_stash(
 def _run_git_stash_pop(
     project_path: pathlib.Path,
     console: rich.console.Console,
-    progress: my_lib.cui_progress.ProgressManager | my_lib.cui_progress.NullProgressManager | None = None,
+    progress: ProgressType,
 ) -> None:
     """Git stash pop を実行
 
@@ -616,8 +631,6 @@ def _parse_uv_lock_packages(content: str) -> dict[str, str]:
         {パッケージ名: バージョン} の辞書
 
     """
-    import re
-
     packages: dict[str, str] = {}
     current_name: str | None = None
 
@@ -732,7 +745,7 @@ def _run_git_commit(
     project_path: pathlib.Path,
     files_info: list[GitCommitFile],
     console: rich.console.Console,
-    progress: my_lib.cui_progress.ProgressManager | my_lib.cui_progress.NullProgressManager | None = None,
+    progress: ProgressType,
     *,
     will_push: bool = False,
 ) -> bool:
@@ -753,16 +766,14 @@ def _run_git_commit(
     _print = _create_printer(progress)
 
     # 相対パスに変換
-    relative_files: list[GitCommitFile] = []
-    for file_info in files_info:
-        try:
-            relative_path = file_info.path.relative_to(project_path)
-        except ValueError:
-            relative_path = file_info.path
-        relative_files.append(
-            GitCommitFile(path=relative_path, config_type=file_info.config_type, message=file_info.message)
+    relative_files = [
+        GitCommitFile(
+            path=_to_relative_path(f.path, project_path),
+            config_type=f.config_type,
+            message=f.message,
         )
-
+        for f in files_info
+    ]
     file_paths = [str(f.path) for f in relative_files]
 
     try:
@@ -842,7 +853,7 @@ def _run_git_push(
     project_path: pathlib.Path,
     files_info: list[GitCommitFile],
     console: rich.console.Console,
-    progress: my_lib.cui_progress.ProgressManager | my_lib.cui_progress.NullProgressManager | None = None,
+    progress: ProgressType,
 ) -> bool:
     """Git push を実行
 
@@ -859,12 +870,7 @@ def _run_git_push(
     _print = _create_printer(progress)
 
     # 相対パスに変換
-    file_paths: list[str] = []
-    for file_info in files_info:
-        try:
-            file_paths.append(str(file_info.path.relative_to(project_path)))
-        except ValueError:
-            file_paths.append(str(file_info.path))
+    file_paths = [str(_to_relative_path(f.path, project_path)) for f in files_info]
 
     try:
         push_result = subprocess.run(
@@ -892,13 +898,9 @@ def _print_summary(
     summary: ApplySummary,
     *,
     dry_run: bool,
-    progress: my_lib.cui_progress.ProgressManager | my_lib.cui_progress.NullProgressManager | None = None,
+    progress: ProgressType,
 ) -> None:
     """サマリを表示"""
-    import time
-
-    from rich.console import Group
-
     # 統計テーブル（横並び）
     stats_table = rich.table.Table(
         box=rich.box.ROUNDED,
@@ -931,11 +933,9 @@ def _print_summary(
     stats_table.add_row(*row)
 
     # 経過時間
-    elapsed_str = ""
-    if progress:
-        elapsed = time.time() - progress._start_time
-        minutes, seconds = divmod(int(elapsed), 60)
-        elapsed_str = f"⏱️  経過時間: {minutes:02d}:{seconds:02d}"
+    elapsed = progress.get_elapsed_time()
+    minutes, seconds = divmod(int(elapsed), 60)
+    elapsed_str = f"⏱️  経過時間: {minutes:02d}:{seconds:02d}"
 
     # ステータスメッセージ
     if dry_run and (summary.created > 0 or summary.updated > 0):
@@ -1005,7 +1005,7 @@ def _print_summary(
     content_parts.append("")
     content_parts.append("  ".join(footer_parts))
 
-    panel_content = Group(*content_parts)
+    panel_content = rich.console.Group(*content_parts)
 
     # Panel で囲む
     panel = rich.panel.Panel(

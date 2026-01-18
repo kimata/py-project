@@ -138,7 +138,7 @@ class TestGitLabCIHandler:
 
     def test_apply_edits(self, handler, sample_gitlab_ci_content):
         """編集を適用"""
-        edits = [{"path": "/image", "value": "new-ubuntu:24.04"}]
+        edits = [py_project.config.GitlabCiEdit(path="/image", value="new-ubuntu:24.04")]
         result = handler._apply_edits(sample_gitlab_ci_content, edits)
 
         lines = result.splitlines()
@@ -146,7 +146,7 @@ class TestGitLabCIHandler:
 
     def test_apply_edits_path_not_found(self, handler, sample_gitlab_ci_content, caplog):
         """存在しないパスへの編集は警告を出す"""
-        edits = [{"path": "/nonexistent", "value": "new-value"}]
+        edits = [py_project.config.GitlabCiEdit(path="/nonexistent", value="new-value")]
         handler._apply_edits(sample_gitlab_ci_content, edits)
 
         # 警告が出力されていることを確認
@@ -170,8 +170,8 @@ class TestGitLabCIHandler:
         edits = handler._get_edits(project, apply_context_with_edits)
 
         assert len(edits) == 1
-        assert edits[0]["path"] == "/image"
-        assert edits[0]["value"] == "registry.example.com/ubuntu:v1.0.0"
+        assert edits[0].path == "/image"
+        assert edits[0].value == "registry.example.com/ubuntu:v1.0.0"
 
     def test_get_edits_with_project_override(self, handler, project_with_gitlab_ci, tmp_path):
         """プロジェクト固有の設定がデフォルトを上書き"""
@@ -209,7 +209,7 @@ class TestGitLabCIHandler:
         edits = handler._get_edits(project, context)
 
         assert len(edits) == 1
-        assert edits[0]["value"] == "override:v2"
+        assert edits[0].value == "override:v2"
 
     def test_get_edits_no_gitlab_ci_options(self, handler, project_with_gitlab_ci, tmp_path):
         """gitlab_ci オプションがない場合は空リスト"""
@@ -218,7 +218,6 @@ class TestGitLabCIHandler:
                 python_version="3.12",
                 configs=["gitlab-ci"],
                 vars={},
-                gitlab_ci=None,  # オプションなし
             ),
             template_dir=str(tmp_path / "templates"),
             projects=[
@@ -381,7 +380,7 @@ class TestGitLabCIHandler:
         project = config_with_edits.projects[0]
         result = handler.apply(project, apply_context_with_edits)
 
-        assert result.status == "updated"
+        assert result.status == handlers_base.ApplyStatus.UPDATED
 
         # ファイルが更新されていることを確認
         output_path = handler.get_output_path(project)
@@ -421,7 +420,7 @@ class TestGitLabCIHandler:
         project = config.projects[0]
         result = handler.apply(project, context)
 
-        assert result.status == "skipped"
+        assert result.status == handlers_base.ApplyStatus.SKIPPED
         assert ".gitlab-ci.yml が見つかりません" in result.message
 
     def test_apply_no_edits(self, handler, project_with_gitlab_ci, tmp_path):
@@ -449,7 +448,7 @@ class TestGitLabCIHandler:
         project = config.projects[0]
         result = handler.apply(project, context)
 
-        assert result.status == "skipped"
+        assert result.status == handlers_base.ApplyStatus.SKIPPED
         assert "edits が指定されていません" in result.message
 
     def test_apply_no_changes(self, handler, project_with_gitlab_ci, tmp_path):
@@ -486,7 +485,7 @@ class TestGitLabCIHandler:
         project = config.projects[0]
         result = handler.apply(project, context)
 
-        assert result.status == "unchanged"
+        assert result.status == handlers_base.ApplyStatus.UNCHANGED
 
     def test_apply_dry_run(self, handler, config_with_edits, project_with_gitlab_ci, tmp_path):
         """dry_run モードでは実際に変更しない"""
@@ -504,7 +503,7 @@ class TestGitLabCIHandler:
 
         result = handler.apply(project, context)
 
-        assert result.status == "updated"
+        assert result.status == handlers_base.ApplyStatus.UPDATED
         # ファイルは変更されていない
         assert output_path.read_text() == original_content
 
@@ -520,7 +519,7 @@ class TestGitLabCIHandler:
 
         result = handler.apply(project, context)
 
-        assert result.status == "updated"
+        assert result.status == handlers_base.ApplyStatus.UPDATED
         # バックアップファイルが作成されている
         backup_files = list(project_with_gitlab_ci.glob(".gitlab-ci.yml.bak*"))
         assert len(backup_files) >= 1
@@ -528,7 +527,13 @@ class TestGitLabCIHandler:
     def test_apply_validation_failure(self, handler, project_with_gitlab_ci, tmp_path, mocker):
         """バリデーション失敗時はエラー"""
         # validate メソッドをモックして失敗させる
-        mocker.patch.object(handler, "validate", return_value=(False, "Invalid YAML structure"))
+        mocker.patch.object(
+            handler,
+            "validate",
+            return_value=handlers_base.ValidationResult(
+                is_valid=False, error_message="Invalid YAML structure"
+            ),
+        )
 
         config = py_project.config.Config(
             defaults=py_project.config.Defaults(
@@ -558,7 +563,7 @@ class TestGitLabCIHandler:
         project = config.projects[0]
         result = handler.apply(project, context)
 
-        assert result.status == "error"
+        assert result.status == handlers_base.ApplyStatus.ERROR
         assert "バリデーション失敗" in result.message
 
     def test_diff_generate_edited_content_returns_none(
@@ -635,4 +640,4 @@ class TestGitLabCIHandler:
         result = handler.apply(project, context)
 
         # _generate_edited_content が None を返すので unchanged
-        assert result.status == "unchanged"
+        assert result.status == handlers_base.ApplyStatus.UNCHANGED

@@ -58,22 +58,22 @@ class TestMyPyLibHandler:
         handler = my_py_lib_handler.MyPyLibHandler()
         content = (tmp_project_with_my_lib / "pyproject.toml").read_text()
 
-        current_hash, start, end = handler.find_my_py_lib_dependency(content)
+        result = handler.find_my_py_lib_dependency(content)
 
-        assert current_hash == "abcd1234567890abcdef1234567890abcdef1234"
-        assert start is not None
-        assert end is not None
+        assert result.hash == "abcd1234567890abcdef1234567890abcdef1234"
+        assert result.start is not None
+        assert result.end is not None
 
     def test_find_my_py_lib_dependency_not_found(self, tmp_project):
         """依存関係が見つからない場合"""
         handler = my_py_lib_handler.MyPyLibHandler()
         content = (tmp_project / "pyproject.toml").read_text()
 
-        current_hash, start, end = handler.find_my_py_lib_dependency(content)
+        result = handler.find_my_py_lib_dependency(content)
 
-        assert current_hash is None
-        assert start is None
-        assert end is None
+        assert result.hash is None
+        assert result.start is None
+        assert result.end is None
 
     def test_update_dependency(self):
         """依存関係を更新"""
@@ -161,7 +161,7 @@ class TestMyPyLibHandler:
 
         result = handler.apply(project, apply_context)
 
-        assert result.status == "skipped"
+        assert result.status == handlers_base.ApplyStatus.SKIPPED
 
     def test_apply_same_hash(self, tmp_project_with_my_lib, apply_context, mocker):
         """ハッシュが同じ場合"""
@@ -174,7 +174,7 @@ class TestMyPyLibHandler:
 
         result = handler.apply(project, apply_context)
 
-        assert result.status == "unchanged"
+        assert result.status == handlers_base.ApplyStatus.UNCHANGED
 
     def test_apply_updates_hash(self, tmp_project_with_my_lib, apply_context, mocker):
         """ハッシュを更新"""
@@ -189,7 +189,7 @@ class TestMyPyLibHandler:
 
         result = handler.apply(project, apply_context)
 
-        assert result.status == "updated"
+        assert result.status == handlers_base.ApplyStatus.UPDATED
         assert result.message is not None
         assert "abcd1234" in result.message  # old hash
         assert "12345678" in result.message  # new hash (truncated)
@@ -224,7 +224,7 @@ class TestMyPyLibHandler:
 
         result = handler.apply(project, context)
 
-        assert result.status == "updated"
+        assert result.status == handlers_base.ApplyStatus.UPDATED
         # ドライランなのでファイルは変更されない
         assert (tmp_project_with_my_lib / "pyproject.toml").read_text() == original_content
 
@@ -276,7 +276,7 @@ class TestMyPyLibHandlerErrors:
 
         result = handler.apply(project, apply_context)
 
-        assert result.status == "skipped"
+        assert result.status == handlers_base.ApplyStatus.SKIPPED
         assert result.message is not None
         assert "pyproject.toml が見つかりません" in result.message
 
@@ -291,7 +291,7 @@ class TestMyPyLibHandlerErrors:
 
         result = handler.apply(project, apply_context)
 
-        assert result.status == "error"
+        assert result.status == handlers_base.ApplyStatus.ERROR
         assert result.message is not None
         assert "最新コミットハッシュの取得に失敗" in result.message
 
@@ -321,7 +321,7 @@ class TestMyPyLibHandlerErrors:
 
         result = handler.apply(project, context)
 
-        assert result.status == "updated"
+        assert result.status == handlers_base.ApplyStatus.UPDATED
         # バックアップが作成されている
         assert (tmp_project_with_my_lib / "pyproject.toml.bak").exists()
         assert (tmp_project_with_my_lib / "pyproject.toml.bak").read_text() == original_content

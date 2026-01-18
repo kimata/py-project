@@ -92,6 +92,32 @@ import py_project.handlers.base as handlers_base
 - `isinstance` は外部ライブラリとの連携で必要な場合のみ許容
 - 関数の戻り値でタプルを使う場合、要素が2つ以下で意味が明確なら dataclass 化は不要
     - 例: `(bool, str | None)` は許容（成功/失敗とエラーメッセージ）
+- 3要素以上のタプルを返す関数は dataclass 化を検討する
+
+### 型エイリアス
+
+- 同じ Union 型が3箇所以上で使用される場合は型エイリアスを定義する
+    ```python
+    # 3箇所以上で使用される場合
+    ProgressType: typing.TypeAlias = ProgressManager | NullProgressManager
+    ```
+
+### Null Object パターン
+
+- Null Object クラスが存在する場合、内部関数では `| None` を使用しない
+- 公開 API のみ `| None` を許容し、早期に Null Object に変換する
+
+    ```python
+    # 公開 API
+    def public_func(..., progress: ProgressType | None = None) -> ...:
+        if progress is None:
+            progress = NullProgressManager(...)
+        _internal_func(..., progress=progress)
+
+    # 内部関数
+    def _internal_func(..., progress: ProgressType) -> ...:
+        progress.print("...")  # None チェック不要
+    ```
 
 ### 後方互換性
 
@@ -107,10 +133,17 @@ import py_project.handlers.base as handlers_base
 
 - 同じ処理が複数箇所で必要な場合は共通関数/メソッドに抽出する
 - ハンドラ間で共通の処理は基底クラス `ConfigHandler` に実装する
+- モジュール内でのみ使用するヘルパー関数は `_` 接頭辞を付ける
+- 共通処理を抽出する際は、単純で再利用可能な単位に分割する
+    - 例: `_to_relative_path()`, `_create_multiline_array()`
 
 ### ログ
 
 - ハンドラ内は DEBUG レベル（コンソール出力と重複するため）
+- 例外: 以下のケースは WARNING を使用
+    - ネットワークエラー（外部リソースへのアクセス失敗）
+    - 設定ミス（config.yaml の不正な設定）
+    - 外部リソースの異常（不正なフォーマット等）
 
 ### 大きな関数の分割
 
@@ -132,7 +165,39 @@ import py_project.handlers.base as handlers_base
     # OK: existing_list.copy() - コピーの意図が明確
     configs = defaults.configs.copy()
     ```
+- 外部ライブラリ（tomlkit 等）のリスト型から Python list への変換には `list()` を使用
+
+    ```python
+    # 外部ライブラリからの変換
+    python_list = list(tomlkit_array)  # OK
+
+    # Python list のコピー
+    copied = existing_list.copy()  # OK
+    ```
+
 - 外部ライブラリのプライベート属性（`_` 接頭辞）への直接アクセスは避ける
+    - 必要な場合は、そのライブラリに public メソッドを追加する
+    - 例: `progress._start_time` ではなく `progress.get_elapsed_time()` を使用
+
+### パス管理
+
+- 相対パスは `my_lib.config` が付与する `base_dir` を基準に解決する
+- ユーザー指定パスの展開: `py_project.config.expand_user_path()` を使用
+- プロジェクトパスは `project.get_path()` を使用する（直接 `project.path` を使わない）
+
+### 戻り値の設計
+
+- 2要素タプルで意味が明確な場合は dataclass 化不要
+    - 例: `(success: bool, error_message: str | None)`
+- ただし、同じパターンが複数箇所で使われる場合は dataclass を検討
+    - 例: `ValidationResult(is_valid, error_message)`
+
+### my_lib 機能の活用
+
+- `my_lib.config.load()`: スキーマ検証付き設定読み込み
+- `my_lib.cui_progress.ProgressManager`: プログレス表示
+- `my_lib.cui_progress.NullProgressManager`: Null Object パターン
+- `my_lib.logger.init()`: ロギング初期化
 
 ## 設定
 
@@ -146,6 +211,13 @@ import py_project.handlers.base as handlers_base
 - `tomlkit`: TOML パース（フォーマット保持）
 - `jinja2`: テンプレート
 - `rich`: コンソール出力
+
+### 外部ライブラリとの連携
+
+- tomlkit 等の外部ライブラリの要素を Python 型に変換する際は、明示的に変換する
+    - 例: `str(tomlkit_item)` で Python str に変換
+    - 例: `list(tomlkit_array)` で Python list に変換
+- これは防御的コーディングであり、ライブラリの内部実装に依存しないため推奨
 
 ## 外部リソースの修正
 

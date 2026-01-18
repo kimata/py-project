@@ -18,7 +18,7 @@ class DummyHandler(handlers_base.ConfigHandler):
         return "dummy"
 
     def apply(self, project, context):
-        return handlers_base.ApplyResult(status="unchanged")
+        return handlers_base.ApplyResult(status=handlers_base.ApplyStatus.UNCHANGED)
 
     def diff(self, project, context):
         return None
@@ -43,21 +43,23 @@ class TestApplyResult:
 
     def test_status_created(self):
         """status が created の場合"""
-        result = handlers_base.ApplyResult(status="created")
+        result = handlers_base.ApplyResult(status=handlers_base.ApplyStatus.CREATED)
 
-        assert result.status == "created"
+        assert result.status == handlers_base.ApplyStatus.CREATED
         assert result.message is None
 
     def test_status_with_message(self):
         """message がある場合"""
-        result = handlers_base.ApplyResult(status="error", message="Something went wrong")
+        result = handlers_base.ApplyResult(
+            status=handlers_base.ApplyStatus.ERROR, message="Something went wrong"
+        )
 
-        assert result.status == "error"
+        assert result.status == handlers_base.ApplyStatus.ERROR
         assert result.message == "Something went wrong"
 
     def test_all_status_values(self):
         """全ステータス値をテスト"""
-        for status in ["created", "updated", "unchanged", "error", "skipped"]:
+        for status in handlers_base.ApplyStatus:
             result = handlers_base.ApplyResult(status=status)
             assert result.status == status
 
@@ -130,67 +132,67 @@ class TestValidate:
         handler = DummyHandler()
         handler.format_type = handlers_base.FormatType.TEXT
 
-        is_valid, error = handler.validate("any content")
+        result = handler.validate("any content")
 
-        assert is_valid is True
-        assert error is None
+        assert result.is_valid is True
+        assert result.error_message is None
 
     def test_validate_yaml_valid(self):
         """有効な YAML"""
         handler = DummyHandler()
         handler.format_type = handlers_base.FormatType.YAML
 
-        is_valid, error = handler.validate("key: value\nlist:\n  - item1\n  - item2\n")
+        result = handler.validate("key: value\nlist:\n  - item1\n  - item2\n")
 
-        assert is_valid is True
-        assert error is None
+        assert result.is_valid is True
+        assert result.error_message is None
 
     def test_validate_yaml_invalid(self):
         """無効な YAML"""
         handler = DummyHandler()
         handler.format_type = handlers_base.FormatType.YAML
 
-        is_valid, error = handler.validate("key: [unclosed bracket")
+        result = handler.validate("key: [unclosed bracket")
 
-        assert is_valid is False
-        assert error is not None
+        assert result.is_valid is False
+        assert result.error_message is not None
 
     def test_validate_toml_valid(self):
         """有効な TOML"""
         handler = DummyHandler()
         handler.format_type = handlers_base.FormatType.TOML
 
-        is_valid, error = handler.validate('[section]\nkey = "value"\n')
+        result = handler.validate('[section]\nkey = "value"\n')
 
-        assert is_valid is True
-        assert error is None
+        assert result.is_valid is True
+        assert result.error_message is None
 
     def test_validate_toml_invalid(self):
         """無効な TOML"""
         handler = DummyHandler()
         handler.format_type = handlers_base.FormatType.TOML
 
-        is_valid, error = handler.validate('[section\nkey = "value"')
+        result = handler.validate('[section\nkey = "value"')
 
-        assert is_valid is False
-        assert error is not None
+        assert result.is_valid is False
+        assert result.error_message is not None
 
     def test_validate_json_valid(self):
         """有効な JSON"""
         handler = DummyHandler()
         handler.format_type = handlers_base.FormatType.JSON
 
-        is_valid, error = handler.validate('{"key": "value", "list": [1, 2, 3]}')
+        result = handler.validate('{"key": "value", "list": [1, 2, 3]}')
 
-        assert is_valid is True
-        assert error is None
+        assert result.is_valid is True
+        assert result.error_message is None
 
     def test_validate_json_invalid(self):
         """無効な JSON"""
         handler = DummyHandler()
         handler.format_type = handlers_base.FormatType.JSON
 
-        is_valid, error = handler.validate('{"key": "value",}')  # trailing comma
+        result = handler.validate('{"key": "value",}')  # trailing comma
 
-        assert is_valid is False
-        assert error is not None
+        assert result.is_valid is False
+        assert result.error_message is not None

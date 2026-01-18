@@ -34,6 +34,20 @@ class ApplyStatus(enum.Enum):
 
 
 @dataclasses.dataclass
+class ValidationResult:
+    """コンテンツバリデーション結果
+
+    Attributes:
+        is_valid: バリデーションが成功したかどうか
+        error_message: エラーメッセージ（is_valid=False の場合）
+
+    """
+
+    is_valid: bool
+    error_message: str | None = None
+
+
+@dataclasses.dataclass
 class ApplyContext:
     """適用時のコンテキスト情報
 
@@ -98,19 +112,52 @@ class ConfigHandler(abc.ABC):
         backup_path.write_text(file_path.read_text())
         return backup_path
 
-    def validate(self, content: str) -> tuple[bool, str | None]:
+    def _read_file(self, path: pathlib.Path, encoding: str = "utf-8") -> str:
+        """ファイル内容を読み込み
+
+        Args:
+            path: 読み込むファイルのパス
+            encoding: 文字エンコーディング（デフォルト: utf-8）
+
+        Returns:
+            ファイルの内容
+
+        """
+        return path.read_text(encoding=encoding)
+
+    def _write_file(
+        self,
+        path: pathlib.Path,
+        content: str,
+        *,
+        encoding: str = "utf-8",
+        create_backup: bool = False,
+    ) -> None:
+        """ファイル内容を書き込み
+
+        Args:
+            path: 書き込むファイルのパス
+            content: 書き込む内容
+            encoding: 文字エンコーディング（デフォルト: utf-8）
+            create_backup: バックアップを作成するかどうか
+
+        """
+        if create_backup and path.exists():
+            self.create_backup(path)
+        path.write_text(content, encoding=encoding)
+
+    def validate(self, content: str) -> ValidationResult:
         """コンテンツのシンタックスを検証
 
         Args:
             content: 検証するコンテンツ
 
         Returns:
-            (True, None) - 有効
-            (False, error_message) - 無効
+            ValidationResult: バリデーション結果
 
         """
         if self.format_type == FormatType.TEXT:
-            return (True, None)
+            return ValidationResult(is_valid=True)
 
         try:
             if self.format_type == FormatType.YAML:
@@ -119,9 +166,9 @@ class ConfigHandler(abc.ABC):
                 tomlkit.parse(content)
             elif self.format_type == FormatType.JSON:
                 json.loads(content)
-            return (True, None)
+            return ValidationResult(is_valid=True)
         except (yaml.YAMLError, tomlkit.exceptions.TOMLKitError, json.JSONDecodeError) as e:
-            return (False, str(e))
+            return ValidationResult(is_valid=False, error_message=str(e))
 
     def generate_diff(
         self,

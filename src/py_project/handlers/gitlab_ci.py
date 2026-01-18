@@ -167,11 +167,11 @@ class GitLabCIHandler(handlers_base.ConfigHandler):
         if new_content is None:
             return handlers_base.ApplyResult(status=handlers_base.ApplyStatus.UNCHANGED)
 
-        is_valid, error_msg = self.validate(new_content)
-        if not is_valid:
+        validation = self.validate(new_content)
+        if not validation.is_valid:
             return handlers_base.ApplyResult(
                 status=handlers_base.ApplyStatus.ERROR,
-                message=f"バリデーション失敗: {error_msg}",
+                message=f"バリデーション失敗: {validation.error_message}",
             )
 
         current_content = output_path.read_text()

@@ -14,6 +14,9 @@ import py_project.handlers.base as handlers_base
 
 logger = logging.getLogger(__name__)
 
+# tomlkit の TOMLDocument または Container を表す型エイリアス
+TOMLContainer: typing.TypeAlias = tomlkit.TOMLDocument | tomlkit.container.Container
+
 # プロジェクト固有のフィールド（常に保持）
 _PRESERVE_FIELDS = {
     "project": ["name", "version", "description", "dependencies"],
@@ -72,7 +75,7 @@ class PyprojectHandler(handlers_base.ConfigHandler):
     def set_nested_value(self, doc: tomlkit.TOMLDocument, key_path: str, value: typing.Any) -> None:
         """ドット区切りのキーパスで値を設定"""
         keys = key_path.split(".")
-        current: tomlkit.TOMLDocument | tomlkit.container.Container = doc
+        current: TOMLContainer = doc
         for key in keys[:-1]:
             if key not in current:
                 current[key] = tomlkit.table()
@@ -91,9 +94,8 @@ class PyprojectHandler(handlers_base.ConfigHandler):
         プロジェクト固有のフィールドは保持される。
         """
         # プロジェクト設定からオプションを取得
-        pyproject_opts = project.pyproject
-        extra_preserve = pyproject_opts.preserve_sections if pyproject_opts else []
-        extra_dev_deps = pyproject_opts.extra_dev_deps if pyproject_opts else []
+        extra_preserve = project.pyproject.preserve_sections
+        extra_dev_deps = project.pyproject.extra_dev_deps
 
         # 保持するセクションのリスト
         preserve_sections = _PRESERVE_SECTIONS + extra_preserve
@@ -143,8 +145,8 @@ class PyprojectHandler(handlers_base.ConfigHandler):
 
     def _merge_section(
         self,
-        result: tomlkit.TOMLDocument | tomlkit.container.Container,
-        template: tomlkit.TOMLDocument | tomlkit.container.Container,
+        result: TOMLContainer,
+        template: TOMLContainer,
         section: str,
         preserve_fields: list[str],
     ) -> None:
@@ -235,11 +237,11 @@ class PyprojectHandler(handlers_base.ConfigHandler):
 
         # バリデーション
         # NOTE: tomlkit が生成する TOML は常に有効なため、このパスは通常到達しない
-        is_valid, error_msg = self.validate(new_content)
-        if not is_valid:  # pragma: no cover
+        validation = self.validate(new_content)
+        if not validation.is_valid:  # pragma: no cover
             return handlers_base.ApplyResult(
                 status=handlers_base.ApplyStatus.ERROR,
-                message=f"バリデーション失敗: {error_msg}",
+                message=f"バリデーション失敗: {validation.error_message}",
             )
 
         current_content = output_path.read_text()

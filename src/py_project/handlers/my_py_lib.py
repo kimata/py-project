@@ -1,5 +1,6 @@
 """my-py-lib 依存関係更新ハンドラ"""
 
+import dataclasses
 import logging
 import pathlib
 import re
@@ -7,6 +8,16 @@ import subprocess
 
 import py_project.config
 import py_project.handlers.base as handlers_base
+
+
+@dataclasses.dataclass
+class MyPyLibDependencyMatch:
+    """my-py-lib 依存関係の検索結果"""
+
+    hash: str | None
+    start: int | None
+    end: int | None
+
 
 logger = logging.getLogger(__name__)
 
@@ -50,18 +61,16 @@ class MyPyLibHandler(handlers_base.ConfigHandler):
             logger.warning("my-py-lib の最新コミットハッシュ取得に失敗: %s", e)
             return None
 
-    def find_my_py_lib_dependency(self, content: str) -> tuple[str | None, int | None, int | None]:
-        """my-py-lib の依存関係を検索
-
-        Returns:
-            (現在のハッシュ or None, 開始位置, 終了位置)
-
-        """
+    def find_my_py_lib_dependency(self, content: str) -> MyPyLibDependencyMatch:
+        """my-py-lib の依存関係を検索"""
         match = _MY_PY_LIB_PATTERN.search(content)
         if match:
-            current_hash = match.group(1)
-            return current_hash, match.start(), match.end()
-        return None, None, None
+            return MyPyLibDependencyMatch(
+                hash=match.group(1),
+                start=match.start(),
+                end=match.end(),
+            )
+        return MyPyLibDependencyMatch(hash=None, start=None, end=None)
 
     def update_dependency(self, content: str, new_hash: str) -> str:
         """依存関係を更新した内容を返す"""
@@ -76,16 +85,16 @@ class MyPyLibHandler(handlers_base.ConfigHandler):
             return f"pyproject.toml が見つかりません: {output_path}"
 
         content = output_path.read_text()
-        current_hash, _, _ = self.find_my_py_lib_dependency(content)
+        dep_match = self.find_my_py_lib_dependency(content)
 
-        if current_hash is None:
+        if dep_match.hash is None:
             return "my-py-lib の依存関係が見つかりません"
 
         latest_hash = self.get_latest_commit_hash()
         if latest_hash is None:
             return "最新コミットハッシュの取得に失敗"
 
-        if current_hash == latest_hash:
+        if dep_match.hash == latest_hash:
             return None
 
         new_content = self.update_dependency(content, latest_hash)
@@ -105,9 +114,9 @@ class MyPyLibHandler(handlers_base.ConfigHandler):
             )
 
         content = output_path.read_text()
-        current_hash, _, _ = self.find_my_py_lib_dependency(content)
+        dep_match = self.find_my_py_lib_dependency(content)
 
-        if current_hash is None:
+        if dep_match.hash is None:
             return handlers_base.ApplyResult(
                 status=handlers_base.ApplyStatus.SKIPPED,
                 message="my-py-lib の依存関係が見つかりません",
@@ -120,13 +129,13 @@ class MyPyLibHandler(handlers_base.ConfigHandler):
                 message="最新コミットハッシュの取得に失敗",
             )
 
-        if current_hash == latest_hash:
+        if dep_match.hash == latest_hash:
             return handlers_base.ApplyResult(status=handlers_base.ApplyStatus.UNCHANGED)
 
         if context.dry_run:
             return handlers_base.ApplyResult(
                 status=handlers_base.ApplyStatus.UPDATED,
-                message=f"{current_hash[:8]} -> {latest_hash[:8]}",
+                message=f"{dep_match.hash[:8]} -> {latest_hash[:8]}",
             )
 
         # バックアップ作成
@@ -139,11 +148,11 @@ class MyPyLibHandler(handlers_base.ConfigHandler):
         logger.debug(
             "my-py-lib を更新しました: %s (%s -> %s)",
             output_path,
-            current_hash[:8],
+            dep_match.hash[:8],
             latest_hash[:8],
         )
 
         return handlers_base.ApplyResult(
             status=handlers_base.ApplyStatus.UPDATED,
-            message=f"{current_hash[:8]} -> {latest_hash[:8]}",
+            message=f"{dep_match.hash[:8]} -> {latest_hash[:8]}",
         )

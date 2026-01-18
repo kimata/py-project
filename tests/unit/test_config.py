@@ -109,7 +109,7 @@ class TestDefaults:
         assert defaults.python_version == "3.12"
         assert defaults.configs == []
         assert defaults.vars == {}
-        assert defaults.gitlab_ci is None
+        assert defaults.gitlab_ci.edits == []
 
     def test_from_dict_without_gitlab_ci(self):
         """gitlab_ci なしの辞書から生成"""
@@ -119,7 +119,7 @@ class TestDefaults:
         }
         defaults = py_project.config.Defaults.from_dict(data)
 
-        assert defaults.gitlab_ci is None
+        assert defaults.gitlab_ci.edits == []
 
 
 class TestProject:
@@ -175,9 +175,9 @@ class TestProject:
         assert project.exclude_configs == []
         assert project.vars == {}
         assert project.template_overrides == {}
-        assert project.pyproject is None
-        assert project.gitlab_ci is None
-        assert project.gitignore is None
+        assert project.pyproject.preserve_sections == []
+        assert project.gitlab_ci.edits == []
+        assert project.gitignore.extra_lines == []
 
 
 class TestConfig:

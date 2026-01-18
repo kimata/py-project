@@ -60,7 +60,7 @@ class TestTemplateCopyHandler:
 
         result = handler.apply(sample_project, apply_context)
 
-        assert result.status == "created"
+        assert result.status == handlers_base.ApplyStatus.CREATED
         assert (tmp_project / ".pre-commit-config.yaml").exists()
 
     def test_apply_updates_file(self, tmp_templates, tmp_project, apply_context, sample_project):
@@ -72,7 +72,7 @@ class TestTemplateCopyHandler:
 
         result = handler.apply(sample_project, apply_context)
 
-        assert result.status == "updated"
+        assert result.status == handlers_base.ApplyStatus.UPDATED
 
     def test_apply_unchanged(self, tmp_templates, tmp_project, apply_context, sample_project):
         """変更なし"""
@@ -84,7 +84,7 @@ class TestTemplateCopyHandler:
 
         result = handler.apply(sample_project, apply_context)
 
-        assert result.status == "unchanged"
+        assert result.status == handlers_base.ApplyStatus.UNCHANGED
 
     def test_apply_dry_run(self, tmp_templates, tmp_project, sample_config):
         """ドライランモード"""
@@ -100,7 +100,7 @@ class TestTemplateCopyHandler:
 
         result = handler.apply(project, context)
 
-        assert result.status == "created"
+        assert result.status == handlers_base.ApplyStatus.CREATED
         # ドライランなのでファイルは作成されない
         assert not (tmp_project / ".pre-commit-config.yaml").exists()
 
@@ -121,7 +121,7 @@ class TestTemplateCopyHandler:
 
         result = handler.apply(project, context)
 
-        assert result.status == "updated"
+        assert result.status == handlers_base.ApplyStatus.UPDATED
         assert (tmp_project / ".pre-commit-config.yaml.bak").exists()
         assert (tmp_project / ".pre-commit-config.yaml.bak").read_text() == "old content"
 
@@ -135,7 +135,7 @@ class TestGitignoreHandler:
 
         result = handler.apply(sample_project, apply_context)
 
-        assert result.status == "created"
+        assert result.status == handlers_base.ApplyStatus.CREATED
         content = (tmp_project / ".gitignore").read_text()
         assert "__pycache__/" in content
 
@@ -157,7 +157,7 @@ class TestGitignoreHandler:
 
         result = handler.apply(project, context)
 
-        assert result.status == "created"
+        assert result.status == handlers_base.ApplyStatus.CREATED
         content = (tmp_project / ".gitignore").read_text()
         assert "__pycache__/" in content
         assert "!config.yaml" in content
@@ -214,7 +214,7 @@ class TestTemplateOverrides:
 
         result = handler.apply(project, context)
 
-        assert result.status == "created"
+        assert result.status == handlers_base.ApplyStatus.CREATED
         content = (tmp_project / ".pre-commit-config.yaml").read_text()
         assert "custom: template" in content
 
@@ -253,7 +253,7 @@ class TestTemplateCopyErrors:
 
         result = handler.apply(project, context)
 
-        assert result.status == "error"
+        assert result.status == handlers_base.ApplyStatus.ERROR
         assert result.message is not None
         assert "テンプレートが見つかりません" in result.message
 
@@ -284,7 +284,7 @@ class TestTemplateCopyErrors:
 
         result = handler.apply(project, context)
 
-        assert result.status == "error"
+        assert result.status == handlers_base.ApplyStatus.ERROR
         assert result.message is not None
         assert "バリデーション失敗" in result.message
 
@@ -394,18 +394,18 @@ class TestJSONValidation:
     def test_validate_valid_json(self):
         """有効な JSON のバリデーション"""
         handler = template_copy.PrettierHandler()
-        is_valid, error = handler.validate('{"key": "value"}')
+        result = handler.validate('{"key": "value"}')
 
-        assert is_valid is True
-        assert error is None
+        assert result.is_valid is True
+        assert result.error_message is None
 
     def test_validate_invalid_json(self):
         """無効な JSON のバリデーション"""
         handler = template_copy.PrettierHandler()
-        is_valid, error = handler.validate('{"key": "value"')  # 閉じ括弧なし
+        result = handler.validate('{"key": "value"')  # 閉じ括弧なし
 
-        assert is_valid is False
-        assert error is not None
+        assert result.is_valid is False
+        assert result.error_message is not None
 
     def test_apply_invalid_json_template(self, tmp_path):
         """無効な JSON テンプレートを適用した場合"""
@@ -433,6 +433,6 @@ class TestJSONValidation:
 
         result = handler.apply(project, context)
 
-        assert result.status == "error"
+        assert result.status == handlers_base.ApplyStatus.ERROR
         assert result.message is not None
         assert "バリデーション失敗" in result.message

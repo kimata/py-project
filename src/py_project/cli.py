@@ -28,12 +28,11 @@ Options:
   --include-config              config.yaml の extra_dev_deps も更新対象にします。
 """
 
-from __future__ import annotations
-
 import logging
 import pathlib
 import sys
 
+import docopt
 import my_lib.config
 import my_lib.cui_progress
 import my_lib.logger
@@ -51,8 +50,8 @@ _SCHEMA_CONFIG = "schema/config.schema"
 def execute(
     config: py_project.config.Config,
     options: py_project.config.ApplyOptions,
-    projects: list[str] | None = None,
-    config_types: list[str] | None = None,
+    projects: py_project.applier.TargetList | None = None,
+    config_types: py_project.applier.TargetList | None = None,
 ) -> int:
     """設定を適用する
 
@@ -136,8 +135,6 @@ def show_projects(config: py_project.config.Config) -> None:
 
 def main() -> None:
     """CLI エントリポイント"""
-    import docopt
-
     if __doc__ is None:
         raise RuntimeError("__doc__ is not set")
 

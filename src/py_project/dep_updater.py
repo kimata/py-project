@@ -1,8 +1,7 @@
 """依存関係バージョン更新ロジック"""
 
-from __future__ import annotations
-
 import dataclasses
+import io
 import json
 import pathlib
 import re
@@ -14,7 +13,9 @@ import rich.console
 import ruamel.yaml
 import tomlkit
 import tomlkit.container
+import tomlkit.items
 
+import py_project.applier
 import py_project.config
 
 
@@ -35,7 +36,7 @@ def _get_latest_version(package: str) -> str | None:
         with urllib.request.urlopen(url, timeout=10) as response:  # noqa: S310
             data = json.loads(response.read().decode())
             return data["info"]["version"]
-    except (urllib.error.URLError, json.JSONDecodeError, KeyError):
+    except (urllib.error.URLError, json.JSONDecodeError, KeyError, TimeoutError):
         return None
 
 
@@ -53,6 +54,15 @@ def _parse_dependency(dep: str) -> tuple[str, str] | None:
 def _format_dependency(package: str, version: str) -> str:
     """依存関係文字列を生成"""
     return f"{package}>={version}"
+
+
+def _create_multiline_array(items: list[str]) -> tomlkit.items.Array:
+    """multiline TOML 配列を生成"""
+    arr = tomlkit.array()
+    arr.multiline(True)
+    for item in items:
+        arr.append(item)
+    return arr
 
 
 def _normalize_version(version: str) -> str:
@@ -121,11 +131,9 @@ def update_template_deps(
         return updates
 
     # 実際に更新（フォーマットを保持するため、tomlkit の配列を使用）
-    new_array = tomlkit.array()
-    new_array.multiline(True)
-    for dep in new_deps:
-        new_array.append(str(dep))
-    typing.cast(tomlkit.container.Container, doc["dependency-groups"])["dev"] = new_array
+    typing.cast(tomlkit.container.Container, doc["dependency-groups"])["dev"] = _create_multiline_array(
+        new_deps
+    )
     template_path.write_text(tomlkit.dumps(doc))
 
     console.print(f"[green]✨ {updated_count} 個の依存関係を更新しました[/green]")
@@ -232,7 +240,7 @@ def update_project_deps(
     if console is None:
         console = rich.console.Console()
 
-    pyproject_path = pathlib.Path(project.path).expanduser() / "pyproject.toml"
+    pyproject_path = project.get_path() / "pyproject.toml"
 
     if not pyproject_path.exists():
         console.print(f"[yellow]pyproject.toml が見つかりません: {pyproject_path}[/yellow]")
@@ -256,11 +264,9 @@ def update_project_deps(
         return None
 
     # 新しい配列を作成
-    new_array = tomlkit.array()
-    new_array.multiline(True)
-    for dep in new_deps:
-        new_array.append(dep)
-    typing.cast(tomlkit.container.Container, doc["project"])["dependencies"] = new_array
+    typing.cast(tomlkit.container.Container, doc["project"])["dependencies"] = _create_multiline_array(
+        new_deps
+    )
     new_content = tomlkit.dumps(doc)
 
     result = FileUpdateResult(
@@ -280,7 +286,7 @@ def update_project_deps(
 
 def update_config_deps(
     config_path: pathlib.Path,
-    projects: list[str] | None = None,
+    projects: py_project.applier.TargetList = None,
     *,
     dry_run: bool = True,
     console: rich.console.Console | None = None,
@@ -333,7 +339,7 @@ def update_config_deps(
 
         console.print(f"\n[bold]  📁 {proj_name}[/bold]")
 
-        new_deps, updates = _check_and_update_deps(list(extra_deps), console)
+        new_deps, updates = _check_and_update_deps(extra_deps.copy(), console)
 
         updated_count = sum(1 for u in updates if u.updated)
         if updated_count > 0:
@@ -347,8 +353,6 @@ def update_config_deps(
         return None
 
     # 新しいコンテンツを生成
-    import io
-
     stream = io.StringIO()
     yaml.dump(doc, stream)
     new_content = stream.getvalue()

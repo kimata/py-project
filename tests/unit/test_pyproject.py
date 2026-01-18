@@ -125,7 +125,7 @@ class TestPyprojectHandler:
 
         result = handler.apply(project, apply_context)
 
-        assert result.status == "updated"
+        assert result.status == handlers_base.ApplyStatus.UPDATED
 
         # 更新後の内容を確認
         content = (tmp_project / "pyproject.toml").read_text()
@@ -143,7 +143,7 @@ class TestPyprojectHandler:
         # 再度適用
         result = handler.apply(project, apply_context)
 
-        assert result.status == "unchanged"
+        assert result.status == handlers_base.ApplyStatus.UNCHANGED
 
     def test_apply_dry_run(self, tmp_templates, tmp_project):
         """ドライランモード"""
@@ -165,7 +165,7 @@ class TestPyprojectHandler:
 
         result = handler.apply(project, context)
 
-        assert result.status == "updated"
+        assert result.status == handlers_base.ApplyStatus.UPDATED
         # ドライランなのでファイルは変更されない
         assert (tmp_project / "pyproject.toml").read_text() == original_content
 
@@ -178,7 +178,7 @@ class TestPyprojectHandler:
 
         result = handler.apply(project, apply_context)
 
-        assert result.status == "skipped"
+        assert result.status == handlers_base.ApplyStatus.SKIPPED
         assert "pyproject.toml が見つかりません" in result.message
 
 
@@ -852,7 +852,7 @@ class TestApplyErrors:
 
         result = handler.apply(project, context)
 
-        assert result.status == "error"
+        assert result.status == handlers_base.ApplyStatus.ERROR
         assert "テンプレートが見つかりません" in result.message
 
     def test_apply_with_backup(self, tmp_templates, tmp_project):
@@ -875,7 +875,7 @@ class TestApplyErrors:
 
         result = handler.apply(project, context)
 
-        assert result.status == "updated"
+        assert result.status == handlers_base.ApplyStatus.UPDATED
         # バックアップが作成されている
         assert (tmp_project / "pyproject.toml.bak").exists()
         assert (tmp_project / "pyproject.toml.bak").read_text() == original_content

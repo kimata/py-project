@@ -1,10 +1,24 @@
 """設定データクラス定義"""
 
-from __future__ import annotations
-
 import dataclasses
 import pathlib
 import typing
+
+
+def expand_user_path(path: str | pathlib.Path) -> pathlib.Path:
+    """ユーザー指定パスを展開・絶対化
+
+    ~/ を展開し、相対パスを絶対パスに変換する。
+    ユーザー入力や設定ファイルのパス指定に使用。
+
+    Args:
+        path: 展開対象のパス（文字列または Path）
+
+    Returns:
+        展開された絶対パス
+
+    """
+    return pathlib.Path(path).expanduser().resolve()
 
 
 @dataclasses.dataclass
@@ -43,7 +57,7 @@ class GitlabCiEdit:
     value: str
 
     @classmethod
-    def from_dict(cls, data: dict[str, typing.Any]) -> GitlabCiEdit:
+    def from_dict(cls, data: dict[str, typing.Any]) -> "GitlabCiEdit":
         """辞書から GitlabCiEdit を生成"""
         return cls(path=data["path"], value=data["value"])
 
@@ -60,7 +74,7 @@ class GitlabCiOptions:
     edits: list[GitlabCiEdit] = dataclasses.field(default_factory=list)
 
     @classmethod
-    def from_dict(cls, data: dict[str, typing.Any]) -> GitlabCiOptions:
+    def from_dict(cls, data: dict[str, typing.Any]) -> "GitlabCiOptions":
         """辞書から GitlabCiOptions を生成"""
         edits = [GitlabCiEdit.from_dict(e) for e in data.get("edits", [])]
         return cls(edits=edits)
@@ -80,7 +94,7 @@ class PyprojectOptions:
     extra_dev_deps: list[str] = dataclasses.field(default_factory=list)
 
     @classmethod
-    def from_dict(cls, data: dict[str, typing.Any]) -> PyprojectOptions:
+    def from_dict(cls, data: dict[str, typing.Any]) -> "PyprojectOptions":
         """辞書から PyprojectOptions を生成"""
         return cls(
             preserve_sections=data.get("preserve_sections", []),
@@ -100,7 +114,7 @@ class GitignoreOptions:
     extra_lines: list[str] = dataclasses.field(default_factory=list)
 
     @classmethod
-    def from_dict(cls, data: dict[str, typing.Any]) -> GitignoreOptions:
+    def from_dict(cls, data: dict[str, typing.Any]) -> "GitignoreOptions":
         """辞書から GitignoreOptions を生成"""
         return cls(extra_lines=data.get("extra_lines", []))
 
@@ -117,7 +131,7 @@ class DockerignoreOptions:
     extra_lines: list[str] = dataclasses.field(default_factory=list)
 
     @classmethod
-    def from_dict(cls, data: dict[str, typing.Any]) -> DockerignoreOptions:
+    def from_dict(cls, data: dict[str, typing.Any]) -> "DockerignoreOptions":
         """辞書から DockerignoreOptions を生成"""
         return cls(extra_lines=data.get("extra_lines", []))
 
@@ -137,19 +151,16 @@ class Defaults:
     python_version: str = "3.12"
     configs: list[str] = dataclasses.field(default_factory=list)
     vars: dict[str, str] = dataclasses.field(default_factory=dict)
-    gitlab_ci: GitlabCiOptions | None = None
+    gitlab_ci: GitlabCiOptions = dataclasses.field(default_factory=GitlabCiOptions)
 
     @classmethod
-    def from_dict(cls, data: dict[str, typing.Any]) -> Defaults:
+    def from_dict(cls, data: dict[str, typing.Any]) -> "Defaults":
         """辞書から Defaults を生成"""
-        gitlab_ci = None
-        if "gitlab_ci" in data:
-            gitlab_ci = GitlabCiOptions.from_dict(data["gitlab_ci"])
         return cls(
             python_version=data.get("python_version", "3.12"),
             configs=data.get("configs", []),
             vars=data.get("vars", {}),
-            gitlab_ci=gitlab_ci,
+            gitlab_ci=GitlabCiOptions.from_dict(data.get("gitlab_ci", {})),
         )
 
 
@@ -177,30 +188,18 @@ class Project:
     exclude_configs: list[str] = dataclasses.field(default_factory=list)
     vars: dict[str, str] = dataclasses.field(default_factory=dict)
     template_overrides: dict[str, str] = dataclasses.field(default_factory=dict)
-    pyproject: PyprojectOptions | None = None
-    gitlab_ci: GitlabCiOptions | None = None
-    gitignore: GitignoreOptions | None = None
-    dockerignore: DockerignoreOptions | None = None
+    pyproject: PyprojectOptions = dataclasses.field(default_factory=PyprojectOptions)
+    gitlab_ci: GitlabCiOptions = dataclasses.field(default_factory=GitlabCiOptions)
+    gitignore: GitignoreOptions = dataclasses.field(default_factory=GitignoreOptions)
+    dockerignore: DockerignoreOptions = dataclasses.field(default_factory=DockerignoreOptions)
 
     def get_path(self) -> pathlib.Path:
-        """展開されたパスを取得"""
-        return pathlib.Path(self.path).expanduser()
+        """展開されたパスを取得（絶対パス）"""
+        return expand_user_path(self.path)
 
     @classmethod
-    def from_dict(cls, data: dict[str, typing.Any]) -> Project:
+    def from_dict(cls, data: dict[str, typing.Any]) -> "Project":
         """辞書から Project を生成"""
-        pyproject = None
-        if "pyproject" in data:
-            pyproject = PyprojectOptions.from_dict(data["pyproject"])
-        gitlab_ci = None
-        if "gitlab_ci" in data:
-            gitlab_ci = GitlabCiOptions.from_dict(data["gitlab_ci"])
-        gitignore = None
-        if "gitignore" in data:
-            gitignore = GitignoreOptions.from_dict(data["gitignore"])
-        dockerignore = None
-        if "dockerignore" in data:
-            dockerignore = DockerignoreOptions.from_dict(data["dockerignore"])
         return cls(
             name=data["name"],
             path=data["path"],
@@ -208,10 +207,10 @@ class Project:
             exclude_configs=data.get("exclude_configs", []),
             vars=data.get("vars", {}),
             template_overrides=data.get("template_overrides", {}),
-            pyproject=pyproject,
-            gitlab_ci=gitlab_ci,
-            gitignore=gitignore,
-            dockerignore=dockerignore,
+            pyproject=PyprojectOptions.from_dict(data.get("pyproject", {})),
+            gitlab_ci=GitlabCiOptions.from_dict(data.get("gitlab_ci", {})),
+            gitignore=GitignoreOptions.from_dict(data.get("gitignore", {})),
+            dockerignore=DockerignoreOptions.from_dict(data.get("dockerignore", {})),
         )
 
 
@@ -231,8 +230,8 @@ class Config:
     template_dir: str = "./templates"
 
     def get_template_dir(self) -> pathlib.Path:
-        """展開されたテンプレートディレクトリを取得"""
-        return pathlib.Path(self.template_dir).expanduser()
+        """展開されたテンプレートディレクトリを取得（絶対パス）"""
+        return expand_user_path(self.template_dir)
 
     def get_project(self, name: str) -> Project | None:
         """名前でプロジェクトを取得"""
@@ -246,7 +245,7 @@ class Config:
         return [p.name for p in self.projects]
 
     @classmethod
-    def from_dict(cls, data: dict[str, typing.Any]) -> Config:
+    def from_dict(cls, data: dict[str, typing.Any]) -> "Config":
         """辞書から Config を生成"""
         defaults = Defaults()
         if "defaults" in data:

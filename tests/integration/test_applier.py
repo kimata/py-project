@@ -279,14 +279,14 @@ class TestShowDiff:
 
 
 class TestGetProjectConfigs:
-    """get_project_configs のテスト"""
+    """_get_project_configs のテスト"""
 
     def test_merge_project_configs_with_defaults(self):
         """プロジェクトの configs は defaults にマージされる"""
         project = py_project.config.Project(name="test", path="/tmp/test", configs=["ruff", "pre-commit"])
         defaults = py_project.config.Defaults(configs=["pyproject"])
 
-        result = applier.get_project_configs(project, defaults)
+        result = applier._get_project_configs(project, defaults)
 
         # defaults.configs をベースに project.configs が追加される
         assert result == ["pyproject", "ruff", "pre-commit"]
@@ -296,7 +296,7 @@ class TestGetProjectConfigs:
         project = py_project.config.Project(name="test", path="/tmp/test")
         defaults = py_project.config.Defaults(configs=["pyproject", "gitignore"])
 
-        result = applier.get_project_configs(project, defaults)
+        result = applier._get_project_configs(project, defaults)
 
         assert result == ["pyproject", "gitignore"]
 
@@ -305,7 +305,7 @@ class TestGetProjectConfigs:
         project = py_project.config.Project(name="test", path="/tmp/test")
         defaults = py_project.config.Defaults(configs=[])
 
-        result = applier.get_project_configs(project, defaults)
+        result = applier._get_project_configs(project, defaults)
 
         assert result == []
 
@@ -314,7 +314,7 @@ class TestGetProjectConfigs:
         project = py_project.config.Project(name="test", path="/tmp/test", exclude_configs=["gitignore"])
         defaults = py_project.config.Defaults(configs=["pyproject", "gitignore", "renovate"])
 
-        result = applier.get_project_configs(project, defaults)
+        result = applier._get_project_configs(project, defaults)
 
         assert result == ["pyproject", "renovate"]
 
@@ -328,7 +328,7 @@ class TestGetProjectConfigs:
         )
         defaults = py_project.config.Defaults(configs=["pyproject", "gitignore"])
 
-        result = applier.get_project_configs(project, defaults)
+        result = applier._get_project_configs(project, defaults)
 
         # pyproject + ruff (gitignore は除外)
         assert result == ["pyproject", "ruff"]
@@ -338,7 +338,7 @@ class TestGetProjectConfigs:
         project = py_project.config.Project(name="test", path="/tmp/test", configs=["pyproject", "ruff"])
         defaults = py_project.config.Defaults(configs=["pyproject", "gitignore"])
 
-        result = applier.get_project_configs(project, defaults)
+        result = applier._get_project_configs(project, defaults)
 
         # pyproject は重複しないので1回だけ
         assert result == ["pyproject", "gitignore", "ruff"]
@@ -352,7 +352,7 @@ class TestGetProjectConfigs:
         )
         defaults = py_project.config.Defaults(configs=["pyproject", "gitignore"])
 
-        result = applier.get_project_configs(project, defaults)
+        result = applier._get_project_configs(project, defaults)
 
         # nonexistent-config は無視される
         assert result == ["pyproject", "gitignore"]
@@ -382,7 +382,7 @@ class TestUpdateSummary:
         import py_project.handlers.base as handlers_base
 
         summary = applier.ApplySummary()
-        result = handlers_base.ApplyResult(status="created")
+        result = handlers_base.ApplyResult(status=handlers_base.ApplyStatus.CREATED)
 
         applier._update_summary(summary, result, "test-project", "pyproject")
 
@@ -393,7 +393,7 @@ class TestUpdateSummary:
         import py_project.handlers.base as handlers_base
 
         summary = applier.ApplySummary()
-        result = handlers_base.ApplyResult(status="updated")
+        result = handlers_base.ApplyResult(status=handlers_base.ApplyStatus.UPDATED)
 
         applier._update_summary(summary, result, "test-project", "pyproject")
 
@@ -404,7 +404,7 @@ class TestUpdateSummary:
         import py_project.handlers.base as handlers_base
 
         summary = applier.ApplySummary()
-        result = handlers_base.ApplyResult(status="unchanged")
+        result = handlers_base.ApplyResult(status=handlers_base.ApplyStatus.UNCHANGED)
 
         applier._update_summary(summary, result, "test-project", "pyproject")
 
@@ -415,7 +415,7 @@ class TestUpdateSummary:
         import py_project.handlers.base as handlers_base
 
         summary = applier.ApplySummary()
-        result = handlers_base.ApplyResult(status="skipped")
+        result = handlers_base.ApplyResult(status=handlers_base.ApplyStatus.SKIPPED)
 
         applier._update_summary(summary, result, "test-project", "pyproject")
 
@@ -426,7 +426,7 @@ class TestUpdateSummary:
         import py_project.handlers.base as handlers_base
 
         summary = applier.ApplySummary()
-        result = handlers_base.ApplyResult(status="error", message="テストエラー")
+        result = handlers_base.ApplyResult(status=handlers_base.ApplyStatus.ERROR, message="テストエラー")
 
         applier._update_summary(summary, result, "test-project", "pyproject")
 
@@ -439,28 +439,12 @@ class TestUpdateSummary:
         import py_project.handlers.base as handlers_base
 
         summary = applier.ApplySummary()
-        result = handlers_base.ApplyResult(status="error")
+        result = handlers_base.ApplyResult(status=handlers_base.ApplyStatus.ERROR)
 
         applier._update_summary(summary, result, "test-project", "pyproject")
 
         assert summary.errors == 1
         assert len(summary.error_messages) == 0
-
-    def test_update_summary_unknown_status(self):
-        """未知のステータス（何も更新されない）"""
-        import py_project.handlers.base as handlers_base
-
-        summary = applier.ApplySummary()
-        result = handlers_base.ApplyResult(status="unknown_status")
-
-        applier._update_summary(summary, result, "test-project", "pyproject")
-
-        # 何も更新されない
-        assert summary.created == 0
-        assert summary.updated == 0
-        assert summary.unchanged == 0
-        assert summary.skipped == 0
-        assert summary.errors == 0
 
 
 class TestPrintResult:
@@ -468,27 +452,33 @@ class TestPrintResult:
 
     def test_print_result_with_message(self):
         """メッセージ付きの結果表示"""
+        import my_lib.cui_progress
+
         import py_project.handlers.base as handlers_base
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
-        result = handlers_base.ApplyResult(status="updated", message="詳細メッセージ")
+        result = handlers_base.ApplyResult(status=handlers_base.ApplyStatus.UPDATED, message="詳細メッセージ")
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        applier._print_result(console, "pyproject", result, dry_run=False)
+        applier._print_result(console, "pyproject", result, dry_run=False, progress=progress)
 
         assert "詳細メッセージ" in output.getvalue()
 
-    def test_print_result_unknown_status(self):
-        """未知のステータス"""
+    def test_print_result_updated_status(self):
+        """更新ステータスの表示"""
+        import my_lib.cui_progress
+
         import py_project.handlers.base as handlers_base
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
-        result = handlers_base.ApplyResult(status="unknown_status")
+        result = handlers_base.ApplyResult(status=handlers_base.ApplyStatus.UPDATED)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        applier._print_result(console, "pyproject", result, dry_run=False)
+        applier._print_result(console, "pyproject", result, dry_run=False, progress=progress)
 
-        assert "unknown_status" in output.getvalue()
+        assert "更新" in output.getvalue()
 
 
 class TestPrintSummary:
@@ -496,8 +486,11 @@ class TestPrintSummary:
 
     def test_print_summary_with_skipped(self):
         """skipped を含むサマリ表示"""
+        import my_lib.cui_progress
+
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
         summary = applier.ApplySummary(
             created=1,
@@ -507,15 +500,18 @@ class TestPrintSummary:
             projects_processed=1,
         )
 
-        applier._print_summary(console, summary, dry_run=False)
+        applier._print_summary(console, summary, dry_run=False, progress=progress)
 
         result = output.getvalue()
         assert "スキップ" in result
 
     def test_print_summary_with_errors(self):
         """エラーを含むサマリ表示"""
+        import my_lib.cui_progress
+
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
         summary = applier.ApplySummary(
             errors=2,
@@ -523,7 +519,7 @@ class TestPrintSummary:
             error_messages=["Error 1", "Error 2"],
         )
 
-        applier._print_summary(console, summary, dry_run=False)
+        applier._print_summary(console, summary, dry_run=False, progress=progress)
 
         result = output.getvalue()
         assert "エラー" in result
@@ -531,8 +527,11 @@ class TestPrintSummary:
 
     def test_print_summary_dry_run_with_changes(self):
         """確認モードで変更がある場合"""
+        import my_lib.cui_progress
+
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
         summary = applier.ApplySummary(
             created=1,
@@ -540,15 +539,18 @@ class TestPrintSummary:
             projects_processed=1,
         )
 
-        applier._print_summary(console, summary, dry_run=True)
+        applier._print_summary(console, summary, dry_run=True, progress=progress)
 
         result = output.getvalue()
         assert "--apply" in result
 
     def test_print_summary_apply_success(self):
         """適用成功時の 完了！ 表示"""
+        import my_lib.cui_progress
+
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
         summary = applier.ApplySummary(
             updated=1,
@@ -556,7 +558,7 @@ class TestPrintSummary:
             errors=0,
         )
 
-        applier._print_summary(console, summary, dry_run=False)
+        applier._print_summary(console, summary, dry_run=False, progress=progress)
 
         result = output.getvalue()
         assert "完了！" in result
@@ -567,27 +569,33 @@ class TestRunUvSync:
 
     def test_run_uv_sync_success(self, tmp_project, mocker):
         """uv sync 成功"""
+        import my_lib.cui_progress
+
         mock_run = mocker.patch("subprocess.run")
         mock_run.return_value.returncode = 0
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        result = applier._run_uv_sync(tmp_project, console)
+        result = applier._run_uv_sync(tmp_project, console, progress)
 
         assert result is True
         assert "uv sync completed" in output.getvalue()
 
     def test_run_uv_sync_failure_with_stderr(self, tmp_project, mocker):
         """uv sync 失敗（stderr あり）"""
+        import my_lib.cui_progress
+
         mock_run = mocker.patch("subprocess.run")
         mock_run.return_value.returncode = 1
         mock_run.return_value.stderr = "Error message\nLine 2\nLine 3"
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        result = applier._run_uv_sync(tmp_project, console)
+        result = applier._run_uv_sync(tmp_project, console, progress)
 
         assert result is False
         output_text = output.getvalue()
@@ -596,14 +604,17 @@ class TestRunUvSync:
 
     def test_run_uv_sync_failure_without_stderr(self, tmp_project, mocker):
         """uv sync 失敗（stderr なし）"""
+        import my_lib.cui_progress
+
         mock_run = mocker.patch("subprocess.run")
         mock_run.return_value.returncode = 1
         mock_run.return_value.stderr = ""
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        result = applier._run_uv_sync(tmp_project, console)
+        result = applier._run_uv_sync(tmp_project, console, progress)
 
         assert result is False
         assert "uv sync failed" in output.getvalue()
@@ -612,24 +623,30 @@ class TestRunUvSync:
         """uv sync タイムアウト"""
         import subprocess
 
+        import my_lib.cui_progress
+
         mocker.patch("subprocess.run", side_effect=subprocess.TimeoutExpired("uv", 120))
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        result = applier._run_uv_sync(tmp_project, console)
+        result = applier._run_uv_sync(tmp_project, console, progress)
 
         assert result is False
         assert "timed out" in output.getvalue()
 
     def test_run_uv_sync_not_found(self, tmp_project, mocker):
         """uv コマンドが見つからない"""
+        import my_lib.cui_progress
+
         mocker.patch("subprocess.run", side_effect=FileNotFoundError())
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        result = applier._run_uv_sync(tmp_project, console)
+        result = applier._run_uv_sync(tmp_project, console, progress)
 
         assert result is False
         assert "uv command not found" in output.getvalue()
@@ -714,27 +731,33 @@ class TestRunGitStash:
 
     def test_run_git_stash_success(self, tmp_path, mocker):
         """git stash 成功"""
+        import my_lib.cui_progress
+
         mock_run = mocker.patch("subprocess.run")
         mock_run.return_value.returncode = 0
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        result = applier._run_git_stash(tmp_path, console)
+        result = applier._run_git_stash(tmp_path, console, progress)
 
         assert result is True
         assert "一時退避" in output.getvalue()
 
     def test_run_git_stash_failure(self, tmp_path, mocker):
         """git stash 失敗"""
+        import my_lib.cui_progress
+
         mock_run = mocker.patch("subprocess.run")
         mock_run.return_value.returncode = 1
         mock_run.return_value.stderr = "error message"
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        result = applier._run_git_stash(tmp_path, console)
+        result = applier._run_git_stash(tmp_path, console, progress)
 
         assert result is False
         assert "stash failed" in output.getvalue()
@@ -745,18 +768,23 @@ class TestRunGitStashPop:
 
     def test_run_git_stash_pop_success(self, tmp_path, mocker):
         """git stash pop 成功"""
+        import my_lib.cui_progress
+
         mock_run = mocker.patch("subprocess.run")
         mock_run.return_value.returncode = 0
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        applier._run_git_stash_pop(tmp_path, console)
+        applier._run_git_stash_pop(tmp_path, console, progress)
 
         assert "復元" in output.getvalue()
 
     def test_run_git_stash_pop_failure(self, tmp_path, mocker):
         """git stash pop 失敗（コンフリクト以外）"""
+        import my_lib.cui_progress
+
         mock_run = mocker.patch("subprocess.run")
         mock_run.return_value.returncode = 1
         mock_run.return_value.stdout = ""
@@ -764,13 +792,16 @@ class TestRunGitStashPop:
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        applier._run_git_stash_pop(tmp_path, console)
+        applier._run_git_stash_pop(tmp_path, console, progress)
 
         assert "stash pop failed" in output.getvalue()
 
     def test_run_git_stash_pop_conflict(self, tmp_path, mocker):
         """git stash pop でコンフリクト発生"""
+        import my_lib.cui_progress
+
         mock_run = mocker.patch("subprocess.run")
         # stash pop がコンフリクトで失敗、その後のクリーンアップは成功
         mock_run.side_effect = [
@@ -786,8 +817,9 @@ class TestRunGitStashPop:
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        applier._run_git_stash_pop(tmp_path, console)
+        applier._run_git_stash_pop(tmp_path, console, progress)
 
         output_text = output.getvalue()
         assert "コンフリクト発生" in output_text
@@ -795,6 +827,8 @@ class TestRunGitStashPop:
 
     def test_run_git_stash_pop_overwritten_by_merge(self, tmp_path, mocker):
         """git stash pop で overwritten by merge エラー"""
+        import my_lib.cui_progress
+
         mock_run = mocker.patch("subprocess.run")
         mock_run.side_effect = [
             mocker.MagicMock(
@@ -809,8 +843,9 @@ class TestRunGitStashPop:
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        applier._run_git_stash_pop(tmp_path, console)
+        applier._run_git_stash_pop(tmp_path, console, progress)
 
         output_text = output.getvalue()
         assert "コンフリクト発生" in output_text
@@ -822,7 +857,11 @@ class TestGenerateCommitMessage:
 
     def test_generate_commit_message_single_file(self):
         """単一ファイルの commit メッセージ（message なし）"""
-        files_info = [("pyproject.toml", "pyproject", "")]
+        import pathlib
+
+        files_info = [
+            applier.GitCommitFile(path=pathlib.Path("pyproject.toml"), config_type="pyproject", message="")
+        ]
 
         result = applier._generate_commit_message(files_info)
 
@@ -831,10 +870,18 @@ class TestGenerateCommitMessage:
 
     def test_generate_commit_message_multiple_files(self):
         """複数ファイルの commit メッセージ（message あり・なし混合）"""
+        import pathlib
+
         files_info = [
-            ("pyproject.toml", "my-py-lib", "7481d562 -> b273ff7b"),
-            (".pre-commit-config.yaml", "pre-commit", ""),
-            ("uv.lock", "uv.lock", "my-lib を更新"),
+            applier.GitCommitFile(
+                path=pathlib.Path("pyproject.toml"), config_type="my-py-lib", message="7481d562 -> b273ff7b"
+            ),
+            applier.GitCommitFile(
+                path=pathlib.Path(".pre-commit-config.yaml"), config_type="pre-commit", message=""
+            ),
+            applier.GitCommitFile(
+                path=pathlib.Path("uv.lock"), config_type="uv.lock", message="my-lib を更新"
+            ),
         ]
 
         result = applier._generate_commit_message(files_info)
@@ -858,14 +905,19 @@ class TestRunGitCommit:
 
     def test_run_git_commit_success(self, tmp_path, mocker):
         """git commit 成功"""
+        import my_lib.cui_progress
+
         mock_run = mocker.patch("subprocess.run")
         mock_run.return_value.returncode = 0
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        files_info = [(tmp_path / "file1.txt", "config-type", "")]
-        result = applier._run_git_commit(tmp_path, files_info, console)
+        files_info = [
+            applier.GitCommitFile(path=tmp_path / "file1.txt", config_type="config-type", message="")
+        ]
+        result = applier._run_git_commit(tmp_path, files_info, console, progress)
 
         assert result is True
         output_text = output.getvalue()
@@ -874,14 +926,19 @@ class TestRunGitCommit:
 
     def test_run_git_commit_success_with_will_push(self, tmp_path, mocker):
         """git commit 成功（will_push=True の場合はログ抑制）"""
+        import my_lib.cui_progress
+
         mock_run = mocker.patch("subprocess.run")
         mock_run.return_value.returncode = 0
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        files_info = [(tmp_path / "file1.txt", "config-type", "")]
-        result = applier._run_git_commit(tmp_path, files_info, console, will_push=True)
+        files_info = [
+            applier.GitCommitFile(path=tmp_path / "file1.txt", config_type="config-type", message="")
+        ]
+        result = applier._run_git_commit(tmp_path, files_info, console, progress, will_push=True)
 
         assert result is True
         # will_push=True の場合は commit のログが出力されない
@@ -890,21 +947,28 @@ class TestRunGitCommit:
 
     def test_run_git_commit_add_failure(self, tmp_path, mocker):
         """git add 失敗"""
+        import my_lib.cui_progress
+
         mock_run = mocker.patch("subprocess.run")
         mock_run.return_value.returncode = 1
         mock_run.return_value.stderr = "fatal: error"
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        files_info = [(tmp_path / "file1.txt", "config-type", "")]
-        result = applier._run_git_commit(tmp_path, files_info, console)
+        files_info = [
+            applier.GitCommitFile(path=tmp_path / "file1.txt", config_type="config-type", message="")
+        ]
+        result = applier._run_git_commit(tmp_path, files_info, console, progress)
 
         assert result is False
         assert "git add failed" in output.getvalue()
 
     def test_run_git_commit_commit_failure(self, tmp_path, mocker):
         """git commit 失敗"""
+        import my_lib.cui_progress
+
         mock_run = mocker.patch("subprocess.run")
         # 1回目の add は成功、2回目の commit は失敗
         mock_run.side_effect = [
@@ -914,9 +978,12 @@ class TestRunGitCommit:
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        files_info = [(tmp_path / "file1.txt", "config-type", "")]
-        result = applier._run_git_commit(tmp_path, files_info, console)
+        files_info = [
+            applier.GitCommitFile(path=tmp_path / "file1.txt", config_type="config-type", message="")
+        ]
+        result = applier._run_git_commit(tmp_path, files_info, console, progress)
 
         assert result is False
         assert "git commit failed" in output.getvalue()
@@ -925,26 +992,36 @@ class TestRunGitCommit:
         """git commit タイムアウト"""
         import subprocess
 
+        import my_lib.cui_progress
+
         mocker.patch("subprocess.run", side_effect=subprocess.TimeoutExpired("git", 30))
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        files_info = [(tmp_path / "file1.txt", "config-type", "")]
-        result = applier._run_git_commit(tmp_path, files_info, console)
+        files_info = [
+            applier.GitCommitFile(path=tmp_path / "file1.txt", config_type="config-type", message="")
+        ]
+        result = applier._run_git_commit(tmp_path, files_info, console, progress)
 
         assert result is False
         assert "git commit timed out" in output.getvalue()
 
     def test_run_git_commit_git_not_found(self, tmp_path, mocker):
         """git コマンドが見つからない"""
+        import my_lib.cui_progress
+
         mocker.patch("subprocess.run", side_effect=FileNotFoundError())
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        files_info = [(tmp_path / "file1.txt", "config-type", "")]
-        result = applier._run_git_commit(tmp_path, files_info, console)
+        files_info = [
+            applier.GitCommitFile(path=tmp_path / "file1.txt", config_type="config-type", message="")
+        ]
+        result = applier._run_git_commit(tmp_path, files_info, console, progress)
 
         assert result is False
 
@@ -952,15 +1029,18 @@ class TestRunGitCommit:
         """プロジェクト外のファイルの場合はフルパスで commit"""
         import pathlib
 
+        import my_lib.cui_progress
+
         mock_run = mocker.patch("subprocess.run")
         mock_run.return_value.returncode = 0
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
         outside_file = pathlib.Path("/some/other/path/file.txt")
-        files_info = [(outside_file, "config-type", "")]
-        result = applier._run_git_commit(tmp_path, files_info, console)
+        files_info = [applier.GitCommitFile(path=outside_file, config_type="config-type", message="")]
+        result = applier._run_git_commit(tmp_path, files_info, console, progress)
 
         assert result is True
         output_text = output.getvalue()
@@ -969,6 +1049,8 @@ class TestRunGitCommit:
 
     def test_run_git_commit_precommit_retry(self, tmp_path, mocker):
         """pre-commit がファイルを修正した場合にリトライする"""
+        import my_lib.cui_progress
+
         mock_run = mocker.patch("subprocess.run")
         # 1回目: add 成功, commit 失敗（pre-commit がファイル修正）
         # リトライ: add -u 成功, add 成功
@@ -988,9 +1070,12 @@ class TestRunGitCommit:
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        files_info = [(tmp_path / "file1.txt", "config-type", "")]
-        result = applier._run_git_commit(tmp_path, files_info, console)
+        files_info = [
+            applier.GitCommitFile(path=tmp_path / "file1.txt", config_type="config-type", message="")
+        ]
+        result = applier._run_git_commit(tmp_path, files_info, console, progress)
 
         assert result is True
         output_text = output.getvalue()
@@ -999,6 +1084,8 @@ class TestRunGitCommit:
 
     def test_run_git_commit_precommit_retry_max_retries(self, tmp_path, mocker):
         """pre-commit リトライが最大回数に達した場合"""
+        import my_lib.cui_progress
+
         mock_run = mocker.patch("subprocess.run")
         # 全ての commit 試行が pre-commit によるファイル修正で失敗
         # max_retries=3 なので、3回ループする
@@ -1032,9 +1119,12 @@ class TestRunGitCommit:
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        files_info = [(tmp_path / "file1.txt", "config-type", "")]
-        result = applier._run_git_commit(tmp_path, files_info, console)
+        files_info = [
+            applier.GitCommitFile(path=tmp_path / "file1.txt", config_type="config-type", message="")
+        ]
+        result = applier._run_git_commit(tmp_path, files_info, console, progress)
 
         assert result is False
         output_text = output.getvalue()
@@ -1046,14 +1136,19 @@ class TestRunGitPush:
 
     def test_run_git_push_success(self, tmp_path, mocker):
         """git push 成功"""
+        import my_lib.cui_progress
+
         mock_run = mocker.patch("subprocess.run")
         mock_run.return_value.returncode = 0
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        files_info = [(tmp_path / "file1.txt", "config-type", "")]
-        result = applier._run_git_push(tmp_path, files_info, console)
+        files_info = [
+            applier.GitCommitFile(path=tmp_path / "file1.txt", config_type="config-type", message="")
+        ]
+        result = applier._run_git_push(tmp_path, files_info, console, progress)
 
         assert result is True
         output_text = output.getvalue()
@@ -1062,15 +1157,20 @@ class TestRunGitPush:
 
     def test_run_git_push_failure(self, tmp_path, mocker):
         """git push 失敗"""
+        import my_lib.cui_progress
+
         mock_run = mocker.patch("subprocess.run")
         mock_run.return_value.returncode = 1
         mock_run.return_value.stderr = "permission denied"
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        files_info = [(tmp_path / "file1.txt", "config-type", "")]
-        result = applier._run_git_push(tmp_path, files_info, console)
+        files_info = [
+            applier.GitCommitFile(path=tmp_path / "file1.txt", config_type="config-type", message="")
+        ]
+        result = applier._run_git_push(tmp_path, files_info, console, progress)
 
         assert result is False
         assert "git push failed" in output.getvalue()
@@ -1079,26 +1179,36 @@ class TestRunGitPush:
         """git push タイムアウト"""
         import subprocess
 
+        import my_lib.cui_progress
+
         mocker.patch("subprocess.run", side_effect=subprocess.TimeoutExpired("git", 60))
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        files_info = [(tmp_path / "file1.txt", "config-type", "")]
-        result = applier._run_git_push(tmp_path, files_info, console)
+        files_info = [
+            applier.GitCommitFile(path=tmp_path / "file1.txt", config_type="config-type", message="")
+        ]
+        result = applier._run_git_push(tmp_path, files_info, console, progress)
 
         assert result is False
         assert "git push timed out" in output.getvalue()
 
     def test_run_git_push_git_not_found(self, tmp_path, mocker):
         """git コマンドが見つからない"""
+        import my_lib.cui_progress
+
         mocker.patch("subprocess.run", side_effect=FileNotFoundError())
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
 
-        files_info = [(tmp_path / "file1.txt", "config-type", "")]
-        result = applier._run_git_push(tmp_path, files_info, console)
+        files_info = [
+            applier.GitCommitFile(path=tmp_path / "file1.txt", config_type="config-type", message="")
+        ]
+        result = applier._run_git_push(tmp_path, files_info, console, progress)
 
         assert result is False
 
@@ -1111,8 +1221,10 @@ class TestRunGitPush:
         console = rich.console.Console(file=output, force_terminal=False)
         mock_progress = mocker.MagicMock(spec=my_lib.cui_progress.ProgressManager)
 
-        files_info = [(tmp_path / "file1.txt", "config-type", "")]
-        result = applier._run_git_push(tmp_path, files_info, console, progress=mock_progress)
+        files_info = [
+            applier.GitCommitFile(path=tmp_path / "file1.txt", config_type="config-type", message="")
+        ]
+        result = applier._run_git_push(tmp_path, files_info, console, mock_progress)
 
         assert result is True
         mock_progress.print.assert_called()
@@ -1487,7 +1599,9 @@ class TestRunGitCommitWithProgress:
 
         mock_progress = mocker.MagicMock(spec=my_lib.cui_progress.ProgressManager)
 
-        files_info = [(tmp_path / "file1.txt", "config-type", "")]
+        files_info = [
+            applier.GitCommitFile(path=tmp_path / "file1.txt", config_type="config-type", message="")
+        ]
         applier._run_git_commit(tmp_path, files_info, console, progress=mock_progress)
 
         # progress.print が呼ばれていることを確認
@@ -1505,7 +1619,7 @@ class TestPrintResultWithProgress:
 
         mock_progress = mocker.MagicMock(spec=my_lib.cui_progress.ProgressManager)
 
-        result = handlers_base.ApplyResult(status="updated")
+        result = handlers_base.ApplyResult(status=handlers_base.ApplyStatus.UPDATED)
         applier._print_result(console, "pyproject", result, dry_run=False, progress=mock_progress)
 
         # progress.print が呼ばれていることを確認
