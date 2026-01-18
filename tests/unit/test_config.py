@@ -2,6 +2,8 @@
 # ruff: noqa: S101
 """config モジュールのテスト"""
 
+import dacite
+
 import py_project.config
 
 
@@ -11,7 +13,7 @@ class TestGitlabCiEdit:
     def test_from_dict(self):
         """辞書から GitlabCiEdit を生成"""
         data = {"path": "/image", "value": "ubuntu:latest"}
-        edit = py_project.config.GitlabCiEdit.from_dict(data)
+        edit = dacite.from_dict(data_class=py_project.config.GitlabCiEdit, data=data)
 
         assert edit.path == "/image"
         assert edit.value == "ubuntu:latest"
@@ -28,7 +30,7 @@ class TestGitlabCiOptions:
                 {"path": "/stages", "value": "test"},
             ]
         }
-        options = py_project.config.GitlabCiOptions.from_dict(data)
+        options = dacite.from_dict(data_class=py_project.config.GitlabCiOptions, data=data)
 
         assert len(options.edits) == 2
         assert options.edits[0].path == "/image"
@@ -36,7 +38,7 @@ class TestGitlabCiOptions:
     def test_from_dict_empty(self):
         """空の辞書から GitlabCiOptions を生成"""
         data = {}
-        options = py_project.config.GitlabCiOptions.from_dict(data)
+        options = dacite.from_dict(data_class=py_project.config.GitlabCiOptions, data=data)
 
         assert options.edits == []
 
@@ -50,7 +52,7 @@ class TestPyprojectOptions:
             "preserve_sections": ["tool.custom"],
             "extra_dev_deps": ["pytest>=8.0.0"],
         }
-        options = py_project.config.PyprojectOptions.from_dict(data)
+        options = dacite.from_dict(data_class=py_project.config.PyprojectOptions, data=data)
 
         assert options.preserve_sections == ["tool.custom"]
         assert options.extra_dev_deps == ["pytest>=8.0.0"]
@@ -58,7 +60,7 @@ class TestPyprojectOptions:
     def test_from_dict_empty(self):
         """空の辞書から生成"""
         data = {}
-        options = py_project.config.PyprojectOptions.from_dict(data)
+        options = dacite.from_dict(data_class=py_project.config.PyprojectOptions, data=data)
 
         assert options.preserve_sections == []
         assert options.extra_dev_deps == []
@@ -70,14 +72,14 @@ class TestGitignoreOptions:
     def test_from_dict_with_extra_lines(self):
         """extra_lines を持つ辞書から生成"""
         data = {"extra_lines": ["!config.yaml", "*.log"]}
-        options = py_project.config.GitignoreOptions.from_dict(data)
+        options = dacite.from_dict(data_class=py_project.config.GitignoreOptions, data=data)
 
         assert options.extra_lines == ["!config.yaml", "*.log"]
 
     def test_from_dict_empty(self):
         """空の辞書から生成"""
         data = {}
-        options = py_project.config.GitignoreOptions.from_dict(data)
+        options = dacite.from_dict(data_class=py_project.config.GitignoreOptions, data=data)
 
         assert options.extra_lines == []
 
@@ -93,7 +95,7 @@ class TestDefaults:
             "vars": {"registry": "example.com"},
             "gitlab_ci": {"edits": [{"path": "/image", "value": "ubuntu:latest"}]},
         }
-        defaults = py_project.config.Defaults.from_dict(data)
+        defaults = dacite.from_dict(data_class=py_project.config.Defaults, data=data)
 
         assert defaults.python_version == "3.11"
         assert defaults.configs == ["pyproject", "pre-commit"]
@@ -104,7 +106,7 @@ class TestDefaults:
     def test_from_dict_minimal(self):
         """最小限の辞書から生成"""
         data = {}
-        defaults = py_project.config.Defaults.from_dict(data)
+        defaults = dacite.from_dict(data_class=py_project.config.Defaults, data=data)
 
         assert defaults.python_version == "3.12"
         assert defaults.configs == []
@@ -117,7 +119,7 @@ class TestDefaults:
             "python_version": "3.12",
             "configs": ["pyproject"],
         }
-        defaults = py_project.config.Defaults.from_dict(data)
+        defaults = dacite.from_dict(data_class=py_project.config.Defaults, data=data)
 
         assert defaults.gitlab_ci.edits == []
 
@@ -149,7 +151,7 @@ class TestProject:
             "gitlab_ci": {"edits": [{"path": "/image", "value": "ubuntu:latest"}]},
             "gitignore": {"extra_lines": ["!keep.txt"]},
         }
-        project = py_project.config.Project.from_dict(data)
+        project = dacite.from_dict(data_class=py_project.config.Project, data=data)
 
         assert project.name == "test-project"
         assert project.path == "/path/to/project"
@@ -167,7 +169,7 @@ class TestProject:
     def test_from_dict_minimal(self):
         """最小限の辞書から生成"""
         data = {"name": "test", "path": "/path"}
-        project = py_project.config.Project.from_dict(data)
+        project = dacite.from_dict(data_class=py_project.config.Project, data=data)
 
         assert project.name == "test"
         assert project.path == "/path"
@@ -249,7 +251,7 @@ class TestConfig:
 
     def test_from_dict_minimal(self):
         """最小限の辞書から生成"""
-        data = {}
+        data = {"projects": []}
         config = py_project.config.Config.from_dict(data)
 
         assert config.defaults.python_version == "3.12"
