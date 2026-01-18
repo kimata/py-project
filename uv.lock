@@ -1295,7 +1295,7 @@ wheels = [
 [[package]]
 name = "my-lib"
 version = "0.2.0"
-source = { git = "https://github.com/kimata/my-py-lib?rev=2699cb0b5b93287dc048a71f1bb51c63ba705238#2699cb0b5b93287dc048a71f1bb51c63ba705238" }
+source = { git = "https://github.com/kimata/my-py-lib?rev=fa5db4c94da59f2434501e8f89326890d24fb80e#fa5db4c94da59f2434501e8f89326890d24fb80e" }
 dependencies = [
     { name = "coloredlogs" },
     { name = "dacite" },
@@ -1615,7 +1615,7 @@ requires-dist = [
     { name = "dacite", specifier = ">=1.8" },
     { name = "docopt", specifier = ">=0.6" },
     { name = "jinja2", specifier = ">=3.1" },
-    { name = "my-lib", git = "https://github.com/kimata/my-py-lib?rev=2699cb0b5b93287dc048a71f1bb51c63ba705238" },
+    { name = "my-lib", git = "https://github.com/kimata/my-py-lib?rev=fa5db4c94da59f2434501e8f89326890d24fb80e" },
     { name = "rich", specifier = ">=14.0" },
     { name = "ruamel-yaml", specifier = ">=0.18" },
     { name = "tomlkit", specifier = ">=0.13" },
