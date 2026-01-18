@@ -1295,7 +1295,7 @@ wheels = [
 [[package]]
 name = "my-lib"
 version = "0.2.0"
-source = { git = "https://github.com/kimata/my-py-lib?rev=fa5db4c94da59f2434501e8f89326890d24fb80e#fa5db4c94da59f2434501e8f89326890d24fb80e" }
+source = { git = "https://github.com/kimata/my-py-lib?rev=2699cb0b5b93287dc048a71f1bb51c63ba705238#2699cb0b5b93287dc048a71f1bb51c63ba705238" }
 dependencies = [
     { name = "coloredlogs" },
     { name = "dacite" },
@@ -1585,7 +1585,6 @@ dependencies = [
     { name = "rich" },
     { name = "ruamel-yaml" },
     { name = "tomlkit" },
-    { name = "yamlpath" },
 ]
 
 [package.dev-dependencies]
@@ -1612,14 +1611,13 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "dacite", specifier = ">=1.8" },
-    { name = "docopt", specifier = ">=0.6" },
-    { name = "jinja2", specifier = ">=3.1" },
-    { name = "my-lib", git = "https://github.com/kimata/my-py-lib?rev=fa5db4c94da59f2434501e8f89326890d24fb80e" },
-    { name = "rich", specifier = ">=14.0" },
+    { name = "dacite", specifier = ">=1.9.2" },
+    { name = "docopt", specifier = ">=0.6.2" },
+    { name = "jinja2", specifier = ">=3.1.6" },
+    { name = "my-lib", git = "https://github.com/kimata/my-py-lib?rev=2699cb0b5b93287dc048a71f1bb51c63ba705238" },
+    { name = "rich", specifier = ">=14.2.0" },
     { name = "ruamel-yaml", specifier = ">=0.18" },
-    { name = "tomlkit", specifier = ">=0.13" },
-    { name = "yamlpath", specifier = ">=3.0" },
+    { name = "tomlkit", specifier = ">=0.14.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -1628,7 +1626,7 @@ dev = [
     { name = "mypy", specifier = ">=1.19.1" },
     { name = "playwright", specifier = ">=1.57.0" },
     { name = "pre-commit", specifier = ">=4.5.1" },
-    { name = "pyright", specifier = ">=1.1.407" },
+    { name = "pyright", specifier = ">=1.1.408" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
     { name = "pytest-html", specifier = ">=4.1.1" },
@@ -1641,7 +1639,7 @@ dev = [
     { name = "types-paramiko", specifier = ">=4.0.0" },
     { name = "types-pytz", specifier = ">=2025.2.0" },
     { name = "types-pyyaml", specifier = ">=6.0.12" },
-    { name = "types-requests", specifier = ">=2.32.0" },
+    { name = "types-requests", specifier = ">=2.32.4" },
 ]
 
 [[package]]
@@ -1797,15 +1795,15 @@ wheels = [
 
 [[package]]
 name = "pyright"
-version = "1.1.407"
+version = "1.1.408"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "nodeenv" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a6/1b/0aa08ee42948b61745ac5b5b5ccaec4669e8884b53d31c8ec20b2fcd6b6f/pyright-1.1.407.tar.gz", hash = "sha256:099674dba5c10489832d4a4b2d302636152a9a42d317986c38474c76fe562262", size = 4122872, upload-time = "2025-10-24T23:17:15.145Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/74/b2/5db700e52554b8f025faa9c3c624c59f1f6c8841ba81ab97641b54322f16/pyright-1.1.408.tar.gz", hash = "sha256:f28f2321f96852fa50b5829ea492f6adb0e6954568d1caa3f3af3a5f555eb684", size = 4400578, upload-time = "2026-01-08T08:07:38.795Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/dc/93/b69052907d032b00c40cb656d21438ec00b3a471733de137a3f65a49a0a0/pyright-1.1.407-py3-none-any.whl", hash = "sha256:6dd419f54fcc13f03b52285796d65e639786373f433e243f8b94cf93a7444d21", size = 5997008, upload-time = "2025-10-24T23:17:13.159Z" },
+    { url = "https://files.pythonhosted.org/packages/0c/82/a2c93e32800940d9573fb28c346772a14778b84ba7524e691b324620ab89/pyright-1.1.408-py3-none-any.whl", hash = "sha256:090b32865f4fdb1e0e6cd82bf5618480d48eecd2eb2e70f960982a3d9a4c17c1", size = 6399144, upload-time = "2026-01-08T08:07:37.082Z" },
 ]
 
 [[package]]
@@ -2437,11 +2435,11 @@ wheels = [
 
 [[package]]
 name = "tomlkit"
-version = "0.13.3"
+version = "0.14.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/cc/18/0bbf3884e9eaa38819ebe46a7bd25dcd56b67434402b66a58c4b8e552575/tomlkit-0.13.3.tar.gz", hash = "sha256:430cf247ee57df2b94ee3fbe588e71d362a941ebb545dec29b53961d61add2a1", size = 185207, upload-time = "2025-06-05T07:13:44.947Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c3/af/14b24e41977adb296d6bd1fb59402cf7d60ce364f90c890bd2ec65c43b5a/tomlkit-0.14.0.tar.gz", hash = "sha256:cf00efca415dbd57575befb1f6634c4f42d2d87dbba376128adb42c121b87064", size = 187167, upload-time = "2026-01-13T01:14:53.304Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bd/75/8539d011f6be8e29f339c42e633aae3cb73bffa95dd0f9adec09b9c58e85/tomlkit-0.13.3-py3-none-any.whl", hash = "sha256:c89c649d79ee40629a9fda55f8ace8c6a1b42deb912b2a8fd8d942ddadb606b0", size = 38901, upload-time = "2025-06-05T07:13:43.546Z" },
+    { url = "https://files.pythonhosted.org/packages/b5/11/87d6d29fb5d237229d67973a6c9e06e048f01cf4994dee194ab0ea841814/tomlkit-0.14.0-py3-none-any.whl", hash = "sha256:592064ed85b40fa213469f81ac584f67a4f2992509a7c3ea2d632208623a3680", size = 39310, upload-time = "2026-01-13T01:14:51.965Z" },
 ]
 
 [[package]]
@@ -2641,15 +2639,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/41/99/8a06b8e17dddbf321325ae4eb12465804120f699cd1b8a355718300c62da/wrapt-2.0.1-cp314-cp314t-win_arm64.whl", hash = "sha256:35cdbd478607036fee40273be8ed54a451f5f23121bd9d4be515158f9498f7ad", size = 60634, upload-time = "2025-11-07T00:45:02.087Z" },
     { url = "https://files.pythonhosted.org/packages/15/d1/b51471c11592ff9c012bd3e2f7334a6ff2f42a7aed2caffcf0bdddc9cb89/wrapt-2.0.1-py3-none-any.whl", hash = "sha256:4d2ce1bf1a48c5277d7969259232b57645aae5686dba1eaeade39442277afbca", size = 44046, upload-time = "2025-11-07T00:45:32.116Z" },
 ]
-
-[[package]]
-name = "yamlpath"
-version = "3.4.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "ruamel-yaml" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/4b/69/788bf76361edd1ce6bdb59a5e5f44f605b1f7d725f0298abe33e975ef895/yamlpath-3.4.0.tar.gz", hash = "sha256:741e9a8b98e84e36876b1ffccce7c2cb9483cc1a7089bf9c34317a43e7a916fd", size = 183367, upload-time = "2020-11-11T05:32:31.508Z" }
 
 [[package]]
 name = "yarl"

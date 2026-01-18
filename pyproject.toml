@@ -5,14 +5,13 @@ description = "複数の Python プロジェクトに標準的な設定を一括
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "my-lib @ git+https://github.com/kimata/my-py-lib@fa5db4c94da59f2434501e8f89326890d24fb80e",
-    "dacite>=1.8",
-    "docopt>=0.6",
-    "jinja2>=3.1",
-    "rich>=14.0",
+    "my-lib @ git+https://github.com/kimata/my-py-lib@2699cb0b5b93287dc048a71f1bb51c63ba705238",
+    "dacite>=1.9.2",
+    "docopt>=0.6.2",
+    "jinja2>=3.1.6",
+    "rich>=14.2.0",
     "ruamel.yaml>=0.18",
-    "tomlkit>=0.13",
-    "yamlpath>=3.0",
+    "tomlkit>=0.14.0",
 ]
 authors = [
     { name = "KIMATA Tetsuya", email = "kimata@green-rabbit.net" }
@@ -92,13 +91,14 @@ exclude = [
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
-# tomlkit の型定義が不完全なため、一部のエラーを無視
+include = ["src", "tests"]
+reportMissingImports = false
+# tomlkit 等の型定義が不完全なライブラリ向け
 reportArgumentType = false
 reportOperatorIssue = false
 reportIndexIssue = false
+reportAttributeAccessIssue = false
 reportGeneralTypeIssues = false
-include = ["src", "tests"]
-reportMissingImports = false
 
 [tool.ty]
 # tomlkit 等の型定義が不完全なライブラリ向け
@@ -118,10 +118,10 @@ dev = [
     "pytest-timeout>=2.4.0",
     "time-machine>=3.2.0",
     "mypy>=1.19.1",
-    "pyright>=1.1.407",
+    "pyright>=1.1.408",
     "ty>=0.0.1a7",
     "types-pytz>=2025.2.0",
     "types-paramiko>=4.0.0",
     "types-pyyaml>=6.0.12",
-    "types-requests>=2.32.0",
+    "types-requests>=2.32.4",
 ]

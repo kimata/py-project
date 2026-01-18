@@ -1,14 +1,12 @@
-"""GitLab CI 設定ハンドラ（yamlpath + 文字列置換方式）"""
+"""GitLab CI 設定ハンドラ"""
 
-import argparse
 import logging
 import pathlib
 import re
+import typing
 
 import jinja2
 import ruamel.yaml
-import yamlpath.processor
-import yamlpath.wrappers
 
 import py_project.config
 import py_project.handlers.base as handlers_base
@@ -19,8 +17,8 @@ logger = logging.getLogger(__name__)
 class GitLabCIHandler(handlers_base.ConfigHandler):
     """GitLab CI 設定ハンドラ
 
-    既存の .gitlab-ci.yml を yamlpath 形式で指定した値に書き換える。
-    yamlpath で行番号を特定し、文字列置換でフォーマットを完全保持。
+    既存の .gitlab-ci.yml を指定したパスの値に書き換える。
+    ruamel.yaml で行番号を特定し、文字列置換でフォーマットを完全保持。
     """
 
     format_type = handlers_base.FormatType.YAML
@@ -34,27 +32,29 @@ class GitLabCIHandler(handlers_base.ConfigHandler):
         return self.get_project_path(project) / ".gitlab-ci.yml"
 
     def _get_line_number(self, content: str, yaml_path: str) -> int | None:
-        """指定された YAML パスの行番号を取得"""
+        """指定された YAML パスの行番号を取得
+
+        Args:
+            content: YAML ファイルの内容
+            yaml_path: スラッシュ区切りのパス（例: /image, /renovate/image/name）
+
+        Returns:
+            行番号（0始まり）、見つからない場合は None
+        """
         yaml = ruamel.yaml.YAML()
         data = yaml.load(content)
 
-        args = argparse.Namespace(verbose=False, quiet=True, debug=False)
-        log = yamlpath.wrappers.ConsolePrinter(args)
-        proc = yamlpath.processor.Processor(log, data)
+        keys = yaml_path.strip("/").split("/")
+        current: typing.Any = data
 
-        for node in proc.get_nodes(yaml_path):
-            # 親マッピングからキーの行番号を取得
-            if hasattr(node, "parent") and hasattr(node.parent, "lc"):
-                key = node.parentref
-                if key is not None:
-                    line, _ = node.parent.lc.key(key)
-                    return line
-            # トップレベルの場合
-            if hasattr(data, "lc"):
-                key = yaml_path.lstrip("/").split("/")[-1]
-                if key in data:
-                    line, _ = data.lc.key(key)
-                    return line
+        for i, key in enumerate(keys):
+            if not isinstance(current, dict) or key not in current:
+                return None
+            if i == len(keys) - 1 and hasattr(current, "lc"):
+                line, _ = current.lc.key(key)
+                return typing.cast(int, line)
+            current = current[key]
+
         return None
 
     def _replace_value_in_line(self, line: str, new_value: str) -> str:
