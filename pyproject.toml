@@ -5,7 +5,7 @@ description = "複数の Python プロジェクトに標準的な設定を一括
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "my-lib @ git+https://github.com/kimata/my-py-lib@4fd91641829a496ecf9469f9f08b575ade595b38",
+    "my-lib @ git+https://github.com/kimata/my-py-lib@b577dfdf6e8df235fd0e58809379a171219772b8",
     "dacite>=1.9.2",
     "docopt>=0.6.2",
     "jinja2>=3.1.6",
@@ -21,7 +21,7 @@ authors = [
 py-project = "py_project.__main__:main"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "uv-dynamic-versioning"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
@@ -29,6 +29,9 @@ packages = ["src/py_project"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
+
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
 
 [tool.ruff]
 line-length = 110
@@ -103,6 +106,11 @@ reportGeneralTypeIssues = false
 [tool.ty]
 # tomlkit 等の型定義が不完全なライブラリ向け
 [tool.ty.rules]
+
+[tool.uv-dynamic-versioning]
+vcs = "git"
+style = "semver"
+format = "{base}"
 
 [dependency-groups]
 dev = [
