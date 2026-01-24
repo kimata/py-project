@@ -278,10 +278,25 @@ import py_project.handlers.base as handlers_base
 - 今回のセッションで作成し、プロジェクトが機能するのに必要なファイル以外は git add しないこと
 - 気になる点がある場合は追加して良いか質問すること
 
-### タグ作成時の注意
+### リリース（タグ作成）時
 
-- タグを打つ際は、事前に CHANGELOG.md を更新すること
-- 変更内容を適切に記録し、バージョン番号と日付を明記すること
+リリースタグを作成する際は、以下の手順に従うこと：
+
+1. **CHANGELOG.md を更新する**
+    - 新しいバージョンのセクションを追加
+    - 含まれる変更を以下のカテゴリで記載：
+        - `Added`: 新機能
+        - `Changed`: 既存機能の変更
+        - `Fixed`: バグ修正
+        - `Removed`: 削除された機能
+        - `Security`: セキュリティ関連の修正
+    - [Keep a Changelog](https://keepachangelog.com/) 形式を参考にする
+
+2. **タグを作成する**
+    ```bash
+    git tag -a v1.x.x -m "バージョン説明"
+    git push origin v1.x.x
+    ```
 
 ### バグ修正の原則
 
