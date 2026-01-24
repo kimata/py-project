@@ -63,6 +63,7 @@
         "dockerignore",
         "gitignore",
         "renovate",
+        "license",
         "pyproject",
         "my-py-lib",
         "gitlab-ci"
@@ -142,6 +143,9 @@
         },
         "dockerignore": {
           "$ref": "#/$defs/dockerignoreOptions"
+        },
+        "license": {
+          "$ref": "#/$defs/licenseOptions"
         }
       },
       "additionalProperties": false
@@ -170,6 +174,18 @@
           "items": {
             "type": "string"
           }
+        }
+      },
+      "additionalProperties": false
+    },
+    "licenseOptions": {
+      "type": "object",
+      "description": "license 設定タイプのオプション",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "ライセンスタイプ（テンプレートファイル名と一致、例: Apache-2.0, MIT）",
+          "default": "Apache-2.0"
         }
       },
       "additionalProperties": false

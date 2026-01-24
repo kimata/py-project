@@ -212,3 +212,29 @@ class RenovateHandler(TemplateCopyHandler):
     template_file = "renovate.json"
     output_file = "renovate.json"
     format_type = handlers_base.FormatType.JSON
+
+
+class LicenseHandler(TemplateCopyHandler):
+    """license 設定ハンドラ
+
+    プロジェクトごとに異なるライセンスタイプを選択可能。
+    テンプレートファイル名はライセンスタイプ名（例: Apache-2.0, MIT）。
+    """
+
+    template_subdir = "license"
+    template_file = "Apache-2.0"  # デフォルト（get_template_path でオーバーライド）
+    output_file = "LICENSE"
+
+    def get_template_path(
+        self, project: py_project.config.Project, context: handlers_base.ApplyContext
+    ) -> pathlib.Path:
+        """テンプレートファイルのパスを取得
+
+        プロジェクトの license.type オプションに応じてテンプレートを選択。
+        """
+        # template_overrides でオーバーライドされている場合はそちらを優先
+        if self.name in project.template_overrides:
+            return py_project.config.expand_user_path(project.template_overrides[self.name])
+
+        license_type = project.license.type
+        return context.template_dir / self.template_subdir / license_type

@@ -15,6 +15,7 @@ HANDLERS: dict[str, type[handlers_base.ConfigHandler]] = {
     "dockerignore": handlers_template_copy.DockerignoreHandler,
     "gitignore": handlers_template_copy.GitignoreHandler,
     "renovate": handlers_template_copy.RenovateHandler,
+    "license": handlers_template_copy.LicenseHandler,
     "pyproject": handlers_pyproject.PyprojectHandler,
     "my-py-lib": handlers_my_py_lib.MyPyLibHandler,
     "gitlab-ci": handlers_gitlab_ci.GitLabCIHandler,

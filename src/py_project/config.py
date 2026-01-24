@@ -110,6 +110,18 @@ class DockerignoreOptions:
 
 
 @dataclasses.dataclass
+class LicenseOptions:
+    """license 設定タイプのオプション
+
+    Attributes:
+        type: ライセンスタイプ（テンプレートファイル名と一致）
+
+    """
+
+    type: str = "Apache-2.0"
+
+
+@dataclasses.dataclass
 class Defaults:
     """全プロジェクト共通のデフォルト設定
 
@@ -142,6 +154,7 @@ class Project:
         gitlab_ci: gitlab-ci 設定タイプのオプション
         gitignore: gitignore 設定タイプのオプション
         dockerignore: dockerignore 設定タイプのオプション
+        license: license 設定タイプのオプション
 
     """
 
@@ -155,6 +168,7 @@ class Project:
     gitlab_ci: GitlabCiOptions = dataclasses.field(default_factory=GitlabCiOptions)
     gitignore: GitignoreOptions = dataclasses.field(default_factory=GitignoreOptions)
     dockerignore: DockerignoreOptions = dataclasses.field(default_factory=DockerignoreOptions)
+    license: LicenseOptions = dataclasses.field(default_factory=LicenseOptions)
 
     def get_path(self) -> pathlib.Path:
         """展開されたパスを取得（絶対パス）"""

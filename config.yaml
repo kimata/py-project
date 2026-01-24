@@ -11,6 +11,8 @@ defaults:
         - gitignore
         - dockerignore
         - renovate
+        - prettier
+        - license
         - my-py-lib
         - gitlab-ci
         - yamllint
