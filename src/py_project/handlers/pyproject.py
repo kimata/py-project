@@ -1,5 +1,5 @@
 """pyproject.toml 共通設定ハンドラ"""
-# mypy: disable-error-code="assignment,union-attr,operator,arg-type,index"
+# mypy: disable-error-code="assignment,union-attr,operator,arg-type,index,return-value"
 # NOTE: tomlkit の型定義が不完全なため、一部の型エラーを無視
 
 import logging
@@ -29,6 +29,27 @@ _PRESERVE_SECTIONS = [
     "tool.mypy.overrides",
 ]
 
+# トップレベルセクションの優先順位（リストにないものはアルファベット順で末尾）
+_TOP_LEVEL_SECTION_ORDER = [
+    "project",
+    "build-system",
+    "dependency-groups",
+    "tool",
+]
+
+# tool.* サブセクションの優先順位（リストにないものはアルファベット順で末尾）
+_TOOL_SECTION_ORDER = [
+    "hatch",
+    "uv",
+    "uv-dynamic-versioning",
+    "ruff",
+    "pytest",
+    "coverage",
+    "mypy",
+    "pyright",
+    "ty",
+]
+
 
 def _normalize_toml(content: str) -> str:
     """TOML 内容を正規化（空行の重複を除去）"""
@@ -38,6 +59,54 @@ def _normalize_toml(content: str) -> str:
     content = re.sub(r"\n{3,}", "\n\n", content)
     # 末尾の空白を除去して改行を追加
     return content.rstrip() + "\n"
+
+
+def _get_section_sort_key(section: str, order_list: list[str]) -> tuple[int, str]:
+    """セクションのソートキーを取得
+
+    優先順位リストにあるセクションは (index, section) を返し、
+    リストにないセクションは (len(order_list), section) を返す（アルファベット順で末尾）。
+    """
+    if section in order_list:
+        return (order_list.index(section), section)
+    return (len(order_list), section)
+
+
+def _sort_tool_sections(tool_container: tomlkit.container.Container) -> tomlkit.container.Container:
+    """tool セクション内のサブセクションを並び替え"""
+    sorted_tool = tomlkit.table()
+
+    # サブセクションをソート
+    subsections = list(tool_container.keys())
+    subsections.sort(key=lambda s: _get_section_sort_key(s, _TOOL_SECTION_ORDER))
+
+    for subsection in subsections:
+        sorted_tool[subsection] = tool_container[subsection]
+
+    return typing.cast(tomlkit.container.Container, sorted_tool)
+
+
+def _sort_sections(doc: tomlkit.TOMLDocument) -> tomlkit.TOMLDocument:
+    """pyproject.toml のセクションを並び替え
+
+    既知のセクションは定義された優先順位で並べ、
+    それ以外はアルファベット順で末尾に配置する。
+    """
+    sorted_doc = tomlkit.document()
+
+    # トップレベルセクションをソート
+    sections = list(doc.keys())
+    sections.sort(key=lambda s: _get_section_sort_key(s, _TOP_LEVEL_SECTION_ORDER))
+
+    for section in sections:
+        if section == "tool":
+            # tool セクション内のサブセクションも並び替え
+            tool_container = typing.cast(tomlkit.container.Container, doc["tool"])
+            sorted_doc["tool"] = _sort_tool_sections(tool_container)
+        else:
+            sorted_doc[section] = doc[section]
+
+    return sorted_doc
 
 
 class PyprojectHandler(handlers_base.ConfigHandler):
@@ -141,7 +210,8 @@ class PyprojectHandler(handlers_base.ConfigHandler):
             else:
                 logger.warning("extra_dev_deps が指定されていますが、dependency-groups.dev が存在しません")
 
-        return result
+        # セクションを並び替えて返す
+        return _sort_sections(result)
 
     def _merge_section(
         self,
