@@ -480,6 +480,7 @@ def _run_uv_sync(
             text=True,
             timeout=120,
             check=False,
+            stdin=subprocess.DEVNULL,
         )
         if result.returncode == 0:
             _print("  [green]✓ uv sync completed[/green]")
@@ -506,6 +507,7 @@ def _is_git_repo(project_path: pathlib.Path) -> bool:
             capture_output=True,
             timeout=5,
             check=False,
+            stdin=subprocess.DEVNULL,
         )
         return result.returncode == 0
     except (subprocess.TimeoutExpired, FileNotFoundError):
@@ -522,6 +524,7 @@ def _has_uncommitted_changes(project_path: pathlib.Path) -> bool:
             text=True,
             timeout=10,
             check=False,
+            stdin=subprocess.DEVNULL,
         )
         return bool(result.stdout.strip())
     except (subprocess.TimeoutExpired, FileNotFoundError):
@@ -549,6 +552,7 @@ def _run_git_stash(
             text=True,
             timeout=30,
             check=False,
+            stdin=subprocess.DEVNULL,
         )
         if result.returncode == 0:
             _print("  [dim]git stash: 既存の変更を一時退避[/dim]")
@@ -581,6 +585,7 @@ def _run_git_stash_pop(
             text=True,
             timeout=30,
             check=False,
+            stdin=subprocess.DEVNULL,
         )
         if result.returncode == 0:
             _print("  [dim]git stash pop: 退避した変更を復元[/dim]")
@@ -596,6 +601,7 @@ def _run_git_stash_pop(
                     capture_output=True,
                     timeout=30,
                     check=False,
+                    stdin=subprocess.DEVNULL,
                 )
                 subprocess.run(
                     ["git", "reset", "HEAD"],  # noqa: S607
@@ -603,6 +609,7 @@ def _run_git_stash_pop(
                     capture_output=True,
                     timeout=30,
                     check=False,
+                    stdin=subprocess.DEVNULL,
                 )
                 # stash を削除（pop は失敗しても stash は残る）
                 subprocess.run(
@@ -611,6 +618,7 @@ def _run_git_stash_pop(
                     capture_output=True,
                     timeout=30,
                     check=False,
+                    stdin=subprocess.DEVNULL,
                 )
                 _print("  [yellow]! 退避した変更は適用済みの内容と競合したため破棄されました[/yellow]")
             else:
@@ -677,6 +685,7 @@ def _get_uv_lock_changes(project_path: pathlib.Path) -> str:
             text=True,
             timeout=10,
             check=False,
+            stdin=subprocess.DEVNULL,
         )
         if result.returncode != 0:
             # 新規ファイルの場合
@@ -786,6 +795,7 @@ def _run_git_commit(
                 text=True,
                 timeout=30,
                 check=False,
+                stdin=subprocess.DEVNULL,
             )
             if add_result.returncode != 0:
                 _print(f"  [red]! git add failed: {add_result.stderr.strip()}[/red]")
@@ -802,6 +812,7 @@ def _run_git_commit(
                 text=True,
                 timeout=60,
                 check=False,
+                stdin=subprocess.DEVNULL,
             )
             if commit_result.returncode == 0:
                 # push する場合は commit のログを抑制（push のログでまとめて表示）
@@ -825,6 +836,7 @@ def _run_git_commit(
                         text=True,
                         timeout=30,
                         check=False,
+                        stdin=subprocess.DEVNULL,
                     )
                     subprocess.run(  # noqa: S603
                         ["git", "add", *file_paths],  # noqa: S607
@@ -833,6 +845,7 @@ def _run_git_commit(
                         text=True,
                         timeout=30,
                         check=False,
+                        stdin=subprocess.DEVNULL,
                     )
                     continue
                 _print("  [red]! pre-commit によるファイル修正後もコミットに失敗[/red]")
@@ -880,6 +893,7 @@ def _run_git_push(
             text=True,
             timeout=60,
             check=False,
+            stdin=subprocess.DEVNULL,
         )
         if push_result.returncode == 0:
             _print(f"  [green]✓ git commit & push: {', '.join(file_paths)}[/green]")

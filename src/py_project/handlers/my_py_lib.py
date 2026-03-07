@@ -45,6 +45,7 @@ class MyPyLibHandler(handlers_base.ConfigHandler):
                 text=True,
                 check=True,
                 timeout=30,
+                stdin=subprocess.DEVNULL,
             )
             # 出力形式: "hash\tHEAD"
             parts = result.stdout.split()
