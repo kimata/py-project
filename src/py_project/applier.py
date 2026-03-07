@@ -3,8 +3,10 @@
 import dataclasses
 import difflib
 import logging
+import os
 import pathlib
 import re
+import signal
 import subprocess
 import typing
 
@@ -458,6 +460,45 @@ def _update_summary(
                 summary.error_messages.append(f"{project_name}/{config_type}: {result.message}")
 
 
+def _run_subprocess_with_group_kill(
+    args: list[str],
+    *,
+    cwd: pathlib.Path,
+    timeout: int,
+    text: bool = True,
+) -> subprocess.CompletedProcess[str]:
+    """subprocess.run と同等だが、タイムアウト時にプロセスグループ全体を kill する
+
+    pre-commit フック等の子プロセスがパイプを保持してハングするのを防ぐ。
+    """
+    process = subprocess.Popen(  # noqa: S603
+        args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        stdin=subprocess.DEVNULL,
+        cwd=cwd,
+        text=text,
+        start_new_session=True,
+    )
+    try:
+        stdout, stderr = process.communicate(timeout=timeout)
+        return subprocess.CompletedProcess(
+            args=args,
+            returncode=process.returncode,
+            stdout=stdout,
+            stderr=stderr,
+        )
+    except subprocess.TimeoutExpired:
+        # プロセスグループ全体を kill（pre-commit フック等の子プロセスも含む）
+        try:
+            os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            process.kill()
+        # kill 後は全プロセスが終了しているため communicate() がすぐ返る
+        process.communicate()
+        raise
+
+
 def _run_uv_sync(
     project_path: pathlib.Path,
     console: rich.console.Console,
@@ -518,7 +559,7 @@ def _has_uncommitted_changes(project_path: pathlib.Path) -> bool:
     """未コミットの変更があるか確認"""
     try:
         result = subprocess.run(
-            ["git", "status", "--porcelain"],  # noqa: S607
+            ["git", "status", "--porcelain", "-uno"],  # noqa: S607
             cwd=project_path,
             capture_output=True,
             text=True,
@@ -804,15 +845,12 @@ def _run_git_commit(
             # commit メッセージを生成
             commit_message = _generate_commit_message(relative_files)
 
-            # git commit
-            commit_result = subprocess.run(  # noqa: S603
-                ["git", "commit", "-m", commit_message],  # noqa: S607
+            # git commit（pre-commit フックが子プロセスを生成するため、
+            # タイムアウト時にプロセスグループ全体を kill する）
+            commit_result = _run_subprocess_with_group_kill(
+                ["git", "commit", "-m", commit_message],
                 cwd=project_path,
-                capture_output=True,
-                text=True,
-                timeout=60,
-                check=False,
-                stdin=subprocess.DEVNULL,
+                timeout=300,
             )
             if commit_result.returncode == 0:
                 # push する場合は commit のログを抑制（push のログでまとめて表示）
