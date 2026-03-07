@@ -5,7 +5,7 @@ description = "複数の Python プロジェクトに標準的な設定を一括
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "my-lib @ git+https://github.com/kimata/my-py-lib@8abfcf15c1000834906fdc740056678ad546fe34",
+    "my-lib @ git+https://github.com/kimata/my-py-lib@f6d4b2caca71634a6983633c372d0c8e68de53c9",
     "dacite>=1.9.2",
     "docopt>=0.6.2",
     "jinja2>=3.1.6",
