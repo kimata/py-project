@@ -905,10 +905,17 @@ class TestRunGitCommit:
 
     def test_run_git_commit_success(self, tmp_path, mocker):
         """git commit 成功"""
+        import subprocess
+
         import my_lib.cui_progress
 
         mock_run = mocker.patch("subprocess.run")
         mock_run.return_value.returncode = 0
+        mocker.patch.object(
+            applier,
+            "_run_subprocess_with_group_kill",
+            return_value=subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
+        )
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
@@ -926,10 +933,17 @@ class TestRunGitCommit:
 
     def test_run_git_commit_success_with_will_push(self, tmp_path, mocker):
         """git commit 成功（will_push=True の場合はログ抑制）"""
+        import subprocess
+
         import my_lib.cui_progress
 
         mock_run = mocker.patch("subprocess.run")
         mock_run.return_value.returncode = 0
+        mocker.patch.object(
+            applier,
+            "_run_subprocess_with_group_kill",
+            return_value=subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
+        )
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
@@ -1028,11 +1042,17 @@ class TestRunGitCommit:
     def test_run_git_commit_outside_project(self, tmp_path, mocker):
         """プロジェクト外のファイルの場合はフルパスで commit"""
         import pathlib
+        import subprocess
 
         import my_lib.cui_progress
 
         mock_run = mocker.patch("subprocess.run")
         mock_run.return_value.returncode = 0
+        mocker.patch.object(
+            applier,
+            "_run_subprocess_with_group_kill",
+            return_value=subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
+        )
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
@@ -1049,24 +1069,31 @@ class TestRunGitCommit:
 
     def test_run_git_commit_precommit_retry(self, tmp_path, mocker):
         """pre-commit がファイルを修正した場合にリトライする"""
+        import subprocess
+
         import my_lib.cui_progress
 
         mock_run = mocker.patch("subprocess.run")
-        # 1回目: add 成功, commit 失敗（pre-commit がファイル修正）
-        # リトライ: add -u 成功, add 成功
-        # 2回目: add 成功, commit 成功
+        # subprocess.run: git add のみ（commit は _run_subprocess_with_group_kill 経由）
+        # 1回目: add 成功 → リトライ: add -u 成功, add 成功 → 2回目: add 成功
         mock_run.side_effect = [
             mocker.MagicMock(returncode=0),  # add (1回目のループ)
-            mocker.MagicMock(
-                returncode=1,
-                stdout="files were modified by this hook",
-                stderr="",
-            ),  # commit (失敗)
             mocker.MagicMock(returncode=0),  # add -u (リトライ処理)
             mocker.MagicMock(returncode=0),  # add (リトライ処理、ファイルリスト)
             mocker.MagicMock(returncode=0),  # add (2回目のループ)
-            mocker.MagicMock(returncode=0),  # commit (成功)
         ]
+        # _run_subprocess_with_group_kill: git commit
+        # 1回目: 失敗（pre-commit がファイル修正） → 2回目: 成功
+        mocker.patch.object(
+            applier,
+            "_run_subprocess_with_group_kill",
+            side_effect=[
+                subprocess.CompletedProcess(
+                    args=[], returncode=1, stdout="files were modified by this hook", stderr=""
+                ),
+                subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
+            ],
+        )
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
@@ -1084,38 +1111,34 @@ class TestRunGitCommit:
 
     def test_run_git_commit_precommit_retry_max_retries(self, tmp_path, mocker):
         """pre-commit リトライが最大回数に達した場合"""
+        import subprocess
+
         import my_lib.cui_progress
 
         mock_run = mocker.patch("subprocess.run")
-        # 全ての commit 試行が pre-commit によるファイル修正で失敗
+        # subprocess.run: git add のみ（commit は _run_subprocess_with_group_kill 経由）
         # max_retries=3 なので、3回ループする
         mock_run.side_effect = [
             # 1回目のループ (attempt=0)
             mocker.MagicMock(returncode=0),  # add
-            mocker.MagicMock(
-                returncode=1,
-                stdout="files were modified by this hook",
-                stderr="",
-            ),  # commit (失敗)
             mocker.MagicMock(returncode=0),  # add -u (リトライ)
             mocker.MagicMock(returncode=0),  # add (リトライ、ファイルリスト)
             # 2回目のループ (attempt=1)
             mocker.MagicMock(returncode=0),  # add
-            mocker.MagicMock(
-                returncode=1,
-                stdout="files were modified by this hook",
-                stderr="",
-            ),  # commit (失敗)
             mocker.MagicMock(returncode=0),  # add -u (リトライ)
             mocker.MagicMock(returncode=0),  # add (リトライ、ファイルリスト)
             # 3回目のループ (attempt=2, max_retries-1=2 なのでリトライしない)
             mocker.MagicMock(returncode=0),  # add
-            mocker.MagicMock(
-                returncode=1,
-                stdout="files were modified by this hook",
-                stderr="",
-            ),  # commit (失敗、最終試行)
         ]
+        # _run_subprocess_with_group_kill: 全ての commit が pre-commit で失敗
+        commit_fail = subprocess.CompletedProcess(
+            args=[], returncode=1, stdout="files were modified by this hook", stderr=""
+        )
+        mocker.patch.object(
+            applier,
+            "_run_subprocess_with_group_kill",
+            side_effect=[commit_fail, commit_fail, commit_fail],
+        )
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
@@ -1367,10 +1390,17 @@ class TestApplyWithGitPush:
 
     def test_apply_with_git_push(self, sample_config, tmp_project, tmp_templates, mocker):
         """git_push=True でファイルが git commit & push される"""
+        import subprocess
+
         mocker.patch.object(applier, "_is_git_repo", return_value=True)
         mocker.patch.object(applier, "_has_uncommitted_changes", return_value=False)
         mock_run = mocker.patch("subprocess.run")
         mock_run.return_value.returncode = 0
+        mocker.patch.object(
+            applier,
+            "_run_subprocess_with_group_kill",
+            return_value=subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr=""),
+        )
 
         output = io.StringIO()
         console = rich.console.Console(file=output, force_terminal=False)
