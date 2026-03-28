@@ -5,7 +5,7 @@ description = "複数の Python プロジェクトに標準的な設定を一括
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "my-lib @ git+https://github.com/kimata/my-py-lib@ce3072d5366b9d86e1217d8bf2f07a24f5d3b483",
+    "my-lib @ git+https://github.com/kimata/my-py-lib@3db13bd92e445b2a20382163cb6846a82fc55d30",
     "dacite>=1.9.2",
     "docopt>=0.6.2",
     "jinja2>=3.1.6",
@@ -57,6 +57,7 @@ source = "uv-dynamic-versioning"
 
 [tool.uv]
 default-groups = ["dev"]
+exclude-newer = "1 week"
 
 [tool.uv-dynamic-versioning]
 vcs = "git"
