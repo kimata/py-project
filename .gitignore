@@ -126,13 +126,13 @@ testem.log
 # =============================================================================
 # Project specific - data directories
 # =============================================================================
-/data/
+/data/*
 !data/.gitkeep
 /flask/data/
 /font/
 /key/
 /img/
-/cache/
+/cache/*
 !cache/.gitkeep
 
 # =============================================================================
@@ -187,7 +187,7 @@ react/node_modules/
 *.psd
 *.xlsx
 *.deb
-output/
+output/*
 !output/.gitkeep
 !config.yaml
 !templates/**/*.yaml
