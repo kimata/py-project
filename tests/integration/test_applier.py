@@ -286,7 +286,7 @@ class TestGetProjectConfigs:
         project = py_project.config.Project(name="test", path="/tmp/test", configs=["ruff", "pre-commit"])
         defaults = py_project.config.Defaults(configs=["pyproject"])
 
-        result = applier._get_project_configs(project, defaults)
+        result = applier.get_project_configs(project, defaults)
 
         # defaults.configs をベースに project.configs が追加される
         assert result == ["pyproject", "ruff", "pre-commit"]
@@ -296,7 +296,7 @@ class TestGetProjectConfigs:
         project = py_project.config.Project(name="test", path="/tmp/test")
         defaults = py_project.config.Defaults(configs=["pyproject", "gitignore"])
 
-        result = applier._get_project_configs(project, defaults)
+        result = applier.get_project_configs(project, defaults)
 
         assert result == ["pyproject", "gitignore"]
 
@@ -305,7 +305,7 @@ class TestGetProjectConfigs:
         project = py_project.config.Project(name="test", path="/tmp/test")
         defaults = py_project.config.Defaults(configs=[])
 
-        result = applier._get_project_configs(project, defaults)
+        result = applier.get_project_configs(project, defaults)
 
         assert result == []
 
@@ -314,7 +314,7 @@ class TestGetProjectConfigs:
         project = py_project.config.Project(name="test", path="/tmp/test", exclude_configs=["gitignore"])
         defaults = py_project.config.Defaults(configs=["pyproject", "gitignore", "renovate"])
 
-        result = applier._get_project_configs(project, defaults)
+        result = applier.get_project_configs(project, defaults)
 
         assert result == ["pyproject", "renovate"]
 
@@ -328,7 +328,7 @@ class TestGetProjectConfigs:
         )
         defaults = py_project.config.Defaults(configs=["pyproject", "gitignore"])
 
-        result = applier._get_project_configs(project, defaults)
+        result = applier.get_project_configs(project, defaults)
 
         # pyproject + ruff (gitignore は除外)
         assert result == ["pyproject", "ruff"]
@@ -338,7 +338,7 @@ class TestGetProjectConfigs:
         project = py_project.config.Project(name="test", path="/tmp/test", configs=["pyproject", "ruff"])
         defaults = py_project.config.Defaults(configs=["pyproject", "gitignore"])
 
-        result = applier._get_project_configs(project, defaults)
+        result = applier.get_project_configs(project, defaults)
 
         # pyproject は重複しないので1回だけ
         assert result == ["pyproject", "gitignore", "ruff"]
@@ -352,7 +352,7 @@ class TestGetProjectConfigs:
         )
         defaults = py_project.config.Defaults(configs=["pyproject", "gitignore"])
 
-        result = applier._get_project_configs(project, defaults)
+        result = applier.get_project_configs(project, defaults)
 
         # nonexistent-config は無視される
         assert result == ["pyproject", "gitignore"]
@@ -524,6 +524,27 @@ class TestPrintSummary:
         result = output.getvalue()
         assert "エラー" in result
         assert "Error 1" in result
+
+    def test_print_summary_error_not_in_changes(self):
+        """changes テーブルに含まれないエラーも表示される（例: ディレクトリ欠落）"""
+        import my_lib.cui_progress
+
+        output = io.StringIO()
+        console = rich.console.Console(file=output, force_terminal=False, width=120)
+        progress = my_lib.cui_progress.NullProgressManager(console=console)
+
+        summary = applier.ApplySummary(
+            updated=1,
+            errors=1,
+            projects_processed=1,
+            error_messages=["missing-project: ディレクトリが見つかりません"],
+            changes=[applier.ChangeDetail("proj-a", "ruff", "updated")],
+        )
+
+        applier._print_summary(console, summary, dry_run=False, progress=progress)
+
+        result = output.getvalue()
+        assert "ディレクトリが見つかりません" in result
 
     def test_print_summary_dry_run_with_changes(self):
         """確認モードで変更がある場合"""
@@ -810,7 +831,7 @@ class TestRunGitStashPop:
                 stdout="CONFLICT (content): Merge conflict in file.txt",
                 stderr="",
             ),
-            mocker.MagicMock(returncode=0),  # checkout --theirs
+            mocker.MagicMock(returncode=0),  # checkout --ours
             mocker.MagicMock(returncode=0),  # reset HEAD
             mocker.MagicMock(returncode=0),  # stash drop
         ]
@@ -836,7 +857,7 @@ class TestRunGitStashPop:
                 stdout="",
                 stderr="error: Your local changes would be overwritten by merge",
             ),
-            mocker.MagicMock(returncode=0),  # checkout --theirs
+            mocker.MagicMock(returncode=0),  # checkout --ours
             mocker.MagicMock(returncode=0),  # reset HEAD
             mocker.MagicMock(returncode=0),  # stash drop
         ]

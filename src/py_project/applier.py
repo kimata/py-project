@@ -119,7 +119,7 @@ class ProcessContext:
     progress: ProgressType
 
 
-def _get_project_configs(
+def get_project_configs(
     project: py_project.config.Project, defaults: py_project.config.Defaults
 ) -> list[str]:
     """プロジェクトに適用する設定タイプのリストを取得
@@ -296,7 +296,7 @@ def _process_project(
     summary.projects_processed += 1
 
     # 適用する設定タイプを取得
-    project_configs = _get_project_configs(project, defaults)
+    project_configs = get_project_configs(project, defaults)
 
     # 対象設定タイプをフィルタ
     target_configs = [c for c in project_configs if config_types is None or c in config_types]
@@ -635,9 +635,9 @@ def _run_git_stash_pop(
             combined_output = result.stdout + result.stderr
             if "CONFLICT" in combined_output or "overwritten by merge" in combined_output:
                 _print("  [yellow]! stash pop でコンフリクト発生、クリーンアップ中...[/yellow]")
-                # コンフリクトを解消（コミット済みの状態に戻す）
+                # コンフリクトを解消（コミット済みの適用結果 = ours 側を維持し、退避側を破棄）
                 subprocess.run(
-                    ["git", "checkout", "--theirs", "."],  # noqa: S607
+                    ["git", "checkout", "--ours", "."],  # noqa: S607
                     cwd=project_path,
                     capture_output=True,
                     timeout=30,
@@ -1002,7 +1002,8 @@ def _print_summary(
 
     # 変更詳細テーブル（幅が十分ある場合のみ表示）
     min_width_for_changes = 80
-    if summary.changes and console.width >= min_width_for_changes:
+    show_changes_table = bool(summary.changes) and console.width >= min_width_for_changes
+    if show_changes_table:
         content_parts.append("")
         content_parts.append("[bold]📝 変更内容:[/bold]")
 
@@ -1035,14 +1036,21 @@ def _print_summary(
         content_parts.append(changes_table)
 
     # エラーメッセージがある場合
-    # 変更詳細テーブルが表示されていない場合、または changes に含まれないエラーがある場合は表示
-    show_error_messages = summary.error_messages and (
-        console.width < min_width_for_changes or not summary.changes
-    )
-    if show_error_messages:
+    # 変更詳細テーブルが表示されていない場合は全件、表示されている場合は
+    # changes に含まれないエラー（例: ディレクトリ欠落）のみ表示する
+    if show_changes_table:
+        displayed_errors = {
+            f"{change.project}/{change.config_type}: {change.message}"
+            for change in summary.changes
+            if change.status == "error"
+        }
+        undisplayed_errors = [msg for msg in summary.error_messages if msg not in displayed_errors]
+    else:
+        undisplayed_errors = summary.error_messages
+    if undisplayed_errors:
         error_table = rich.table.Table(box=None, show_header=False, padding=(0, 0))
         error_table.add_column("Error", style="red")
-        for msg in summary.error_messages:
+        for msg in undisplayed_errors:
             error_table.add_row(f"  • {msg}")
         content_parts.append("")
         content_parts.append("[red bold]エラー:[/red bold]")

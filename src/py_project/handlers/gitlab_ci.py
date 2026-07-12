@@ -103,8 +103,8 @@ class GitLabCIHandler(handlers_base.ConfigHandler):
         # マージ（プロジェクト設定が優先）
         merged = {**default_edits, **project_edits}
 
-        # Jinja2 テンプレート展開
-        vars_dict = defaults.vars
+        # Jinja2 テンプレート展開（プロジェクト設定が優先）
+        vars_dict = {**defaults.vars, **project.vars}
         return [
             py_project.config.GitlabCiEdit(path=k, value=self._render_value(v, vars_dict))
             for k, v in merged.items()

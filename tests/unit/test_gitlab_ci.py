@@ -211,6 +211,42 @@ class TestGitLabCIHandler:
         assert len(edits) == 1
         assert edits[0].value == "override:v2"
 
+    def test_get_edits_with_project_vars_override(self, handler, project_with_gitlab_ci, tmp_path):
+        """プロジェクト固有の vars がデフォルトの vars を上書きして展開される"""
+        config = py_project.config.Config(
+            defaults=py_project.config.Defaults(
+                python_version="3.12",
+                configs=["gitlab-ci"],
+                vars={"registry": "default.registry.com", "tag": "v1"},
+                gitlab_ci=py_project.config.GitlabCiOptions(
+                    edits=[
+                        py_project.config.GitlabCiEdit(
+                            path="/image", value="{{ vars.registry }}/ubuntu:{{ vars.tag }}"
+                        ),
+                    ]
+                ),
+            ),
+            template_dir=str(tmp_path / "templates"),
+            projects=[
+                py_project.config.Project(
+                    name="test-project",
+                    path=str(project_with_gitlab_ci),
+                    vars={"tag": "v2-project"},
+                )
+            ],
+        )
+        context = handlers_base.ApplyContext(
+            config=config,
+            template_dir=tmp_path / "templates",
+            dry_run=False,
+            backup=False,
+        )
+        project = config.projects[0]
+        edits = handler._get_edits(project, context)
+
+        assert len(edits) == 1
+        assert edits[0].value == "default.registry.com/ubuntu:v2-project"
+
     def test_get_edits_no_gitlab_ci_options(self, handler, project_with_gitlab_ci, tmp_path):
         """gitlab_ci オプションがない場合は空リスト"""
         config = py_project.config.Config(

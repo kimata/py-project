@@ -122,11 +122,10 @@ def show_projects(config: py_project.config.Config) -> None:
     table.add_column("パス")
     table.add_column("設定タイプ")
 
-    default_configs = config.defaults.configs
-
     for proj in config.projects:
-        configs = proj.configs if proj.configs is not None else default_configs
-        configs_str = ", ".join(configs) if configs else "(デフォルト)"
+        # 適用ロジックと同じ解決方法（defaults + 追加 - 除外）で表示する
+        configs = py_project.applier.get_project_configs(proj, config.defaults)
+        configs_str = ", ".join(configs) if configs else "(なし)"
 
         table.add_row(proj.name, proj.path, configs_str)
 

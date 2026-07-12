@@ -49,9 +49,9 @@ class TemplateCopyHandler(handlers_base.ConfigHandler):
         )
         template = env.get_template(template_path.name)
 
-        # テンプレート変数を構築
+        # テンプレート変数を構築（プロジェクト設定が優先）
         defaults = context.config.defaults
-        template_vars = project.vars
+        template_vars = {**defaults.vars, **project.vars}
 
         return template.render(
             project=project,
