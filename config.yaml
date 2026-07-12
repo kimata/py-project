@@ -54,6 +54,9 @@ projects:
               - undetected-chromedriver>=3.5.5
               - types-requests>=2.32.4
 
+    - name: price-platform
+      path: ~/github/price-platform
+
     - name: pt-fleama
       path: ~/github/pt-fleama
       pyproject:
