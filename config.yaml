@@ -120,3 +120,4 @@ projects:
           extra_lines:
               - "!config.yaml"
               - "!templates/**/*.yaml"
+              - "!doc/**/*.md"

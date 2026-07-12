@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 480" font-family="-apple-system, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#898781"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="920" height="480" fill="#fcfcfb"/>
+
+  <text x="460" y="28" text-anchor="middle" fill="#0b0b0b" font-size="14" font-weight="700">PyprojectHandler のマージ処理（merge_pyproject）</text>
+
+  <!-- 入力: 既存 -->
+  <rect x="40" y="60" width="240" height="120" rx="8" fill="#ffffff" stroke="#2a78d6" stroke-width="1.5"/>
+  <text x="160" y="84" text-anchor="middle" fill="#0b0b0b" font-size="12.5" font-weight="600">既存の pyproject.toml</text>
+  <text x="160" y="106" text-anchor="middle" fill="#52514e" font-size="11">プロジェクト固有の内容を含む</text>
+  <text x="160" y="128" text-anchor="middle" fill="#898781" font-size="10.5">name / version / description /</text>
+  <text x="160" y="144" text-anchor="middle" fill="#898781" font-size="10.5">dependencies / tool.hatch.build /</text>
+  <text x="160" y="160" text-anchor="middle" fill="#898781" font-size="10.5">tool.mypy.packages, overrides など</text>
+
+  <!-- 入力: テンプレート -->
+  <rect x="40" y="220" width="240" height="100" rx="8" fill="#ffffff" stroke="#1baf7a" stroke-width="1.5"/>
+  <text x="160" y="244" text-anchor="middle" fill="#0b0b0b" font-size="12.5" font-weight="600">templates/pyproject/sections.toml</text>
+  <text x="160" y="266" text-anchor="middle" fill="#52514e" font-size="11">共通セクションのテンプレート</text>
+  <text x="160" y="288" text-anchor="middle" fill="#898781" font-size="10.5">project / dependency-groups /</text>
+  <text x="160" y="304" text-anchor="middle" fill="#898781" font-size="10.5">build-system / tool.*</text>
+
+  <!-- マージ処理 -->
+  <rect x="350" y="60" width="300" height="300" rx="8" fill="#ffffff" stroke="#4a3aa7" stroke-width="2"/>
+  <text x="500" y="86" text-anchor="middle" fill="#0b0b0b" font-size="12.5" font-weight="700">マージ（既存をベースに上書き）</text>
+  <line x1="365" y1="98" x2="635" y2="98" stroke="#e1e0d9" stroke-width="1"/>
+  <text x="365" y="120" fill="#52514e" font-size="11">1. project セクションをマージ</text>
+  <text x="380" y="138" fill="#898781" font-size="10.5">保持: name, version, description, dependencies</text>
+  <text x="365" y="162" fill="#52514e" font-size="11">2. dependency-groups / build-system を上書き</text>
+  <text x="365" y="186" fill="#52514e" font-size="11">3. tool.* サブセクションをマージ</text>
+  <text x="380" y="204" fill="#898781" font-size="10.5">保持: tool.hatch.build.targets.wheel,</text>
+  <text x="380" y="220" fill="#898781" font-size="10.5">tool.mypy.packages / overrides,</text>
+  <text x="380" y="236" fill="#898781" font-size="10.5">+ project.pyproject.preserve_sections</text>
+  <text x="365" y="260" fill="#52514e" font-size="11">4. extra_dev_deps を dependency-groups.dev に追加</text>
+  <text x="380" y="278" fill="#898781" font-size="10.5">既存にない依存のみ append</text>
+  <text x="365" y="302" fill="#52514e" font-size="11">5. セクションを並び替え</text>
+  <text x="380" y="320" fill="#898781" font-size="10.5">project → build-system → dependency-groups → tool</text>
+  <text x="380" y="336" fill="#898781" font-size="10.5">tool 内: hatch → uv → … → ty（それ以外は末尾に ABC 順）</text>
+
+  <!-- 出力 -->
+  <rect x="710" y="130" width="180" height="160" rx="8" fill="#ffffff" stroke="#0b0b0b" stroke-width="1.5"/>
+  <text x="800" y="154" text-anchor="middle" fill="#0b0b0b" font-size="12.5" font-weight="600">出力</text>
+  <text x="800" y="178" text-anchor="middle" fill="#52514e" font-size="11">正規化</text>
+  <text x="800" y="196" text-anchor="middle" fill="#898781" font-size="10.5">3 行以上の連続空行を</text>
+  <text x="800" y="212" text-anchor="middle" fill="#898781" font-size="10.5">2 行に圧縮（tomlkit 対策）</text>
+  <text x="800" y="236" text-anchor="middle" fill="#52514e" font-size="11">既存と一致 → UNCHANGED</text>
+  <text x="800" y="256" text-anchor="middle" fill="#52514e" font-size="11">差分あり → 書き込み</text>
+  <text x="800" y="276" text-anchor="middle" fill="#898781" font-size="10.5">ファイルなし → SKIPPED</text>
+
+  <line x1="280" y1="120" x2="350" y2="150" stroke="#898781" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="280" y1="270" x2="350" y2="240" stroke="#898781" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="650" y1="210" x2="710" y2="210" stroke="#898781" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <text x="60" y="420" fill="#52514e" font-size="11.5" font-weight="600">ポイント:</text>
+  <text x="60" y="442" fill="#52514e" font-size="11">・テンプレートに存在するキーだけが上書きされ、既存ファイル固有のキー（例: project.scripts）はそのまま残る</text>
+  <text x="60" y="462" fill="#52514e" font-size="11">・tomlkit によりコメント・書式を保持したままマージされる</text>
+</svg>

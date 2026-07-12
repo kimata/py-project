@@ -189,6 +189,10 @@ projects:
               - some-package>=1.0
 ```
 
+## 📚 ドキュメント
+
+- [アーキテクチャ](doc/architecture.md) - モジュール構成・ハンドラ設計・適用フローの図解付き解説
+
 ## 📝 ライセンス
 
 Apache License Version 2.0

@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 420" font-family="-apple-system, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#898781"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="920" height="420" fill="#fcfcfb"/>
+
+  <text x="460" y="28" text-anchor="middle" fill="#0b0b0b" font-size="14" font-weight="700">--update-deps の処理フロー（dep_updater.py）</text>
+
+  <!-- 3 つの更新対象 -->
+  <rect x="40" y="60" width="260" height="90" rx="8" fill="#ffffff" stroke="#1baf7a" stroke-width="1.5"/>
+  <text x="170" y="84" text-anchor="middle" fill="#0b0b0b" font-size="12" font-weight="600">① テンプレート</text>
+  <text x="170" y="104" text-anchor="middle" fill="#52514e" font-size="10.5">templates/pyproject/sections.toml</text>
+  <text x="170" y="122" text-anchor="middle" fill="#898781" font-size="10.5">dependency-groups.dev（tomlkit）</text>
+  <text x="170" y="140" text-anchor="middle" fill="#898781" font-size="10.5">-p 指定時は更新しない</text>
+
+  <rect x="330" y="60" width="260" height="90" rx="8" fill="#ffffff" stroke="#1baf7a" stroke-width="1.5"/>
+  <text x="460" y="84" text-anchor="middle" fill="#0b0b0b" font-size="12" font-weight="600">② プロジェクト</text>
+  <text x="460" y="104" text-anchor="middle" fill="#52514e" font-size="10.5">各プロジェクトの pyproject.toml</text>
+  <text x="460" y="122" text-anchor="middle" fill="#898781" font-size="10.5">project.dependencies（tomlkit）</text>
+  <text x="460" y="140" text-anchor="middle" fill="#898781" font-size="10.5">--include-projects または -p 指定時</text>
+
+  <rect x="620" y="60" width="260" height="90" rx="8" fill="#ffffff" stroke="#1baf7a" stroke-width="1.5"/>
+  <text x="750" y="84" text-anchor="middle" fill="#0b0b0b" font-size="12" font-weight="600">③ 設定ファイル</text>
+  <text x="750" y="104" text-anchor="middle" fill="#52514e" font-size="10.5">config.yaml の extra_dev_deps</text>
+  <text x="750" y="122" text-anchor="middle" fill="#898781" font-size="10.5">ruamel.yaml で書式を保持</text>
+  <text x="750" y="140" text-anchor="middle" fill="#898781" font-size="10.5">--include-config 指定時</text>
+
+  <!-- 共通処理 -->
+  <rect x="180" y="200" width="560" height="130" rx="8" fill="#ffffff" stroke="#4a3aa7" stroke-width="2"/>
+  <text x="460" y="226" text-anchor="middle" fill="#0b0b0b" font-size="12.5" font-weight="700">共通処理: _check_and_update_deps()</text>
+  <line x1="195" y1="238" x2="725" y2="238" stroke="#e1e0d9" stroke-width="1"/>
+  <text x="200" y="260" fill="#52514e" font-size="11">1. 「パッケージ名&gt;=バージョン」形式をパース（それ以外の形式は変更せず維持）</text>
+  <text x="200" y="282" fill="#52514e" font-size="11">2. PyPI JSON API（pypi.org/pypi/{name}/json）から最新バージョンを取得</text>
+  <text x="200" y="304" fill="#52514e" font-size="11">3. バージョンを major.minor.patch の 3 要素に正規化して比較</text>
+  <text x="200" y="322" fill="#898781" font-size="10.5">例: types 系パッケージの "2025.2.0.20251108" → "2025.2.0"</text>
+
+  <!-- 出力 -->
+  <rect x="180" y="360" width="260" height="44" rx="8" fill="#ffffff" stroke="#898781" stroke-width="1.5"/>
+  <text x="310" y="380" text-anchor="middle" fill="#0b0b0b" font-size="11.5" font-weight="600">dry-run: 更新可能数を表示</text>
+  <text x="310" y="396" text-anchor="middle" fill="#898781" font-size="10.5">--apply で実際に書き込み</text>
+
+  <rect x="480" y="360" width="260" height="44" rx="8" fill="#ffffff" stroke="#898781" stroke-width="1.5"/>
+  <text x="610" y="380" text-anchor="middle" fill="#0b0b0b" font-size="11.5" font-weight="600">-d: FileUpdateResult から差分表示</text>
+  <text x="610" y="396" text-anchor="middle" fill="#898781" font-size="10.5">変更されたパッケージのみ - / + 形式</text>
+
+  <line x1="170" y1="150" x2="300" y2="200" stroke="#898781" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="460" y1="150" x2="460" y2="200" stroke="#898781" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="750" y1="150" x2="620" y2="200" stroke="#898781" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="380" y1="330" x2="330" y2="360" stroke="#898781" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="540" y1="330" x2="590" y2="360" stroke="#898781" stroke-width="1.5" marker-end="url(#arrow)"/>
+</svg>

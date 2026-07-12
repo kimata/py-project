@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 620" font-family="-apple-system, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#898781"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="920" height="620" fill="#fcfcfb"/>
+
+  <text x="460" y="28" text-anchor="middle" fill="#0b0b0b" font-size="14" font-weight="700">_process_project() の処理フロー（プロジェクト 1 件あたり）</text>
+
+  <!-- 1 存在確認 -->
+  <rect x="40" y="50" width="200" height="54" rx="8" fill="#ffffff" stroke="#898781" stroke-width="1.5"/>
+  <text x="140" y="72" text-anchor="middle" fill="#0b0b0b" font-size="12" font-weight="600">① ディレクトリ存在確認</text>
+  <text x="140" y="92" text-anchor="middle" fill="#898781" font-size="10.5">なければエラー計上して終了</text>
+
+  <!-- 2 configs 解決 -->
+  <rect x="290" y="50" width="220" height="54" rx="8" fill="#ffffff" stroke="#898781" stroke-width="1.5"/>
+  <text x="400" y="72" text-anchor="middle" fill="#0b0b0b" font-size="12" font-weight="600">② 設定タイプの解決</text>
+  <text x="400" y="92" text-anchor="middle" fill="#898781" font-size="10.5">defaults + configs - exclude_configs</text>
+
+  <!-- 3 stash -->
+  <rect x="560" y="50" width="320" height="54" rx="8" fill="#ffffff" stroke="#eda100" stroke-width="1.5"/>
+  <text x="720" y="72" text-anchor="middle" fill="#0b0b0b" font-size="12" font-weight="600">③ git stash（--git-commit / --git-push 時のみ）</text>
+  <text x="720" y="92" text-anchor="middle" fill="#898781" font-size="10.5">git repo かつ未コミット変更がある場合に退避</text>
+
+  <!-- 4 適用ループ -->
+  <rect x="40" y="150" width="840" height="180" rx="8" fill="#ffffff" stroke="#4a3aa7" stroke-width="2"/>
+  <text x="60" y="176" fill="#0b0b0b" font-size="12.5" font-weight="700">④ 設定タイプごとの適用ループ</text>
+
+  <rect x="60" y="192" width="180" height="54" rx="6" fill="#ffffff" stroke="#898781" stroke-width="1.2"/>
+  <text x="150" y="214" text-anchor="middle" fill="#0b0b0b" font-size="11.5">HANDLERS から</text>
+  <text x="150" y="232" text-anchor="middle" fill="#0b0b0b" font-size="11.5">ハンドラを取得・生成</text>
+
+  <rect x="280" y="192" width="180" height="54" rx="6" fill="#ffffff" stroke="#898781" stroke-width="1.2"/>
+  <text x="370" y="214" text-anchor="middle" fill="#0b0b0b" font-size="11.5">-d 指定時: diff() を表示</text>
+  <text x="370" y="232" text-anchor="middle" fill="#898781" font-size="10.5">dry-run なら apply をスキップ</text>
+
+  <rect x="500" y="192" width="180" height="54" rx="6" fill="#ffffff" stroke="#1baf7a" stroke-width="1.5"/>
+  <text x="590" y="214" text-anchor="middle" fill="#0b0b0b" font-size="11.5">apply() 実行</text>
+  <text x="590" y="232" text-anchor="middle" fill="#898781" font-size="10.5">結果表示・サマリ更新</text>
+
+  <rect x="720" y="192" width="140" height="54" rx="6" fill="#ffffff" stroke="#898781" stroke-width="1.2"/>
+  <text x="790" y="214" text-anchor="middle" fill="#0b0b0b" font-size="11.5">commit 対象に追加</text>
+  <text x="790" y="232" text-anchor="middle" fill="#898781" font-size="10.5">CREATED / UPDATED 時</text>
+
+  <line x1="240" y1="219" x2="280" y2="219" stroke="#898781" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="460" y1="219" x2="500" y2="219" stroke="#898781" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="680" y1="219" x2="720" y2="219" stroke="#898781" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <text x="60" y="285" fill="#52514e" font-size="11">ApplyStatus: CREATED / UPDATED / UNCHANGED / SKIPPED / ERROR</text>
+  <text x="60" y="308" fill="#52514e" font-size="11">pyproject または my-py-lib が UPDATED になった場合、後段の uv sync 対象としてマーク</text>
+
+  <!-- 5 uv sync -->
+  <rect x="40" y="370" width="260" height="70" rx="8" fill="#ffffff" stroke="#eda100" stroke-width="1.5"/>
+  <text x="170" y="394" text-anchor="middle" fill="#0b0b0b" font-size="12" font-weight="600">⑤ uv sync</text>
+  <text x="170" y="412" text-anchor="middle" fill="#898781" font-size="10.5">pyproject 更新時のみ（--no-sync で省略）</text>
+  <text x="170" y="428" text-anchor="middle" fill="#898781" font-size="10.5">成功時は uv.lock も commit 対象に追加</text>
+
+  <!-- 6 commit -->
+  <rect x="350" y="370" width="260" height="70" rx="8" fill="#ffffff" stroke="#eda100" stroke-width="1.5"/>
+  <text x="480" y="394" text-anchor="middle" fill="#0b0b0b" font-size="12" font-weight="600">⑥ git add &amp; commit</text>
+  <text x="480" y="412" text-anchor="middle" fill="#898781" font-size="10.5">メッセージは変更内容から自動生成</text>
+  <text x="480" y="428" text-anchor="middle" fill="#898781" font-size="10.5">pre-commit がファイル修正 → 最大 3 回リトライ</text>
+
+  <!-- 7 push -->
+  <rect x="660" y="370" width="220" height="70" rx="8" fill="#ffffff" stroke="#eda100" stroke-width="1.5"/>
+  <text x="770" y="394" text-anchor="middle" fill="#0b0b0b" font-size="12" font-weight="600">⑦ git push</text>
+  <text x="770" y="412" text-anchor="middle" fill="#898781" font-size="10.5">--git-push 指定かつ</text>
+  <text x="770" y="428" text-anchor="middle" fill="#898781" font-size="10.5">commit 成功時のみ</text>
+
+  <!-- 8 stash pop -->
+  <rect x="40" y="490" width="840" height="100" rx="8" fill="#ffffff" stroke="#e34948" stroke-width="1.5"/>
+  <text x="60" y="516" fill="#0b0b0b" font-size="12.5" font-weight="700">⑧ git stash pop（③ で退避した場合）</text>
+  <text x="60" y="540" fill="#52514e" font-size="11">成功 → 退避した変更を作業ツリーに復元</text>
+  <text x="60" y="560" fill="#52514e" font-size="11">コンフリクト → git checkout --ours .（コミット済みの適用結果を維持）→ git reset HEAD → git stash drop</text>
+  <text x="60" y="580" fill="#898781" font-size="10.5">競合した退避側の変更は破棄され、その旨が表示される</text>
+
+  <!-- 接続矢印 -->
+  <line x1="240" y1="77" x2="290" y2="77" stroke="#898781" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="510" y1="77" x2="560" y2="77" stroke="#898781" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="720" y1="104" x2="600" y2="150" stroke="#898781" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="170" y1="330" x2="170" y2="370" stroke="#898781" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="300" y1="405" x2="350" y2="405" stroke="#898781" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="610" y1="405" x2="660" y2="405" stroke="#898781" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="480" y1="440" x2="480" y2="490" stroke="#898781" stroke-width="1.5" marker-end="url(#arrow)"/>
+</svg>
