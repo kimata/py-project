@@ -72,6 +72,14 @@ projects:
 
     - name: pt-fleama
       path: ~/github/pt-fleama
+      gitignore:
+          extra_lines:
+              - ""
+              - "# コンテンツ YAML はテンプレートの *.yaml 除外の対象外にする"
+              - "!conf/about.yaml"
+              - "!conf/editorial_policy.yaml"
+              - "!conf/guides/*.yaml"
+              - "!conf/knowledge/*.yaml"
       pyproject:
           preserve_fields:
               - requires-python # PEP 695 構文を使用しており 3.12 以上が必須
@@ -80,6 +88,13 @@ projects:
 
     - name: lens-fleama
       path: ~/github/lens-fleama
+      gitignore:
+          extra_lines:
+              - ""
+              - "# コンテンツ YAML はテンプレートの *.yaml 除外の対象外にする"
+              - "!conf/about.yaml"
+              - "!conf/editorial_policy.yaml"
+              - "!conf/guides/*.yaml"
       pyproject:
           preserve_fields:
               - requires-python # PEP 695 構文を使用しており 3.12 以上が必須
@@ -88,6 +103,13 @@ projects:
 
     - name: hp-fleama
       path: ~/github/hp-fleama
+      gitignore:
+          extra_lines:
+              - ""
+              - "# コンテンツ YAML はテンプレートの *.yaml 除外の対象外にする"
+              - "!conf/about.yaml"
+              - "!conf/editorial_policy.yaml"
+              - "!conf/guides/*.yaml"
       pyproject:
           preserve_fields:
               - requires-python # PEP 695 構文を使用しており 3.12 以上が必須
