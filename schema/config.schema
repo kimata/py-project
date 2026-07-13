@@ -365,7 +365,8 @@
           "description": ".gitlab-ci.yml テンプレート名",
           "enum": [
             "fleama",
-            "library"
+            "library",
+            "docker"
           ]
         },
         "ty": {
@@ -415,6 +416,55 @@
         "update_cache": {
           "type": "boolean",
           "description": "update-cache ジョブを含めるか"
+        },
+        "frontend": {
+          "type": "boolean",
+          "description": "build-react ジョブを含めるか",
+          "default": true
+        },
+        "npm_build_script": {
+          "type": "string",
+          "description": "frontend の npm run スクリプト名",
+          "default": "build"
+        },
+        "config_script": {
+          "type": "array",
+          "description": "設定ファイル取得のスクリプト行 (build-image / test-pytest で共用)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pytest_config_script": {
+          "type": "boolean",
+          "description": "test-pytest でも config_script を実行するか",
+          "default": true
+        },
+        "webui_run": {
+          "type": "array",
+          "description": "test-webui でアプリを起動するスクリプト行",
+          "items": {
+            "type": "string"
+          }
+        },
+        "webui_health_path": {
+          "type": "string",
+          "description": "test-webui のヘルスチェックパス"
+        },
+        "e2e_target": {
+          "type": "string",
+          "description": "E2E テストの対象",
+          "default": "tests/e2e/test_webui.py"
+        },
+        "deploy_script": {
+          "type": "array",
+          "description": "deploy の kubectl スクリプト行",
+          "items": {
+            "type": "string"
+          }
+        },
+        "include_local": {
+          "type": "boolean",
+          "description": ".gitlab/ci-local.yml を include するか"
         }
       },
       "additionalProperties": false

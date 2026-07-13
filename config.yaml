@@ -26,6 +26,7 @@ defaults:
         node_image: "node:20-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0"
         # CI の build-react ジョブ用 node イメージ
         ci_node_image: "node:24.17@sha256:733e1c06ada118ed9f6133a31aa1290be6929664026fb28821500437c61f2c6f"
+        kubectl_tag: "250715_c88f3965"
     gitlab_ci:
         edits:
             - path: /image
@@ -361,6 +362,27 @@ projects:
       path: ~/github/server-list
       configs:
           - dockerfile
+          - gitlab-ci-gen
+      exclude_configs:
+          - gitlab-ci
+      ci:
+          template: docker
+          pyright_target: ""
+          config_script:
+              - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.green-rabbit.net/kimata/panel-config.git
+              - mv panel-config/server-list.yaml config.yaml
+              - mv panel-config/server-list-secret.yaml secret.yaml
+          webui_run:
+              - >
+                  docker run --rm --detach=true --tty=true
+                  --name ${CI_JOB_NAME}-${CI_JOB_ID} --label job=${CI_JOB_NAME}
+                  --publish :5000
+                  ${CI_REGISTRY_IMAGE}:${TAG} server-list-webui
+          webui_health_path: /server-list/api/config
+          deploy_script:
+              - kubectl config use-context kimata/server-list:pod-rollout
+              - kubectl -n panel set image deployment/server-list server-list=${IMAGE}
+              - kubectl -n panel rollout status deployment/server-list --timeout=300s
       docker:
           template: standard
           cjk_fonts: false

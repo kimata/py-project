@@ -187,6 +187,16 @@ class CiOptions:
     smoke_command: str = ""
     lint: bool = False
     update_cache: bool = False
+    # docker 系統テンプレート用
+    frontend: bool = True
+    npm_build_script: str = "build"
+    config_script: list[str] = dataclasses.field(default_factory=list)
+    pytest_config_script: bool = True
+    webui_run: list[str] = dataclasses.field(default_factory=list)
+    webui_health_path: str = ""
+    e2e_target: str = "tests/e2e/test_webui.py"
+    deploy_script: list[str] = dataclasses.field(default_factory=list)
+    include_local: bool = False
 
 
 @dataclasses.dataclass
