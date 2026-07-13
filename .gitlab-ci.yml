@@ -4,6 +4,7 @@ variables:
     UV_LINK_MODE: copy
     UV_CACHE_DIR: .uv-cache
     PYRIGHT_PYTHON_FORCE_VERSION: latest
+    UV_HTTP_TIMEOUT: "120"
 
     UV_EXTRA_INDEX_URL: "http://proxy:3141/simple/"
     UV_INSECURE_HOST: "proxy"
@@ -16,6 +17,9 @@ test-typecheck:
     stage: test
 
     needs: []
+
+    before_script:
+        - uv sync --locked --no-editable
 
     script:
         - uv run python -m pyright src/
@@ -35,6 +39,9 @@ test-pytest:
     stage: test
 
     needs: []
+
+    before_script:
+        - uv sync --locked --no-editable
 
     script:
         - uv run pytest
