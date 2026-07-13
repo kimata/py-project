@@ -39,7 +39,7 @@ projects:
           - my-py-lib
       pyproject:
           extra_dev_deps:
-              - amazon-paapi5>=1.1.2
+              - python-amazon-paapi>=6.2.0
               - flask-cors>=6.0.2
               - flask>=3.1.2
               - openpyxl>=3.1.5
@@ -86,6 +86,12 @@ projects:
 
     - name: rasp-water
       path: ~/github/rasp-water
+      dockerignore:
+          extra_lines:
+              - ""
+              - "# NOTE: dist/ は Angular のビルド出力であり、Docker イメージに含める必要が"
+              - "# あるため、テンプレートの除外設定を取り消す。"
+              - "!dist/"
       ruff:
           extra_lines:
               - ""
