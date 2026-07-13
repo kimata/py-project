@@ -40,8 +40,18 @@ template_dir: ./templates
 projects:
     - name: my-py-lib
       path: ~/github/my-py-lib
+      configs:
+          - gitlab-ci-gen
+      ci:
+          template: library
+          pyright_target: ""
+          pytest_args: "tests/unit/"
+          pytest_pre:
+              - apt update
+              - apt install --no-install-recommends --assume-yes smem
       exclude_configs:
           - my-py-lib
+          - gitlab-ci
       pyproject:
           extra_dev_deps:
               - python-amazon-paapi>=6.2.0
@@ -61,6 +71,15 @@ projects:
 
     - name: price-platform
       path: ~/github/price-platform
+      configs:
+          - gitlab-ci-gen
+      exclude_configs:
+          - gitlab-ci
+      ci:
+          template: library
+          pyright_target: ""
+          lint: true
+          update_cache: true
       pyproject:
           preserve_fields:
               - requires-python # PEP 695 構文を使用しており 3.12 以上が必須
@@ -226,8 +245,17 @@ projects:
 
     - name: merhist-python
       path: ~/github/merhist-python
+      ci:
+          template: library
+          smoke_config: merhist.yaml
+          smoke_command: merhist
+          extra_artifacts:
+              - data/debug/**
       configs:
           - dockerfile
+          - gitlab-ci-gen
+      exclude_configs:
+          - gitlab-ci
       docker:
           template: standard
           app_name: merhist
@@ -238,8 +266,17 @@ projects:
 
     - name: amazhist-python
       path: ~/github/amazhist-python
+      ci:
+          template: library
+          smoke_config: amazhist.yaml
+          smoke_command: amazhist
+          extra_artifacts:
+              - data/debug/**
       configs:
           - dockerfile
+          - gitlab-ci-gen
+      exclude_configs:
+          - gitlab-ci
       docker:
           template: standard
           app_name: amazhist
@@ -336,9 +373,25 @@ projects:
 
     - name: dupdel
       path: ~/github/dupdel
+      configs:
+          - gitlab-ci-gen
+      exclude_configs:
+          - gitlab-ci
+      ci:
+          template: library
+          pyright_target: ""
+          pytest_env_ja: true
+          pytest_args: "tests/test_core.py tests/test_cache.py"
 
     - name: py-project
       path: ~/github/py-project
+      configs:
+          - gitlab-ci-gen
+      exclude_configs:
+          - gitlab-ci
+      ci:
+          template: library
+          ty: false # 既存の ty 診断 74 件が未解消のため
       gitignore:
           extra_lines:
               - "!config.yaml"

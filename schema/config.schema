@@ -364,8 +364,57 @@
           "type": "string",
           "description": ".gitlab-ci.yml テンプレート名",
           "enum": [
-            "fleama"
+            "fleama",
+            "library"
           ]
+        },
+        "ty": {
+          "type": "boolean",
+          "description": "typecheck に ty check を含めるか",
+          "default": true
+        },
+        "pyright_target": {
+          "type": "string",
+          "description": "pyright の対象引数（空なら引数なし）",
+          "default": "src/"
+        },
+        "pytest_args": {
+          "type": "string",
+          "description": "pytest の追加引数"
+        },
+        "pytest_pre": {
+          "type": "array",
+          "description": "pytest 前に実行する追加コマンド",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pytest_env_ja": {
+          "type": "boolean",
+          "description": "日本語ロケール env を export するか"
+        },
+        "extra_artifacts": {
+          "type": "array",
+          "description": "test-pytest の追加 artifact パス",
+          "items": {
+            "type": "string"
+          }
+        },
+        "smoke_config": {
+          "type": "string",
+          "description": "test-smoke の bot-config 設定ファイル名"
+        },
+        "smoke_command": {
+          "type": "string",
+          "description": "test-smoke の実行コマンド名"
+        },
+        "lint": {
+          "type": "boolean",
+          "description": "ruff の test-lint ジョブを含めるか"
+        },
+        "update_cache": {
+          "type": "boolean",
+          "description": "update-cache ジョブを含めるか"
         }
       },
       "additionalProperties": false

@@ -1,0 +1,201 @@
+image: {{ vars.registry }}/local-ubuntu:{{ vars.ubuntu_tag }}
+
+variables:
+    UV_LINK_MODE: copy
+    UV_CACHE_DIR: .uv-cache
+    PYRIGHT_PYTHON_FORCE_VERSION: latest
+    UV_HTTP_TIMEOUT: "120"
+
+    UV_EXTRA_INDEX_URL: "http://proxy:3141/simple/"
+    UV_INSECURE_HOST: "proxy"
+
+stages:
+    - test
+    - renovate
+
+test-typecheck:
+    stage: test
+
+    needs: []
+
+    before_script:
+        - uv sync --locked --no-editable
+
+    script:
+        - uv run python -m pyright{% if project.ci.pyright_target %} {{ project.ci.pyright_target }}{% endif %}
+        - uv run mypy src/
+{%- if project.ci.ty %}
+        - uv run ty check src/
+{%- endif %}
+
+    cache:
+        - key:
+              files:
+                  - uv.lock
+          fallback_keys:
+              - uv-cache-${CI_PROJECT_ID}
+          paths:
+              - ${UV_CACHE_DIR}
+              - .mypy_cache/
+{%- if project.ci.lint %}
+
+test-lint:
+    stage: test
+
+    needs: []
+
+    before_script:
+        - uv sync --locked --no-editable
+
+    script:
+        - uv run ruff check src tests
+
+    cache:
+        - key:
+              files:
+                  - uv.lock
+          fallback_keys:
+              - uv-cache-${CI_PROJECT_ID}
+          policy: pull
+          paths:
+              - ${UV_CACHE_DIR}
+{%- endif %}
+
+test-pytest:
+    stage: test
+
+    needs: []
+
+    before_script:
+        - uv sync --locked --no-editable
+
+    script:
+{%- for cmd in project.ci.pytest_pre %}
+        - {{ cmd }}
+{%- endfor %}
+{%- if project.ci.pytest_env_ja %}
+        - export LANG=ja_JP.UTF-8
+        - export LANGUAGE=ja_JP:ja
+        - export LC_ALL=ja_JP.UTF-8
+        - export TERM=xterm-256color
+{%- endif %}
+        - uv run pytest{% if project.ci.pytest_args %} {{ project.ci.pytest_args }}{% endif %}
+
+    coverage: '/TOTAL.*\s+(\d+%)/'
+
+    cache:
+        - key:
+              files:
+                  - uv.lock
+          fallback_keys:
+              - uv-cache-${CI_PROJECT_ID}
+          paths:
+              - ${UV_CACHE_DIR}
+
+    artifacts:
+        when: always
+        paths:
+            - reports/**
+            - htmlcov/**
+{%- for path in project.ci.extra_artifacts %}
+            - {{ path }}
+{%- endfor %}
+        reports:
+            junit: reports/junit-report.xml
+            coverage_report:
+                coverage_format: cobertura
+                path: reports/coverage.xml
+{%- if project.ci.smoke_config and project.ci.smoke_command %}
+
+test-smoke:
+    stage: test
+
+    needs:
+        - job: test-pytest
+          artifacts: false
+
+    before_script:
+        - uv sync --locked --no-editable
+
+    script:
+        - 'echo "Building: ${CI_REGISTRY_IMAGE}:${TAG}"'
+        - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.green-rabbit.net/kimata/bot-config.git
+        - mv bot-config/{{ project.ci.smoke_config }} config.yaml
+        - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.green-rabbit.net/kimata/font.git private_font
+        - mv private_font/* font
+
+        - export LANG=ja_JP.UTF-8
+        - export LANGUAGE=ja_JP:ja
+        - export LC_ALL=ja_JP.UTF-8
+        - export TERM=xterm-256color
+
+        - uv run {{ project.ci.smoke_command }} -D -R
+        - sync
+
+    cache:
+        - key: selenium-${CI_PROJECT_ID}
+          paths:
+              - data/chrome
+          when: on_success
+
+    artifacts:
+        when: always
+        paths:
+            - data/debug/**
+{%- endif %}
+{%- if project.ci.update_cache %}
+
+update-cache:
+    stage: renovate
+
+    needs: []
+
+    before_script:
+        - uv sync --locked --no-editable
+
+    script:
+        - echo "Cache updated"
+
+    cache:
+        - key:
+              files:
+                  - uv.lock
+          fallback_keys:
+              - uv-cache-${CI_PROJECT_ID}
+          paths:
+              - ${UV_CACHE_DIR}
+
+    rules:
+        - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+          when: never
+        - if: $CI_PIPELINE_SOURCE == "schedule"
+{%- endif %}
+
+renovate:
+    stage: renovate
+
+    dependencies: []
+
+    resource_group: renovate
+
+    image:
+        name: {{ vars.registry }}/local-renovate:{{ vars.renovate_tag }}
+
+    variables:
+        RENOVATE_CACHE_DIR: .renovate-cache
+        LOG_LEVEL: info
+
+    script:
+        - renovate --platform gitlab --token ${RENOVATE_TOKEN} --endpoint ${CI_SERVER_URL}/api/v4 ${CI_PROJECT_PATH}
+
+    cache:
+        key: ${CI_JOB_NAME}-${CI_PROJECT_ID}
+        paths:
+            - ${RENOVATE_CACHE_DIR}
+
+    rules:
+        - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+          when: never
+        - if: $CI_PIPELINE_SOURCE == "schedule"
+        - changes:
+              - renovate.json

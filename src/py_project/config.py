@@ -159,13 +159,34 @@ class CiOptions:
     """gitlab-ci-gen 設定タイプのオプション
 
     Attributes:
-        template: .gitlab-ci.yml テンプレート名（例: fleama）。
+        template: .gitlab-ci.yml テンプレート名（例: fleama, library）。
             空の場合、gitlab-ci-gen 設定タイプは SKIPPED になる。
-            プロジェクト固有の値は project.vars（ci_ プレフィクス推奨）で注入する
+            系統固有の値は project.vars（ci_ プレフィクス推奨）でも注入できる
+        ty: typecheck ジョブに ty check を含めるか
+        pyright_target: pyright の対象引数（空なら引数なし）
+        pytest_args: pytest の追加引数（対象テストの限定等）
+        pytest_pre: pytest 前に実行する追加コマンド（apt install 等）
+        pytest_env_ja: pytest 前に日本語ロケールの環境変数を export するか
+        extra_artifacts: test-pytest の追加 artifact パス（data/debug/** 等）
+        smoke_config: test-smoke ジョブで bot-config から取得する設定ファイル名
+            （smoke_command と両方指定で smoke ジョブが有効になる）
+        smoke_command: test-smoke ジョブで実行するコマンド名
+        lint: ruff の test-lint ジョブを含めるか
+        update_cache: update-cache ジョブを含めるか
 
     """
 
     template: str = ""
+    ty: bool = True
+    pyright_target: str = "src/"
+    pytest_args: str = ""
+    pytest_pre: list[str] = dataclasses.field(default_factory=list)
+    pytest_env_ja: bool = False
+    extra_artifacts: list[str] = dataclasses.field(default_factory=list)
+    smoke_config: str = ""
+    smoke_command: str = ""
+    lint: bool = False
+    update_cache: bool = False
 
 
 @dataclasses.dataclass
