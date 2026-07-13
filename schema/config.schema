@@ -71,7 +71,8 @@
         "gitlab-ci",
         "dockerfile",
         "supervisord",
-        "docker-entrypoint"
+        "docker-entrypoint",
+        "gitlab-ci-gen"
       ],
       "description": "設定タイプ"
     },
@@ -171,6 +172,9 @@
         },
         "docker": {
           "$ref": "#/$defs/dockerOptions"
+        },
+        "ci": {
+          "$ref": "#/$defs/ciOptions"
         }
       },
       "additionalProperties": false
@@ -348,6 +352,20 @@
             },
             "additionalProperties": false
           }
+        }
+      },
+      "additionalProperties": false
+    },
+    "ciOptions": {
+      "type": "object",
+      "description": "gitlab-ci-gen 設定タイプのオプション",
+      "properties": {
+        "template": {
+          "type": "string",
+          "description": ".gitlab-ci.yml テンプレート名",
+          "enum": [
+            "fleama"
+          ]
         }
       },
       "additionalProperties": false

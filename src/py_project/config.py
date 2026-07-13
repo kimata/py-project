@@ -155,6 +155,20 @@ class DockerOptions:
 
 
 @dataclasses.dataclass
+class CiOptions:
+    """gitlab-ci-gen 設定タイプのオプション
+
+    Attributes:
+        template: .gitlab-ci.yml テンプレート名（例: fleama）。
+            空の場合、gitlab-ci-gen 設定タイプは SKIPPED になる。
+            プロジェクト固有の値は project.vars（ci_ プレフィクス推奨）で注入する
+
+    """
+
+    template: str = ""
+
+
+@dataclasses.dataclass
 class RuffOptions:
     """ruff 設定タイプのオプション
 
@@ -229,6 +243,7 @@ class Project:
     ruff: RuffOptions = dataclasses.field(default_factory=RuffOptions)
     license: LicenseOptions = dataclasses.field(default_factory=LicenseOptions)
     docker: DockerOptions = dataclasses.field(default_factory=DockerOptions)
+    ci: CiOptions = dataclasses.field(default_factory=CiOptions)
 
     def get_path(self) -> pathlib.Path:
         """展開されたパスを取得（絶対パス）"""

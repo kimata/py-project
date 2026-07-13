@@ -3,6 +3,7 @@
 import py_project.handlers.base as handlers_base
 import py_project.handlers.dockerfile as handlers_dockerfile
 import py_project.handlers.gitlab_ci as handlers_gitlab_ci
+import py_project.handlers.gitlab_ci_gen as handlers_gitlab_ci_gen
 import py_project.handlers.my_py_lib as handlers_my_py_lib
 import py_project.handlers.pyproject as handlers_pyproject
 import py_project.handlers.template_copy as handlers_template_copy
@@ -21,6 +22,7 @@ HANDLERS: dict[str, type[handlers_base.ConfigHandler]] = {
     "my-py-lib": handlers_my_py_lib.MyPyLibHandler,
     "gitlab-ci": handlers_gitlab_ci.GitLabCIHandler,
     "dockerfile": handlers_dockerfile.DockerfileHandler,
+    "gitlab-ci-gen": handlers_gitlab_ci_gen.GitLabCIGenHandler,
     "supervisord": handlers_template_copy.SupervisordHandler,
     "docker-entrypoint": handlers_template_copy.DockerEntrypointHandler,
 }
