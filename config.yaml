@@ -56,6 +56,9 @@ projects:
 
     - name: price-platform
       path: ~/github/price-platform
+      pyproject:
+          extra_dev_deps:
+              - "ruff==0.12.2" # CI の test-lint で使用。pre-commit の rev と揃える
       ruff:
           extra_lines:
               - ""
