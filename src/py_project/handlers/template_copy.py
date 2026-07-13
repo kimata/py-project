@@ -133,15 +133,6 @@ class PreCommitHandler(TemplateCopyHandler):
     format_type = handlers_base.FormatType.YAML
 
 
-class RuffHandler(TemplateCopyHandler):
-    """ruff 設定ハンドラ"""
-
-    template_subdir = "ruff"
-    template_file = ".ruff.toml"
-    output_file = ".ruff.toml"
-    format_type = handlers_base.FormatType.TOML
-
-
 class YamllintHandler(TemplateCopyHandler):
     """yamllint 設定ハンドラ"""
 
@@ -203,6 +194,21 @@ class GitignoreHandler(IgnoreFileHandler):
     template_file = ".gitignore"
     output_file = ".gitignore"
     options_attr = "gitignore"
+
+
+class RuffHandler(IgnoreFileHandler):
+    """ruff 設定ハンドラ
+
+    プロジェクト固有の TOML セクション（例: [lint.per-file-ignores]）を
+    extra_lines でテンプレートの末尾に追記できる。
+    TOML はセクションの記述順に意味を持たないため、末尾追記で等価になる。
+    """
+
+    template_subdir = "ruff"
+    template_file = ".ruff.toml"
+    output_file = ".ruff.toml"
+    format_type = handlers_base.FormatType.TOML
+    options_attr = "ruff"
 
 
 class RenovateHandler(TemplateCopyHandler):

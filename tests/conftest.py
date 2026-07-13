@@ -44,6 +44,13 @@ __pycache__/
 .venv/
 """
 
+TEMPLATE_RUFF = """\
+line-length = 110
+
+[lint]
+select = ["E", "F"]
+"""
+
 
 # === プロジェクト用サンプル ===
 SAMPLE_PYPROJECT = """\
@@ -93,6 +100,11 @@ def tmp_templates(tmp_path):
     gitignore_dir = template_dir / "gitignore"
     gitignore_dir.mkdir()
     (gitignore_dir / ".gitignore").write_text(TEMPLATE_GITIGNORE)
+
+    # ruff テンプレート
+    ruff_dir = template_dir / "ruff"
+    ruff_dir.mkdir()
+    (ruff_dir / ".ruff.toml").write_text(TEMPLATE_RUFF)
 
     return template_dir
 

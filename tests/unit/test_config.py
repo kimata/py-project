@@ -84,6 +84,24 @@ class TestGitignoreOptions:
         assert options.extra_lines == []
 
 
+class TestRuffOptions:
+    """RuffOptions のテスト"""
+
+    def test_from_dict_with_extra_lines(self):
+        """extra_lines を持つ辞書から生成"""
+        data = {"extra_lines": ["[lint.per-file-ignores]", '"tests/**/*.py" = ["S101"]']}
+        options = dacite.from_dict(data_class=py_project.config.RuffOptions, data=data)
+
+        assert options.extra_lines == ["[lint.per-file-ignores]", '"tests/**/*.py" = ["S101"]']
+
+    def test_from_dict_empty(self):
+        """空の辞書から生成"""
+        data = {}
+        options = dacite.from_dict(data_class=py_project.config.RuffOptions, data=data)
+
+        assert options.extra_lines == []
+
+
 class TestDefaults:
     """Defaults のテスト"""
 

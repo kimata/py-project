@@ -56,6 +56,12 @@ projects:
 
     - name: price-platform
       path: ~/github/price-platform
+      ruff:
+          extra_lines:
+              - ""
+              - "[lint.per-file-ignores]"
+              - '"tests/**/*.py" = ["S101", "S108"]'
+              - '"src/price_platform/testing/**/*.py" = ["S101"]'
 
     - name: pt-fleama
       path: ~/github/pt-fleama
@@ -80,6 +86,13 @@ projects:
 
     - name: rasp-water
       path: ~/github/rasp-water
+      ruff:
+          extra_lines:
+              - ""
+              - "[lint.per-file-ignores]"
+              - "# NOTE: メトリクスページは HTML テンプレートを埋め込んだ文字列で構成されており、"
+              - "# 行長制限 (E501) は本質的に適用しづらいため除外する。"
+              - '"**/metrics/webapi/page.py" = ["E501"]'
 
     - name: mercari-bot
       path: ~/github/mercari-bot

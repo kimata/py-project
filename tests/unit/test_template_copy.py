@@ -186,6 +186,71 @@ class TestGitignoreHandler:
         assert "custom-pattern/*" in content
 
 
+class TestRuffHandler:
+    """RuffHandler のテスト"""
+
+    def test_apply(self, tmp_templates, tmp_project, apply_context, sample_project):
+        """ruff 適用（extra_lines なし）"""
+        handler = template_copy.RuffHandler()
+
+        result = handler.apply(sample_project, apply_context)
+
+        assert result.status == handlers_base.ApplyStatus.CREATED
+        content = (tmp_project / ".ruff.toml").read_text()
+        assert "line-length = 110" in content
+
+    def test_apply_with_extra_lines(self, tmp_templates, tmp_project, sample_config):
+        """ruff に extra_lines でプロジェクト固有セクションを追加"""
+        handler = template_copy.RuffHandler()
+        project = config_module.Project(
+            name="test-project",
+            path=str(tmp_project),
+            ruff=config_module.RuffOptions(
+                extra_lines=[
+                    "",
+                    "[lint.per-file-ignores]",
+                    '"tests/**/*.py" = ["S101"]',
+                ]
+            ),
+        )
+
+        context = handlers_base.ApplyContext(
+            config=sample_config,
+            template_dir=tmp_templates,
+            dry_run=False,
+            backup=False,
+        )
+
+        result = handler.apply(project, context)
+
+        assert result.status == handlers_base.ApplyStatus.CREATED
+        content = (tmp_project / ".ruff.toml").read_text()
+        assert "line-length = 110" in content
+        assert "[lint.per-file-ignores]" in content
+        assert '"tests/**/*.py" = ["S101"]' in content
+
+    def test_apply_with_invalid_extra_lines(self, tmp_templates, tmp_project, sample_config):
+        """TOML として不正な extra_lines はバリデーションで弾かれる"""
+        handler = template_copy.RuffHandler()
+        project = config_module.Project(
+            name="test-project",
+            path=str(tmp_project),
+            ruff=config_module.RuffOptions(extra_lines=["[lint.per-file-ignores", "broken"]),
+        )
+
+        context = handlers_base.ApplyContext(
+            config=sample_config,
+            template_dir=tmp_templates,
+            dry_run=False,
+            backup=False,
+        )
+
+        result = handler.apply(project, context)
+
+        assert result.status == handlers_base.ApplyStatus.ERROR
+        assert not (tmp_project / ".ruff.toml").exists()
+
+
 class TestTemplateOverrides:
     """template_overrides のテスト"""
 

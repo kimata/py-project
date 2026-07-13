@@ -144,6 +144,9 @@
         "dockerignore": {
           "$ref": "#/$defs/dockerignoreOptions"
         },
+        "ruff": {
+          "$ref": "#/$defs/ruffOptions"
+        },
         "license": {
           "$ref": "#/$defs/licenseOptions"
         }
@@ -171,6 +174,20 @@
         "extra_lines": {
           "type": "array",
           "description": "テンプレートの末尾に追加する行",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "ruffOptions": {
+      "type": "object",
+      "description": "ruff 設定タイプのオプション",
+      "properties": {
+        "extra_lines": {
+          "type": "array",
+          "description": "テンプレートの末尾に追加する行（プロジェクト固有の TOML セクション等）",
           "items": {
             "type": "string"
           }

@@ -110,6 +110,18 @@ class DockerignoreOptions:
 
 
 @dataclasses.dataclass
+class RuffOptions:
+    """ruff 設定タイプのオプション
+
+    Attributes:
+        extra_lines: テンプレートの末尾に追加する行（プロジェクト固有の TOML セクション等）
+
+    """
+
+    extra_lines: list[str] = dataclasses.field(default_factory=list)
+
+
+@dataclasses.dataclass
 class LicenseOptions:
     """license 設定タイプのオプション
 
@@ -154,6 +166,7 @@ class Project:
         gitlab_ci: gitlab-ci 設定タイプのオプション
         gitignore: gitignore 設定タイプのオプション
         dockerignore: dockerignore 設定タイプのオプション
+        ruff: ruff 設定タイプのオプション
         license: license 設定タイプのオプション
 
     """
@@ -168,6 +181,7 @@ class Project:
     gitlab_ci: GitlabCiOptions = dataclasses.field(default_factory=GitlabCiOptions)
     gitignore: GitignoreOptions = dataclasses.field(default_factory=GitignoreOptions)
     dockerignore: DockerignoreOptions = dataclasses.field(default_factory=DockerignoreOptions)
+    ruff: RuffOptions = dataclasses.field(default_factory=RuffOptions)
     license: LicenseOptions = dataclasses.field(default_factory=LicenseOptions)
 
     def get_path(self) -> pathlib.Path:
