@@ -212,6 +212,14 @@ projects:
 
     - name: amazhist-python
       path: ~/github/amazhist-python
+      configs:
+          - dockerfile
+      docker:
+          template: standard
+          app_name: amazhist
+          chrome: true
+          fonts: true
+          cmd: ["amazhist"]
 
     - name: amazon-bot
       path: ~/github/amazon-bot
