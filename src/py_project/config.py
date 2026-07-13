@@ -147,6 +147,11 @@ class DockerOptions:
     cmd: list[str] = dataclasses.field(default_factory=list)
     install_project: bool = True
     compile_bytecode: bool = False
+    # hardware テンプレート用
+    python_version: str = "3.13"
+    lgpio: bool = False
+    dev_deps: bool = False
+    extra_env: dict[str, str] = dataclasses.field(default_factory=dict)
 
 
 @dataclasses.dataclass

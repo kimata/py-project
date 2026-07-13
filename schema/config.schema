@@ -273,6 +273,26 @@
         "compile_bytecode": {
           "type": "boolean",
           "description": "uv sync に --compile-bytecode を付けるか"
+        },
+        "python_version": {
+          "type": "string",
+          "description": "hardware テンプレートの Python バージョン",
+          "default": "3.13"
+        },
+        "lgpio": {
+          "type": "boolean",
+          "description": "lgpio ライブラリをビルドしてコピーするか (Raspberry Pi GPIO)"
+        },
+        "dev_deps": {
+          "type": "boolean",
+          "description": "dev グループの依存もインストールするか (time-machine API 等)"
+        },
+        "extra_env": {
+          "type": "object",
+          "description": "追加の ENV",
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": false

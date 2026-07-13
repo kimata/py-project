@@ -163,6 +163,15 @@ projects:
 
     - name: rasp-water
       path: ~/github/rasp-water
+      configs:
+          - dockerfile
+      docker:
+          template: hardware
+          lgpio: true
+          dev_deps: true
+          expose:
+              - 5000
+          cmd: ["./flask/src/app.py"]
       dockerignore:
           extra_lines:
               - ""
@@ -234,15 +243,48 @@ projects:
 
     - name: unit-cooler
       path: ~/github/unit-cooler
+      configs:
+          - dockerfile
+      docker:
+          template: hardware
+          app_name: unit_cooler
+          python_version: "3.12"
+          lgpio: true
+          expose:
+              - 2222
+              - 5000
+              - 5001
+          cmd: ["./src/controller.py"]
 
     - name: rasp-shutter
       path: ~/github/rasp-shutter
+      configs:
+          - dockerfile
+      docker:
+          template: hardware
+          dev_deps: true
+          expose:
+              - 5000
+          cmd: ["./src/app.py"]
       pyproject:
           preserve_fields:
               - requires-python # 3.12 指定を維持
 
     - name: modes-sensing
       path: ~/github/modes-sensing
+      configs:
+          - dockerfile
+      docker:
+          template: hardware
+          dev_deps: true
+          extra_env:
+              # gitpython がインストールされていない環境でもエラーを抑制
+              GIT_PYTHON_REFRESH: quiet
+              # amdar パッケージのインポートを可能にする
+              PYTHONPATH: /opt/modes-sensing/src
+          expose:
+              - 5000
+          cmd: ["python", "-m", "amdar"]
 
     - name: server-list
       path: ~/github/server-list

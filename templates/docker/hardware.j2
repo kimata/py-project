@@ -1,0 +1,69 @@
+{%- if project.docker.python_version != "3.13" %}
+# NOTE: .python-version（テスト済みランタイム）と揃えること
+{%- endif %}
+ARG PYTHON_VERSION={{ project.docker.python_version }}
+FROM python:${PYTHON_VERSION}-bookworm AS build
+
+RUN --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    apt-get update && apt-get install --no-install-recommends --assume-yes \
+    build-essential \
+    swig
+
+ENV PATH="/root/.local/bin/:$PATH"
+
+ENV UV_SYSTEM_PYTHON=1 \
+    UV_LINK_MODE=copy
+
+ADD https://astral.sh/uv/install.sh /uv-installer.sh
+
+RUN sh /uv-installer.sh && rm /uv-installer.sh
+{%- if project.docker.lgpio %}
+
+# NOTE: lgpio で必要になるライブラリ
+ADD http://abyz.me.uk/lg/lg.zip lg.zip
+RUN unzip lg.zip
+RUN make -C lg
+RUN make -C lg install
+{%- endif %}
+
+# NOTE: システムにインストール
+{%- if project.docker.dev_deps %} (time-machine を API 経由で使いたいので、dev グループもインストール){% endif %}
+# NOTE: .git は uv-dynamic-versioning がバージョン取得に必要
+RUN --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    --mount=type=bind,source=.python-version,target=.python-version \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=README.md,target=README.md \
+    --mount=type=bind,source=.git,target=.git \
+    --mount=type=cache,target=/root/.cache/uv \
+    uv export --frozen{% if not project.docker.dev_deps %} --no-group dev{% endif %} --format requirements-txt > requirements.txt \
+    && uv pip install -r requirements.txt
+
+FROM python:${PYTHON_VERSION}-slim-bookworm AS prod
+
+ARG PYTHON_VERSION
+ARG IMAGE_BUILD_DATE
+ENV IMAGE_BUILD_DATE=${IMAGE_BUILD_DATE}
+
+ENV TZ=Asia/Tokyo
+{%- for key, value in project.docker.extra_env.items() %}
+
+ENV {{ key }}={{ value }}
+{%- endfor %}
+
+COPY --from=build /usr/local/lib/python${PYTHON_VERSION}/site-packages /usr/local/lib/python${PYTHON_VERSION}/site-packages
+{%- if project.docker.lgpio %}
+
+COPY --from=build /usr/local/lib/liblgpio.so* /usr/local/lib
+RUN ldconfig
+{%- endif %}
+
+WORKDIR /opt/{{ project.get_app_name() }}
+
+COPY . .
+{%- for port in project.docker.expose %}
+
+EXPOSE {{ port }}
+{%- endfor %}
+
+CMD {{ project.docker.cmd | tojson }}
