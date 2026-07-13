@@ -59,6 +59,8 @@ projects:
       pyproject:
           preserve_fields:
               - requires-python # PEP 695 構文を使用しており 3.12 以上が必須
+          preserve_sections:
+              - tool.ty # unresolved-import=ignore（tweepy 等は消費側が提供する遅延 import）
           extra_dev_deps:
               - "ruff==0.12.2" # CI の test-lint で使用。pre-commit の rev と揃える
       ruff:
