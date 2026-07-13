@@ -77,11 +77,14 @@ class PyprojectOptions:
 
     Attributes:
         preserve_sections: 追加で保持するセクション
+        preserve_fields: [project] セクション内で追加で保持するフィールド
+            （例: requires-python — テンプレートより新しい Python を要求するプロジェクト用）
         extra_dev_deps: 追加の開発依存
 
     """
 
     preserve_sections: list[str] = dataclasses.field(default_factory=list)
+    preserve_fields: list[str] = dataclasses.field(default_factory=list)
     extra_dev_deps: list[str] = dataclasses.field(default_factory=list)
 
 

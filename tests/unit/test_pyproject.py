@@ -66,6 +66,30 @@ class TestPyprojectHandler:
         assert result["project"]["requires-python"] == ">=3.11"
         assert result["tool"]["ruff"]["line-length"] == 110
 
+    def test_merge_preserve_fields(self, tmp_templates, tmp_project, apply_context):
+        """preserve_fields で指定したフィールドが保持されることを確認"""
+        handler = pyproject_handler.PyprojectHandler()
+        project = py_project.config.Project(
+            name="test-project",
+            path=str(tmp_project),
+            pyproject=py_project.config.PyprojectOptions(preserve_fields=["requires-python"]),
+        )
+
+        pyproject_content = textwrap.dedent("""\
+            [project]
+            name = "test-project"
+            version = "0.1.0"
+            description = "Test project"
+            requires-python = ">=3.12"
+        """)
+        current = tomlkit.parse(pyproject_content)
+        template = tomlkit.parse((tmp_templates / "pyproject" / "sections.toml").read_text())
+
+        result = handler.merge_pyproject(current, template, project)
+
+        # preserve_fields 指定によりテンプレートの >=3.11 で上書きされない
+        assert result["project"]["requires-python"] == ">=3.12"
+
     def test_merge_preserves_dependencies(self, tmp_templates, tmp_project, apply_context):
         """dependencies が保持されることを確認"""
         handler = pyproject_handler.PyprojectHandler()

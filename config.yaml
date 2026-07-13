@@ -57,6 +57,8 @@ projects:
     - name: price-platform
       path: ~/github/price-platform
       pyproject:
+          preserve_fields:
+              - requires-python # PEP 695 構文を使用しており 3.12 以上が必須
           extra_dev_deps:
               - "ruff==0.12.2" # CI の test-lint で使用。pre-commit の rev と揃える
       ruff:
@@ -123,6 +125,9 @@ projects:
 
     - name: rasp-shutter
       path: ~/github/rasp-shutter
+      pyproject:
+          preserve_fields:
+              - requires-python # 3.12 指定を維持
 
     - name: modes-sensing
       path: ~/github/modes-sensing

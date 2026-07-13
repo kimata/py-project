@@ -127,6 +127,11 @@
               "description": "追加で保持するセクション",
               "items": { "type": "string" }
             },
+            "preserve_fields": {
+              "type": "array",
+              "description": "[project] セクション内で追加で保持するフィールド（例: requires-python）",
+              "items": { "type": "string" }
+            },
             "extra_dev_deps": {
               "type": "array",
               "description": "追加の開発依存",

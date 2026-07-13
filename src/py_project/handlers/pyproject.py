@@ -173,7 +173,8 @@ class PyprojectHandler(handlers_base.ConfigHandler):
         result = tomlkit.parse(tomlkit.dumps(current))
 
         # テンプレートの各セクションを処理
-        self._merge_section(result, template, "project", _PRESERVE_FIELDS.get("project", []))
+        project_preserve_fields = _PRESERVE_FIELDS.get("project", []) + project.pyproject.preserve_fields
+        self._merge_section(result, template, "project", project_preserve_fields)
         self._merge_section(result, template, "dependency-groups", [])
         self._merge_section(result, template, "build-system", [])
 
