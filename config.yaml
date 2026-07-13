@@ -73,18 +73,24 @@ projects:
     - name: pt-fleama
       path: ~/github/pt-fleama
       pyproject:
+          preserve_fields:
+              - requires-python # PEP 695 構文を使用しており 3.12 以上が必須
           extra_dev_deps:
               - "numpy>=2.4.2"
 
     - name: lens-fleama
       path: ~/github/lens-fleama
       pyproject:
+          preserve_fields:
+              - requires-python # PEP 695 構文を使用しており 3.12 以上が必須
           extra_dev_deps:
               - "numpy>=2.4.2"
 
     - name: hp-fleama
       path: ~/github/hp-fleama
       pyproject:
+          preserve_fields:
+              - requires-python # PEP 695 構文を使用しており 3.12 以上が必須
           extra_dev_deps:
               - "numpy>=2.4.2"
 
