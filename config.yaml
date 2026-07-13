@@ -120,6 +120,18 @@ projects:
 
     - name: price-watch
       path: ~/github/price-watch
+      configs:
+          - dockerfile
+      docker:
+          template: standard
+          chrome: true
+          # NOTE: Chrome 143 でレンダラープロセスが約20分後に切断される問題があるため固定
+          chrome_version: "142.0.7444.175-1"
+          fonts: true
+          extra_apt:
+              - ffmpeg
+              - smem
+          cmd: ["price-watch"]
 
     - name: rasp-water
       path: ~/github/rasp-water
@@ -151,15 +163,46 @@ projects:
 
     - name: merhist-python
       path: ~/github/merhist-python
+      configs:
+          - dockerfile
+      docker:
+          template: standard
+          app_name: merhist
+          chrome: true
+          fonts: true
+          cmd: ["./src/app.py"]
+          install_project: false
 
     - name: amazhist-python
       path: ~/github/amazhist-python
 
     - name: amazon-bot
       path: ~/github/amazon-bot
+      configs:
+          - dockerfile
+      docker:
+          template: standard
+          chrome: true
+          # NOTE: Chrome 143 でレンダラープロセスが約20分後に切断される問題があるため固定
+          chrome_version: "142.0.7444.175-1"
+          fonts: true
+          extra_apt:
+              - smem
+          extra_mkdir:
+              - data/chrome
+          cmd: ["amazon-vine"]
 
     - name: eink-weather-panel
       path: ~/github/eink-weather-panel
+      configs:
+          - dockerfile
+      docker:
+          template: standard
+          chrome: true
+          fonts: true
+          cjk_fonts: false
+          cmd: ["src/display_image.py"]
+          compile_bytecode: true
 
     - name: unit-cooler
       path: ~/github/unit-cooler
@@ -175,6 +218,14 @@ projects:
 
     - name: server-list
       path: ~/github/server-list
+      configs:
+          - dockerfile
+      docker:
+          template: standard
+          cjk_fonts: false
+          expose:
+              - 5000
+          cmd: ["server-list-webui"]
 
     - name: rsudp
       path: ~/github/rsudp

@@ -121,9 +121,13 @@ class DockerOptions:
             空の場合、dockerfile 設定タイプは SKIPPED になる
         app_name: WORKDIR (/opt/<app_name>) に使う名前。省略時はプロジェクト名
         chrome: Google Chrome をインストールするか（Selenium 利用プロジェクト）
+        chrome_version: Chrome のバージョンを固定する場合に指定
+            （例: "142.0.7444.175-1"。新しい Chrome の不具合回避用）
         fonts: リポジトリの font/ をイメージへコピーするか
         cjk_fonts: fonts-noto-cjk を apt でインストールするか
         extra_apt: 追加でインストールする apt パッケージ
+        extra_mkdir: 追加で作成するディレクトリ（named volume の所有権対策等）
+        expose: EXPOSE するポート
         cmd: CMD に設定するコマンド
         install_project: COPY 後にプロジェクト自身を uv sync でインストールするか
             （./src/xxx.py 直接実行のプロジェクトは False で可）
@@ -134,9 +138,12 @@ class DockerOptions:
     template: str = ""
     app_name: str | None = None
     chrome: bool = False
+    chrome_version: str | None = None
     fonts: bool = False
     cjk_fonts: bool = True
     extra_apt: list[str] = dataclasses.field(default_factory=list)
+    extra_mkdir: list[str] = dataclasses.field(default_factory=list)
+    expose: list[int] = dataclasses.field(default_factory=list)
     cmd: list[str] = dataclasses.field(default_factory=list)
     install_project: bool = True
     compile_bytecode: bool = False

@@ -207,6 +207,10 @@
           "type": "boolean",
           "description": "Google Chrome をインストールするか"
         },
+        "chrome_version": {
+          "type": "string",
+          "description": "Chrome のバージョンを固定する場合に指定（例: 142.0.7444.175-1）"
+        },
         "fonts": {
           "type": "boolean",
           "description": "リポジトリの font/ をイメージへコピーするか"
@@ -220,6 +224,16 @@
           "type": "array",
           "description": "追加でインストールする apt パッケージ",
           "items": { "type": "string" }
+        },
+        "extra_mkdir": {
+          "type": "array",
+          "description": "追加で作成するディレクトリ（named volume の所有権対策等）",
+          "items": { "type": "string" }
+        },
+        "expose": {
+          "type": "array",
+          "description": "EXPOSE するポート",
+          "items": { "type": "integer" }
         },
         "cmd": {
           "type": "array",
