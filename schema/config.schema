@@ -66,7 +66,8 @@
         "license",
         "pyproject",
         "my-py-lib",
-        "gitlab-ci"
+        "gitlab-ci",
+        "dockerfile"
       ],
       "description": "設定タイプ"
     },
@@ -154,6 +155,9 @@
         },
         "license": {
           "$ref": "#/$defs/licenseOptions"
+        },
+        "docker": {
+          "$ref": "#/$defs/dockerOptions"
         }
       },
       "additionalProperties": false
@@ -182,6 +186,54 @@
           "items": {
             "type": "string"
           }
+        }
+      },
+      "additionalProperties": false
+    },
+    "dockerOptions": {
+      "type": "object",
+      "description": "dockerfile 設定タイプのオプション",
+      "properties": {
+        "template": {
+          "type": "string",
+          "description": "Dockerfile テンプレート名",
+          "enum": ["standard", "supervisor", "hardware"]
+        },
+        "app_name": {
+          "type": "string",
+          "description": "WORKDIR (/opt/<app_name>) に使う名前。省略時はプロジェクト名"
+        },
+        "chrome": {
+          "type": "boolean",
+          "description": "Google Chrome をインストールするか"
+        },
+        "fonts": {
+          "type": "boolean",
+          "description": "リポジトリの font/ をイメージへコピーするか"
+        },
+        "cjk_fonts": {
+          "type": "boolean",
+          "description": "fonts-noto-cjk を apt でインストールするか",
+          "default": true
+        },
+        "extra_apt": {
+          "type": "array",
+          "description": "追加でインストールする apt パッケージ",
+          "items": { "type": "string" }
+        },
+        "cmd": {
+          "type": "array",
+          "description": "CMD に設定するコマンド",
+          "items": { "type": "string" }
+        },
+        "install_project": {
+          "type": "boolean",
+          "description": "COPY 後にプロジェクト自身を uv sync でインストールするか",
+          "default": true
+        },
+        "compile_bytecode": {
+          "type": "boolean",
+          "description": "uv sync に --compile-bytecode を付けるか"
         }
       },
       "additionalProperties": false

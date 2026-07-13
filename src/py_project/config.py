@@ -113,6 +113,36 @@ class DockerignoreOptions:
 
 
 @dataclasses.dataclass
+class DockerOptions:
+    """dockerfile 設定タイプのオプション
+
+    Attributes:
+        template: Dockerfile テンプレート名（standard / supervisor / hardware）。
+            空の場合、dockerfile 設定タイプは SKIPPED になる
+        app_name: WORKDIR (/opt/<app_name>) に使う名前。省略時はプロジェクト名
+        chrome: Google Chrome をインストールするか（Selenium 利用プロジェクト）
+        fonts: リポジトリの font/ をイメージへコピーするか
+        cjk_fonts: fonts-noto-cjk を apt でインストールするか
+        extra_apt: 追加でインストールする apt パッケージ
+        cmd: CMD に設定するコマンド
+        install_project: COPY 後にプロジェクト自身を uv sync でインストールするか
+            （./src/xxx.py 直接実行のプロジェクトは False で可）
+        compile_bytecode: uv sync に --compile-bytecode を付けるか
+
+    """
+
+    template: str = ""
+    app_name: str | None = None
+    chrome: bool = False
+    fonts: bool = False
+    cjk_fonts: bool = True
+    extra_apt: list[str] = dataclasses.field(default_factory=list)
+    cmd: list[str] = dataclasses.field(default_factory=list)
+    install_project: bool = True
+    compile_bytecode: bool = False
+
+
+@dataclasses.dataclass
 class RuffOptions:
     """ruff 設定タイプのオプション
 
@@ -186,10 +216,15 @@ class Project:
     dockerignore: DockerignoreOptions = dataclasses.field(default_factory=DockerignoreOptions)
     ruff: RuffOptions = dataclasses.field(default_factory=RuffOptions)
     license: LicenseOptions = dataclasses.field(default_factory=LicenseOptions)
+    docker: DockerOptions = dataclasses.field(default_factory=DockerOptions)
 
     def get_path(self) -> pathlib.Path:
         """展開されたパスを取得（絶対パス）"""
         return expand_user_path(self.path)
+
+    def get_app_name(self) -> str:
+        """Dockerfile 等で使うアプリ名を取得（デフォルトはプロジェクト名）"""
+        return self.docker.app_name or self.name
 
 
 @dataclasses.dataclass

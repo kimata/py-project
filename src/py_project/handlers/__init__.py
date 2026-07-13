@@ -1,6 +1,7 @@
 """設定タイプハンドラ"""
 
 import py_project.handlers.base as handlers_base
+import py_project.handlers.dockerfile as handlers_dockerfile
 import py_project.handlers.gitlab_ci as handlers_gitlab_ci
 import py_project.handlers.my_py_lib as handlers_my_py_lib
 import py_project.handlers.pyproject as handlers_pyproject
@@ -19,4 +20,5 @@ HANDLERS: dict[str, type[handlers_base.ConfigHandler]] = {
     "pyproject": handlers_pyproject.PyprojectHandler,
     "my-py-lib": handlers_my_py_lib.MyPyLibHandler,
     "gitlab-ci": handlers_gitlab_ci.GitLabCIHandler,
+    "dockerfile": handlers_dockerfile.DockerfileHandler,
 }

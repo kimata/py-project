@@ -21,6 +21,8 @@ defaults:
         registry: "gitlab.green-rabbit.net:5050/kimata"
         ubuntu_tag: "260104_3efe597c"
         renovate_tag: "260104_3da7b77b"
+        # Dockerfile テンプレートのベースイメージ（renovate は py-project 側で更新する）
+        ubuntu_image: "ubuntu:24.04@sha256:4fbb8e6a8395de5a7550b33509421a2bafbc0aab6c06ba2cef9ebffbc7092d90"
     gitlab_ci:
         edits:
             - path: /image
@@ -137,6 +139,15 @@ projects:
 
     - name: mercari-bot
       path: ~/github/mercari-bot
+      configs:
+          - dockerfile
+      docker:
+          template: standard
+          chrome: true
+          fonts: true
+          extra_apt:
+              - smem
+          cmd: ["mercari-bot", "-l"]
 
     - name: merhist-python
       path: ~/github/merhist-python
