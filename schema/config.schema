@@ -3,7 +3,9 @@
   "title": "py-project Configuration",
   "description": "複数Pythonプロジェクトへの設定適用ツールの設定ファイル",
   "type": "object",
-  "required": ["projects"],
+  "required": [
+    "projects"
+  ],
   "properties": {
     "defaults": {
       "type": "object",
@@ -67,13 +69,18 @@
         "pyproject",
         "my-py-lib",
         "gitlab-ci",
-        "dockerfile"
+        "dockerfile",
+        "supervisord",
+        "docker-entrypoint"
       ],
       "description": "設定タイプ"
     },
     "project": {
       "type": "object",
-      "required": ["name", "path"],
+      "required": [
+        "name",
+        "path"
+      ],
       "properties": {
         "name": {
           "type": "string",
@@ -126,17 +133,23 @@
             "preserve_sections": {
               "type": "array",
               "description": "追加で保持するセクション",
-              "items": { "type": "string" }
+              "items": {
+                "type": "string"
+              }
             },
             "preserve_fields": {
               "type": "array",
               "description": "[project] セクション内で追加で保持するフィールド（例: requires-python）",
-              "items": { "type": "string" }
+              "items": {
+                "type": "string"
+              }
             },
             "extra_dev_deps": {
               "type": "array",
               "description": "追加の開発依存",
-              "items": { "type": "string" }
+              "items": {
+                "type": "string"
+              }
             }
           },
           "additionalProperties": false
@@ -197,7 +210,11 @@
         "template": {
           "type": "string",
           "description": "Dockerfile テンプレート名",
-          "enum": ["standard", "supervisor", "hardware"]
+          "enum": [
+            "standard",
+            "supervisor",
+            "hardware"
+          ]
         },
         "app_name": {
           "type": "string",
@@ -223,22 +240,30 @@
         "extra_apt": {
           "type": "array",
           "description": "追加でインストールする apt パッケージ",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "extra_mkdir": {
           "type": "array",
           "description": "追加で作成するディレクトリ（named volume の所有権対策等）",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "expose": {
           "type": "array",
           "description": "EXPOSE するポート",
-          "items": { "type": "integer" }
+          "items": {
+            "type": "integer"
+          }
         },
         "cmd": {
           "type": "array",
           "description": "CMD に設定するコマンド",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "install_project": {
           "type": "boolean",
@@ -287,7 +312,10 @@
           "description": "yamlpath 形式で値を編集",
           "items": {
             "type": "object",
-            "required": ["path", "value"],
+            "required": [
+              "path",
+              "value"
+            ],
             "properties": {
               "path": {
                 "type": "string",

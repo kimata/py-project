@@ -211,6 +211,22 @@ class RuffHandler(IgnoreFileHandler):
     options_attr = "ruff"
 
 
+class SupervisordHandler(TemplateCopyHandler):
+    """supervisord.conf 設定ハンドラ（supervisor 構成のプロジェクト用）"""
+
+    template_subdir = "supervisord"
+    template_file = "supervisord.conf"
+    output_file = "supervisord.conf"
+
+
+class DockerEntrypointHandler(TemplateCopyHandler):
+    """docker-entrypoint.sh 設定ハンドラ（supervisor 構成のプロジェクト用）"""
+
+    template_subdir = "docker-entrypoint"
+    template_file = "docker-entrypoint.sh"
+    output_file = "docker-entrypoint.sh"
+
+
 class RenovateHandler(TemplateCopyHandler):
     """renovate 設定ハンドラ"""
 

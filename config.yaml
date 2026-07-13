@@ -23,6 +23,7 @@ defaults:
         renovate_tag: "260104_3da7b77b"
         # Dockerfile テンプレートのベースイメージ（renovate は py-project 側で更新する）
         ubuntu_image: "ubuntu:24.04@sha256:4fbb8e6a8395de5a7550b33509421a2bafbc0aab6c06ba2cef9ebffbc7092d90"
+        node_image: "node:20-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0"
     gitlab_ci:
         edits:
             - path: /image
@@ -74,6 +75,15 @@ projects:
 
     - name: pt-fleama
       path: ~/github/pt-fleama
+      configs:
+          - dockerfile
+          - supervisord
+          - docker-entrypoint
+      docker:
+          template: supervisor
+          chrome: true
+          # NOTE: Chrome 143 でレンダラープロセスが約20分後に切断される問題があるため固定
+          chrome_version: "142.0.7444.175-1"
       gitignore:
           extra_lines:
               - ""
@@ -90,6 +100,15 @@ projects:
 
     - name: lens-fleama
       path: ~/github/lens-fleama
+      configs:
+          - dockerfile
+          - supervisord
+          - docker-entrypoint
+      docker:
+          template: supervisor
+          chrome: true
+          # NOTE: Chrome 143 でレンダラープロセスが約20分後に切断される問題があるため固定
+          chrome_version: "142.0.7444.175-1"
       gitignore:
           extra_lines:
               - ""
@@ -105,6 +124,15 @@ projects:
 
     - name: hp-fleama
       path: ~/github/hp-fleama
+      configs:
+          - dockerfile
+          - supervisord
+          - docker-entrypoint
+      docker:
+          template: supervisor
+          chrome: true
+          # NOTE: Chrome 143 でレンダラープロセスが約20分後に切断される問題があるため固定
+          chrome_version: "142.0.7444.175-1"
       gitignore:
           extra_lines:
               - ""

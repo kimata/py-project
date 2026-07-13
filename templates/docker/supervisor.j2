@@ -1,0 +1,137 @@
+# {{ project.get_app_name() }} Dockerfile
+# Flask API + SSR Server + Crawler (Chrome) をサポート
+#
+# ビルド: docker build -t {{ project.get_app_name() }} .
+# 実行:   docker run -p 3000:3000 -v ./conf:/opt/{{ project.get_app_name() }}/conf:ro -v ./data:/opt/{{ project.get_app_name() }}/data {{ project.get_app_name() }}
+
+# ============================================================
+# Stage 1: Frontend Build
+# ============================================================
+FROM {{ vars.node_image }} AS frontend-builder
+
+WORKDIR /app/frontend
+
+# 依存関係をインストール
+COPY frontend/package*.json ./
+RUN npm ci
+
+# フロントエンドソースをコピー
+COPY frontend/ ./
+
+# クライアント・サーバーバンドルをビルド
+RUN npm run build:ssr
+
+# ============================================================
+# Stage 2: Final Image (Ubuntu + Chrome + Node.js + Python)
+# ============================================================
+FROM {{ vars.ubuntu_image }}
+# NOTE:
+# python:3.11.4-bookworm とかを使った場合，Selenium を同時に複数動かせないので，
+# Ubuntu イメージを使う
+
+RUN --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    apt-get update && apt-get install --no-install-recommends --assume-yes \
+    curl \
+    ca-certificates \
+    tini \
+    build-essential \
+    git \
+    language-pack-ja \
+    tzdata \
+    fonts-noto-cjk \
+    smem \
+    ffmpeg \
+    supervisor
+
+ENV TZ=Asia/Tokyo \
+    LANG=ja_JP.UTF-8 \
+    LANGUAGE=ja_JP:ja \
+    LC_ALL=ja_JP.UTF-8
+
+RUN locale-gen en_US.UTF-8
+RUN locale-gen ja_JP.UTF-8
+
+# Node.js 20.x インストール
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+# NOTE: 新しい Chrome の不具合回避のためバージョンを固定する
+# （固定バージョンは py-project の config.yaml で管理）
+RUN curl -O https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_{{ project.docker.chrome_version }}_amd64.deb
+
+RUN --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    apt-get update && apt-get install --no-install-recommends --assume-yes \
+    ./google-chrome-stable_{{ project.docker.chrome_version }}_amd64.deb && \
+    rm -f google-chrome-stable_{{ project.docker.chrome_version }}_amd64.deb
+
+USER ubuntu
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PATH="/home/ubuntu/.local/bin:$PATH"
+ENV UV_LINK_MODE=copy
+
+# ubuntu ユーザーで uv をインストール
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+WORKDIR /opt/{{ project.get_app_name() }}
+
+RUN --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    --mount=type=bind,source=.python-version,target=.python-version \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=README.md,target=README.md \
+    --mount=type=bind,source=src,target=src \
+    --mount=type=bind,source=.git,target=.git \
+    --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
+    git config --global --add safe.directory /opt/{{ project.get_app_name() }} && \
+    uv sync --frozen --no-editable --no-group dev
+
+ARG IMAGE_BUILD_DATE
+ENV IMAGE_BUILD_DATE=${IMAGE_BUILD_DATE}
+
+# Python ソースとスキーマをコピー
+COPY --chown=ubuntu:ubuntu src/ ./src/
+COPY --chown=ubuntu:ubuntu schema/ ./schema/
+COPY --chown=ubuntu:ubuntu conf/ ./conf/
+COPY --chown=ubuntu:ubuntu img/ ./img/
+COPY --chown=ubuntu:ubuntu pyproject.toml uv.lock .python-version README.md ./
+
+# 設定ファイルをコピー（CI でビルド時に bot-config リポジトリから取得される）
+COPY --chown=ubuntu:ubuntu config.yaml ./
+
+# フロントエンドビルド成果物をコピー（node_modules 含む）
+COPY --from=frontend-builder --chown=ubuntu:ubuntu /app/frontend/dist ./frontend/dist/
+COPY --from=frontend-builder --chown=ubuntu:ubuntu /app/frontend/node_modules ./frontend/node_modules/
+COPY --chown=ubuntu:ubuntu frontend/package*.json ./frontend/
+
+# supervisord 設定とエントリポイントスクリプトをコピー
+USER root
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+RUN chown ubuntu:ubuntu /etc/supervisor/conf.d/supervisord.conf
+COPY --chown=ubuntu:ubuntu docker-entrypoint.sh /opt/{{ project.get_app_name() }}/
+
+USER ubuntu
+
+# データディレクトリ作成
+RUN mkdir -p data
+
+# 環境変数
+ENV NODE_ENV=production
+ENV FLASK_API_URL=http://localhost:5000
+ENV PORT=3000
+ENV SSR_CACHE_MAX_SIZE=500
+ENV SSR_CACHE_TTL_MS=60000
+# docker-entrypoint.sh がランダム生成するが、docker exec で supervisord を
+# 直接起動する場合（CI等）のために空のデフォルト値を設定
+ENV SSR_INTERNAL_SECRET=""
+# EXTERNAL_URL は config.yaml の webapp.external_url から自動読み込み
+# 環境変数で上書きも可能: docker run -e EXTERNAL_URL=https://... ...
+
+# ポート公開
+EXPOSE 3000
+
+# supervisord で Flask API + SSR Server を起動
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["/opt/{{ project.get_app_name() }}/docker-entrypoint.sh"]
