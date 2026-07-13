@@ -104,6 +104,7 @@ projects:
           - gitlab-ci-gen
       exclude_configs:
           - gitlab-ci
+          - my-py-lib # my_lib は price-platform 経由の推移的依存 (pin 同時更新制約の解消)
       vars:
           ci_npm_build_script: "build:ssr"
           ci_test_db_file: "price.duckdb"
@@ -137,6 +138,7 @@ projects:
           - gitlab-ci-gen
       exclude_configs:
           - gitlab-ci
+          - my-py-lib # my_lib は price-platform 経由の推移的依存 (pin 同時更新制約の解消)
       vars:
           ci_npm_build_script: "build"
           ci_test_db_file: "price.db"
@@ -169,6 +171,7 @@ projects:
           - gitlab-ci-gen
       exclude_configs:
           - gitlab-ci
+          - my-py-lib # my_lib は price-platform 経由の推移的依存 (pin 同時更新制約の解消)
       vars:
           ci_npm_build_script: "build"
           ci_test_db_file: "price.duckdb"
