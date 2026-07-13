@@ -3,7 +3,7 @@ revision = 3
 requires-python = ">=3.11"
 
 [options]
-exclude-newer = "2026-07-05T11:05:17.704361482Z"
+exclude-newer = "2026-07-06T08:59:09.184529177Z"
 exclude-newer-span = "P1W"
 
 [[package]]
@@ -1299,7 +1299,7 @@ wheels = [
 [[package]]
 name = "my-lib"
 version = "0.2.0"
-source = { git = "https://github.com/kimata/my-py-lib?rev=382621749920b8c09145ba739335616689bae96d#382621749920b8c09145ba739335616689bae96d" }
+source = { git = "https://github.com/kimata/my-py-lib?rev=738656ce5aae03d551e81dc2fad89b2466fb9626#738656ce5aae03d551e81dc2fad89b2466fb9626" }
 dependencies = [
     { name = "coloredlogs" },
     { name = "dacite" },
@@ -1619,7 +1619,7 @@ requires-dist = [
     { name = "dacite", specifier = ">=1.9.2" },
     { name = "docopt", specifier = ">=0.6.2" },
     { name = "jinja2", specifier = ">=3.1.6" },
-    { name = "my-lib", git = "https://github.com/kimata/my-py-lib?rev=382621749920b8c09145ba739335616689bae96d" },
+    { name = "my-lib", git = "https://github.com/kimata/my-py-lib?rev=738656ce5aae03d551e81dc2fad89b2466fb9626" },
     { name = "rich", specifier = ">=14.2.0" },
     { name = "ruamel-yaml", specifier = ">=0.18" },
     { name = "tomlkit", specifier = ">=0.14.0" },
