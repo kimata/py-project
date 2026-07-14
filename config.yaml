@@ -351,6 +351,45 @@ projects:
       path: ~/github/amazon-bot
       configs:
           - dockerfile
+          - gitlab-ci-gen
+      exclude_configs:
+          - gitlab-ci
+      ci:
+          template: docker
+          pyright_target: ""
+          extra_artifacts:
+              - data/debug/**
+          config_script:
+              - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.green-rabbit.net/kimata/bot-config.git
+              - mv bot-config/amazon-bot.yaml config.yaml
+              - mv bot-config/amazon-bot-target.yaml target.yaml
+              - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.green-rabbit.net/kimata/font.git private_font
+              - mv private_font/* font
+          webui_run:
+              # テスト用のダミーメトリクス DB を作成
+              - mkdir -p test_data/metrics
+              - uv run python scripts/create_test_metrics_db.py -o test_data/metrics/metrics.db
+              - |-
+                  docker run --rm --detach=true --tty=true
+                  --name ${CI_JOB_NAME}-${CI_JOB_ID} --label job=${CI_JOB_NAME}
+                  --publish :5000
+                  ${CI_REGISTRY_IMAGE}:${TAG} sleep infinity
+              - docker exec ${CI_JOB_NAME}-${CI_JOB_ID} mkdir -p /opt/amazon-bot/data/metrics
+              - docker cp test_data/metrics/metrics.db ${CI_JOB_NAME}-${CI_JOB_ID}:/opt/amazon-bot/data/metrics/
+              - >-
+                  docker exec -u root ${CI_JOB_NAME}-${CI_JOB_ID}
+                  chown ubuntu:ubuntu /opt/amazon-bot/data/metrics/metrics.db
+                  # CI は root 実行のため webui (ubuntu) が書けるよう所有者を合わせる
+              - docker exec --detach ${CI_JOB_NAME}-${CI_JOB_ID} uv run amazon-vine-webui
+          webui_health_path: /metrics
+          extra_test_jobs:
+              - test-dry-run
+              - test-docker
+          include_local: true
+          deploy_script:
+              - kubectl config use-context kimata/amazon-bot:pod-rollout
+              - kubectl -n bot set image deployment/amazon-bot amazon-bot=${IMAGE}
+              - kubectl -n bot rollout status deployment/amazon-bot --timeout=300s
       docker:
           template: standard
           chrome: true
