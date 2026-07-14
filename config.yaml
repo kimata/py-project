@@ -416,6 +416,35 @@ projects:
 
     - name: rsudp
       path: ~/github/rsudp
+      configs:
+          - gitlab-ci-gen
+      exclude_configs:
+          - gitlab-ci
+      ci:
+          template: docker
+          pyright_target: ""
+          pytest_config_script: false
+          config_script:
+              - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.green-rabbit.net/kimata/sense-config.git
+              - mv sense-config/sense-rsudp.yaml config.yaml
+              - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.green-rabbit.net/kimata/font.git private_font
+              - mv private_font/* font
+          webui_run:
+              - >-
+                  docker run --rm --detach=true --tty=true
+                  --name ${CI_JOB_NAME}-${CI_JOB_ID} --label job=${CI_JOB_NAME}
+                  --publish :5000
+                  ${CI_REGISTRY_IMAGE}:${TAG} sleep infinity
+              - >-
+                  docker exec --detach --workdir /opt/rsudp/webui ${CI_JOB_NAME}-${CI_JOB_ID}
+                  sh -c ".venv/bin/rsudp-webui > /tmp/flask.log 2>&1"
+          webui_health_path: /rsudp/api/screenshot/
+          deploy_script:
+              - kubectl config use-context kimata/rsudp:pod-rollout
+              - kubectl -n sensor set image deployment/rsudp rsudp=${IMAGE}
+              - kubectl -n sensor set image deployment/rsudp-webui rsudp-webui=${IMAGE}
+              - kubectl -n sensor rollout status deployment/rsudp --timeout=300s
+              - kubectl -n sensor rollout status deployment/rsudp-webui --timeout=300s
 
     - name: dupdel
       path: ~/github/dupdel
