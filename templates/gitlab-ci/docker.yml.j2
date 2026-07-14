@@ -71,6 +71,9 @@ build-image:
 {%- if project.ci.frontend %}
         - build-react
 {%- endif %}
+{%- for job in project.ci.extra_build_needs %}
+        - {{ job }}
+{%- endfor %}
 
     variables:
         BUILDER: builder-${CI_PROJECT_NAME}
@@ -108,7 +111,14 @@ build-image:
 test-typecheck:
     stage: test
 
+{%- if project.ci.test_needs %}
+    needs:
+{%- for job in project.ci.test_needs %}
+        - {{ job }}
+{%- endfor %}
+{%- else %}
     needs: []
+{%- endif %}
 {%- if project.ci.typecheck_allow_failure %}
 
     # NOTE: 型チェックは未整備のため段階導入 (失敗してもパイプラインは止めない)
@@ -120,9 +130,9 @@ test-typecheck:
 
     script:
         - uv run python -m pyright{% if project.ci.pyright_target %} {{ project.ci.pyright_target }}{% endif %}
-        - uv run mypy src/
+        - uv run mypy {{ project.ci.typecheck_target }}
 {%- if project.ci.ty %}
-        - uv run ty check src/
+        - uv run ty check {{ project.ci.typecheck_target }}
 {%- endif %}
 
     cache:
@@ -138,7 +148,14 @@ test-typecheck:
 test-pytest:
     stage: test
 
+{%- if project.ci.test_needs %}
+    needs:
+{%- for job in project.ci.test_needs %}
+        - {{ job }}
+{%- endfor %}
+{%- else %}
     needs: []
+{%- endif %}
 
     before_script:
         - uv sync --locked --no-editable

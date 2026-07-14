@@ -202,6 +202,9 @@ class CiOptions:
     tag_timestamp: bool = False
     build_platforms: str = "linux/amd64"
     typecheck_allow_failure: bool = False
+    typecheck_target: str = "src/"
+    extra_build_needs: list[str] = dataclasses.field(default_factory=list)
+    test_needs: list[str] = dataclasses.field(default_factory=list)
 
 
 @dataclasses.dataclass

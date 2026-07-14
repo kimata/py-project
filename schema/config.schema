@@ -492,6 +492,25 @@
         "typecheck_allow_failure": {
           "type": "boolean",
           "description": "test-typecheck に allow_failure を付けるか (型チェック未整備プロジェクトの段階導入用)"
+        },
+        "typecheck_target": {
+          "type": "string",
+          "description": "mypy / ty の対象ディレクトリ",
+          "default": "src/"
+        },
+        "extra_build_needs": {
+          "type": "array",
+          "description": "build-image の needs に追加するジョブ (ci-local.yml 側で定義したビルドジョブ等)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "test_needs": {
+          "type": "array",
+          "description": "test-typecheck / test-pytest の needs (省略時は依存なし)",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": false

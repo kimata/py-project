@@ -252,6 +252,44 @@ projects:
       path: ~/github/rasp-water
       configs:
           - dockerfile
+          - gitlab-ci-gen
+      exclude_configs:
+          - gitlab-ci
+      ci:
+          template: docker
+          # Angular がリポジトリルートにあるため build-angular は ci-local 側で定義
+          frontend: false
+          extra_build_needs:
+              - build-angular
+          pyright_target: ""
+          # Python コードは flask/src/ 配下 (src/ は Angular)
+          typecheck_target: flask/src/
+          # 型チェックは未整備のため allow_failure で段階導入
+          typecheck_allow_failure: true
+          # rpi-lgpio のビルドに swig が必要なため、uv キャッシュを test-prepare
+          # (ci-local 側) で作って配布する
+          test_needs:
+              - build-angular
+              - test-prepare
+          pytest_args: --numprocesses=auto --junit-xml=reports/junit-report.xml tests/test_basic.py
+          pytest_config_script: false
+          # Raspberry Pi でも動かすためマルチアーキビルド
+          build_platforms: linux/amd64,linux/arm64/v8
+          config_script:
+              - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.green-rabbit.net/kimata/hems-config.git
+              - mv hems-config/rasp-water.yaml config.yaml
+          extra_test_jobs:
+              - test-playwright
+              - test-playwright-docker
+              - test-playwright-docker-demo
+              - test-healthz-docker
+          include_local: true
+          deploy_script:
+              - kubectl config use-context kimata/rasp-water:pod-rollout
+              - kubectl -n hems set image deployment/rasp-water-1 rasp-water=${IMAGE}
+              - kubectl -n hems set image deployment/rasp-water-demo rasp-water-demo=${IMAGE}
+              - kubectl -n hems rollout status deployment/rasp-water-1 --timeout=300s
+              - kubectl -n hems rollout status deployment/rasp-water-demo --timeout=300s
       docker:
           template: hardware
           lgpio: true
