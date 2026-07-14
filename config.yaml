@@ -239,6 +239,27 @@ projects:
       path: ~/github/mercari-bot
       configs:
           - dockerfile
+          - gitlab-ci-gen
+      exclude_configs:
+          - gitlab-ci
+      ci:
+          template: docker
+          frontend: false
+          pytest_config_script: false
+          config_script:
+              - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.green-rabbit.net/kimata/bot-config.git
+              - mv bot-config/mercari-bot.yaml config.yaml
+              - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.green-rabbit.net/kimata/font.git private_font
+              - mv private_font/* font
+          extra_build_args:
+              # Chrome は週次で最新版を取得する（キャッシュバスター）
+              - --build-arg CHROME_CACHE_BUSTER=$(date +%Y%W)
+          extra_test_jobs:
+              - test-smoke
+              - test-docker
+          include_local: true
+          deploy_script:
+              - 'echo "OK. The CronJob references latest, so no action is needed."'
       docker:
           template: standard
           chrome: true

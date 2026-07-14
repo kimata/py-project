@@ -196,6 +196,8 @@ class CiOptions:
     webui_health_path: str = ""
     e2e_target: str = "tests/e2e/test_webui.py"
     deploy_script: list[str] = dataclasses.field(default_factory=list)
+    extra_test_jobs: list[str] = dataclasses.field(default_factory=list)
+    extra_build_args: list[str] = dataclasses.field(default_factory=list)
     include_local: bool = False
 
 

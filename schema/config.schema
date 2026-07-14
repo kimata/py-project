@@ -465,6 +465,20 @@
         "include_local": {
           "type": "boolean",
           "description": ".gitlab/ci-local.yml を include するか"
+        },
+        "extra_test_jobs": {
+          "type": "array",
+          "description": "tag-latest / deploy の needs に追加するプロジェクト固有テストジョブ (ci-local.yml 側で定義)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "extra_build_args": {
+          "type": "array",
+          "description": "docker buildx build に追加する --build-arg 等の引数",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": false

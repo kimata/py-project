@@ -88,6 +88,9 @@ build-image:
             --cache-to type=inline
             --cache-to type=registry,ref=${CI_REGISTRY_IMAGE}:cache,mode=max
             --build-arg IMAGE_BUILD_DATE=$(date --iso-8601=seconds)
+{%- for arg in project.ci.extra_build_args %}
+            {{ arg }}
+{%- endfor %}
             --tag ${CI_REGISTRY_IMAGE}:${TAG}
             --push .
 
@@ -239,6 +242,10 @@ tag-latest:
         - job: test-webui
           artifacts: false
 {%- endif %}
+{%- for job in project.ci.extra_test_jobs %}
+        - job: {{ job }}
+          artifacts: false
+{%- endfor %}
 
     script:
         - 'echo "Tagging ${CI_REGISTRY_IMAGE}:${TAG} as latest"'
@@ -264,6 +271,10 @@ deploy:
         - job: test-webui
           artifacts: false
 {%- endif %}
+{%- for job in project.ci.extra_test_jobs %}
+        - job: {{ job }}
+          artifacts: false
+{%- endfor %}
 
     image:
         name: {{ vars.registry }}/local-kubectl:{{ vars.kubectl_tag }}
