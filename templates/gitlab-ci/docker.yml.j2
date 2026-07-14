@@ -24,7 +24,13 @@ stages:
 generate-tag:
     stage: generate-tag
     script:
+{%- if project.ci.tag_timestamp %}
+        # NOTE: config リポジトリの変更で同一コミットが再ビルドされても一意なタグにする
+        # (タグが同じだと kubectl set image がノーオペになり設定が反映されない)
+        - echo "TAG=$(date +%y%m%d_%H%M%S)_${CI_COMMIT_SHORT_SHA}" > tag.env
+{%- else %}
         - echo "TAG=$(date +%y%m%d)_${CI_COMMIT_SHORT_SHA}" > tag.env
+{%- endif %}
     artifacts:
         reports:
             dotenv: tag.env
@@ -87,7 +93,7 @@ build-image:
             docker buildx build
             --provenance=false
             --progress=plain
-            --platform linux/amd64
+            --platform {{ project.ci.build_platforms }}
             --cache-from type=registry,ref=${CI_REGISTRY_IMAGE}:cache
             --cache-from type=registry,ref=${CI_REGISTRY_IMAGE}:latest
             --cache-to type=inline
@@ -258,10 +264,16 @@ tag-latest:
 {%- endfor %}
 
     script:
+{%- if "," in project.ci.build_platforms %}
+        # NOTE: マルチアーキイメージは manifest ごと参照を張る必要がある
+        - 'echo "Tagging multi-arch image ${CI_REGISTRY_IMAGE}:${TAG} as latest"'
+        - docker buildx imagetools create -t ${CI_REGISTRY_IMAGE}:latest ${CI_REGISTRY_IMAGE}:${TAG}
+{%- else %}
         - 'echo "Tagging ${CI_REGISTRY_IMAGE}:${TAG} as latest"'
         - docker pull ${CI_REGISTRY_IMAGE}:${TAG}
         - docker tag ${CI_REGISTRY_IMAGE}:${TAG} ${CI_REGISTRY_IMAGE}:latest
         - docker push ${CI_REGISTRY_IMAGE}:latest
+{%- endif %}
 
     rules:
         - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH

@@ -451,6 +451,42 @@ projects:
       path: ~/github/unit-cooler
       configs:
           - dockerfile
+          - gitlab-ci-gen
+      exclude_configs:
+          - gitlab-ci
+      ci:
+          template: docker
+          pyright_target: ""
+          pytest_args: >-
+              tests/unit/ tests/integration/
+              --junit-xml=reports/junit-report.xml --maxfail=1 --dist=loadgroup
+          pytest_config_script: false
+          extra_artifacts:
+              - htmlcov/**
+          # hems-config の変更で同一コミットが再ビルドされるため一意タグが必要
+          tag_timestamp: true
+          # Raspberry Pi (actuator) でも動かすためマルチアーキビルド
+          build_platforms: linux/amd64,linux/arm64/v8
+          config_script:
+              - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.green-rabbit.net/kimata/hems-config.git
+              - mv hems-config/unit-cooler.yaml config.yaml
+          extra_test_jobs:
+              - test-controller-regular
+              - test-actuator-regular
+              - test-webui-docker
+              - test-healthz-docker
+              - test-config-compat
+          include_local: true
+          deploy_script:
+              - kubectl config use-context kimata/unit-cooler:pod-rollout
+              - kubectl -n hems set image deployment/unit-cooler-controller unit-cooler-controller=${IMAGE}
+              - kubectl -n hems set image deployment/unit-cooler-actuator unit-cooler-actuator=${IMAGE}
+              - kubectl -n hems set image deployment/unit-cooler-webui unit-cooler-webui=${IMAGE}
+              - kubectl -n hems set image deployment/unit-cooler-webui-demo unit-cooler-webui-demo=${IMAGE}
+              - kubectl -n hems rollout status deployment/unit-cooler-controller --timeout=300s
+              - kubectl -n hems rollout status deployment/unit-cooler-actuator --timeout=300s
+              - kubectl -n hems rollout status deployment/unit-cooler-webui --timeout=300s
+              - kubectl -n hems rollout status deployment/unit-cooler-webui-demo --timeout=300s
       docker:
           template: hardware
           app_name: unit_cooler

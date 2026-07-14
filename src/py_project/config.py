@@ -199,6 +199,8 @@ class CiOptions:
     extra_test_jobs: list[str] = dataclasses.field(default_factory=list)
     extra_build_args: list[str] = dataclasses.field(default_factory=list)
     include_local: bool = False
+    tag_timestamp: bool = False
+    build_platforms: str = "linux/amd64"
 
 
 @dataclasses.dataclass
