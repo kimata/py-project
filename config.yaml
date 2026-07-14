@@ -376,10 +376,10 @@ projects:
                   ${CI_REGISTRY_IMAGE}:${TAG} sleep infinity
               - docker exec ${CI_JOB_NAME}-${CI_JOB_ID} mkdir -p /opt/amazon-bot/data/metrics
               - docker cp test_data/metrics/metrics.db ${CI_JOB_NAME}-${CI_JOB_ID}:/opt/amazon-bot/data/metrics/
-              - >-
+              # CI は root 実行のため webui (ubuntu) が書けるよう所有者を合わせる
+              - |-
                   docker exec -u root ${CI_JOB_NAME}-${CI_JOB_ID}
                   chown ubuntu:ubuntu /opt/amazon-bot/data/metrics/metrics.db
-                  # CI は root 実行のため webui (ubuntu) が書けるよう所有者を合わせる
               - docker exec --detach ${CI_JOB_NAME}-${CI_JOB_ID} uv run amazon-vine-webui
           webui_health_path: /metrics
           extra_test_jobs:
