@@ -109,6 +109,11 @@ test-typecheck:
     stage: test
 
     needs: []
+{%- if project.ci.typecheck_allow_failure %}
+
+    # NOTE: 型チェックは未整備のため段階導入 (失敗してもパイプラインは止めない)
+    allow_failure: true
+{%- endif %}
 
     before_script:
         - uv sync --locked --no-editable

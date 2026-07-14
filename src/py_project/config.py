@@ -201,6 +201,7 @@ class CiOptions:
     include_local: bool = False
     tag_timestamp: bool = False
     build_platforms: str = "linux/amd64"
+    typecheck_allow_failure: bool = False
 
 
 @dataclasses.dataclass

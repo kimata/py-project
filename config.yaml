@@ -502,6 +502,37 @@ projects:
       path: ~/github/rasp-shutter
       configs:
           - dockerfile
+          - gitlab-ci-gen
+      exclude_configs:
+          - gitlab-ci
+      ci:
+          template: docker
+          pyright_target: ""
+          # 型チェックは未整備のため allow_failure で段階導入
+          typecheck_allow_failure: true
+          pytest_args: >-
+              tests/unit/ tests/integration/
+              --junit-xml=reports/junit-report.xml --maxfail=1 --dist=loadgroup
+          pytest_config_script: false
+          extra_artifacts:
+              - htmlcov/**
+          # Raspberry Pi でも動かすためマルチアーキビルド
+          build_platforms: linux/amd64,linux/arm64/v8
+          config_script:
+              - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.green-rabbit.net/kimata/hems-config.git
+              - mv hems-config/rasp-shutter.yaml config.yaml
+          extra_test_jobs:
+              - test-playwright
+              - test-playwright-docker
+              - test-playwright-docker-demo
+              - test-healthz-docker
+          include_local: true
+          deploy_script:
+              - kubectl config use-context kimata/rasp-shutter:pod-rollout
+              - kubectl -n hems set image deployment/rasp-shutter rasp-shutter=${IMAGE}
+              - kubectl -n hems set image deployment/rasp-shutter-demo rasp-shutter-demo=${IMAGE}
+              - kubectl -n hems rollout status deployment/rasp-shutter --timeout=300s
+              - kubectl -n hems rollout status deployment/rasp-shutter-demo --timeout=300s
       docker:
           template: hardware
           dev_deps: true

@@ -488,6 +488,10 @@
           "type": "string",
           "description": "docker buildx build の --platform 指定",
           "default": "linux/amd64"
+        },
+        "typecheck_allow_failure": {
+          "type": "boolean",
+          "description": "test-typecheck に allow_failure を付けるか (型チェック未整備プロジェクトの段階導入用)"
         }
       },
       "additionalProperties": false
