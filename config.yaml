@@ -199,6 +199,44 @@ projects:
       path: ~/github/price-watch
       configs:
           - dockerfile
+          - gitlab-ci-gen
+      exclude_configs:
+          - gitlab-ci
+      ci:
+          template: docker
+          pyright_target: ""
+          pytest_config_script: false
+          extra_artifacts:
+              - data/debug/**
+          config_script:
+              - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.green-rabbit.net/kimata/bot-config.git
+              - mv bot-config/price-watch.yaml config.yaml
+              - mv bot-config/price-watch-target.yaml target.yaml
+          webui_run:
+              # テスト用のダミー価格履歴 DB を作成
+              - mkdir -p test_data
+              - uv run python scripts/create_test_history_db.py -o test_data/price.db
+              - |-
+                  docker run --rm --detach=true --tty=true
+                  --name ${CI_JOB_NAME}-${CI_JOB_ID} --label job=${CI_JOB_NAME}
+                  --publish :5000
+                  ${CI_REGISTRY_IMAGE}:${TAG} sleep infinity
+              # config.yaml の data.price 設定により異なるパスが使われる可能性があるため両方へコピー
+              - docker exec ${CI_JOB_NAME}-${CI_JOB_ID} mkdir -p /opt/price-watch/data
+              - docker exec ${CI_JOB_NAME}-${CI_JOB_ID} mkdir -p /opt/price-watch/data/price
+              - docker cp test_data/price.db ${CI_JOB_NAME}-${CI_JOB_ID}:/opt/price-watch/data/
+              - docker cp test_data/price.db ${CI_JOB_NAME}-${CI_JOB_ID}:/opt/price-watch/data/price/
+              # target.yaml を削除してテスト DB のアイテムが表示されるようにする
+              - docker exec ${CI_JOB_NAME}-${CI_JOB_ID} rm -f /opt/price-watch/target.yaml
+              - docker exec --detach ${CI_JOB_NAME}-${CI_JOB_ID} uv run --no-group dev price-watch-webui
+          webui_health_path: /price
+          extra_test_jobs:
+              - test-docker
+          include_local: true
+          deploy_script:
+              - kubectl config use-context kimata/price-watch:pod-rollout
+              - kubectl -n bot set image deployment/price-watch price-watch=${IMAGE}
+              - kubectl -n bot rollout status deployment/price-watch --timeout=300s
       docker:
           template: standard
           chrome: true
