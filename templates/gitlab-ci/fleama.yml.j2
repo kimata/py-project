@@ -38,6 +38,10 @@ build-react:
 
     image: {{ vars.ci_node_image }}
 
+    variables:
+        # @kimata スコープ (GitLab npm registry) の TLS 検証用 LAN CA
+        NODE_EXTRA_CA_CERTS: ${CI_PROJECT_DIR}/frontend/.gitlab-ca.pem
+
     before_script: []
 
     script:

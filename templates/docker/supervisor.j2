@@ -12,7 +12,9 @@ FROM {{ vars.node_image }} AS frontend-builder
 WORKDIR /app/frontend
 
 # 依存関係をインストール
-COPY frontend/package*.json ./
+# .npmrc は @kimata スコープの registry 解決に、.gitlab-ca.pem はその TLS 検証に必要
+COPY frontend/package*.json frontend/.npmrc frontend/.gitlab-ca.pem ./
+ENV NODE_EXTRA_CA_CERTS=/app/frontend/.gitlab-ca.pem
 RUN npm ci
 
 # フロントエンドソースをコピー
