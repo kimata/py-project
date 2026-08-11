@@ -201,6 +201,19 @@ class PyprojectHandler(handlers_base.ConfigHandler):
                 else:
                     result_tool[tool_key] = template_tool[tool_key]
 
+        # カバレッジ計測対象の書き換え（コードを src/ 以外に置くプロジェクト用）
+        pytest_cov_target = project.pyproject.pytest_cov_target
+        if pytest_cov_target:
+            ini_options = self.get_nested_value(result, "tool.pytest.ini_options")
+            if ini_options is not None and "addopts" in ini_options:
+                ini_options["addopts"] = str(ini_options["addopts"]).replace(
+                    "--cov=src", f"--cov={pytest_cov_target}"
+                )
+            else:
+                logger.warning(
+                    "pytest_cov_target が指定されていますが、tool.pytest.ini_options.addopts が存在しません"
+                )
+
         # 追加の開発依存をマージ
         if extra_dev_deps:
             dev_deps = self.get_nested_value(result, "dependency-groups.dev")

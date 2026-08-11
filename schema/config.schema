@@ -151,6 +151,10 @@
               "items": {
                 "type": "string"
               }
+            },
+            "pytest_cov_target": {
+              "type": "string",
+              "description": "pytest のカバレッジ計測対象（addopts の --cov=src を置き換える）"
             }
           },
           "additionalProperties": false
