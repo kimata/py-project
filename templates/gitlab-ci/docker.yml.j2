@@ -110,13 +110,14 @@ build-image:
 
 test-typecheck:
     stage: test
-
 {%- if project.ci.test_needs %}
+
     needs:
 {%- for job in project.ci.test_needs %}
         - {{ job }}
 {%- endfor %}
 {%- else %}
+
     needs: []
 {%- endif %}
 {%- if project.ci.typecheck_allow_failure %}
@@ -147,13 +148,14 @@ test-typecheck:
 
 test-pytest:
     stage: test
-
 {%- if project.ci.test_needs %}
+
     needs:
 {%- for job in project.ci.test_needs %}
         - {{ job }}
 {%- endfor %}
 {%- else %}
+
     needs: []
 {%- endif %}
 
@@ -272,6 +274,10 @@ tag-latest:
 
     needs:
         - generate-tag
+        # NOTE: docker ベースのテストジョブが無い構成では、build-image を明示的に
+        # 待たないとイメージ push 前に実行されてしまう
+        - job: build-image
+          artifacts: false
         - job: test-typecheck
           artifacts: false
         - job: test-pytest
@@ -307,6 +313,10 @@ deploy:
 
     needs:
         - generate-tag
+        # NOTE: docker ベースのテストジョブが無い構成では、build-image を明示的に
+        # 待たないとイメージ push 前に実行されてしまう
+        - job: build-image
+          artifacts: false
         - job: test-typecheck
           artifacts: false
         - job: test-pytest
