@@ -51,14 +51,14 @@ repos:
 
           - id: mypy
             name: Run mypy
-            entry: uv run mypy src/
+            entry: uv run mypy {{ project.ci.typecheck_target }}
             language: system
             types: [python]
             pass_filenames: false
 
           - id: ty
             name: Run ty
-            entry: uv run ty check src/
+            entry: uv run ty check {{ project.ci.typecheck_target }}
             language: system
             types: [python]
             pass_filenames: false
