@@ -485,6 +485,47 @@ projects:
           cmd: ["src/display_image.py"]
           compile_bytecode: true
 
+    - name: m5paper-aqua
+      path: ~/github/m5paper-aqua
+      configs:
+          - dockerfile
+          - gitlab-ci-gen
+      exclude_configs:
+          - gitlab-ci
+      ci:
+          template: docker
+          frontend: false
+          pyright_target: ""
+          # Python コードは flask/src/ 配下 (viewer/ は M5Paper ファームウェア)
+          typecheck_target: flask/src/
+          # 型チェックは未整備のため allow_failure で段階導入
+          typecheck_allow_failure: true
+          pytest_config_script: false
+          # arm64 ノードでも動かすためマルチアーキビルド
+          build_platforms: linux/amd64,linux/arm64/v8
+          config_script:
+              - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.green-rabbit.net/kimata/panel-config.git
+              - mv panel-config/m5paper-aqua.yaml config.yaml
+              - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.green-rabbit.net/kimata/font.git private_font
+          deploy_script:
+              - kubectl config use-context kimata/m5paper-aqua:pod-rollout
+              - kubectl -n panel set image deployment/m5paper-aqua m5paper-aqua=${IMAGE}
+              - kubectl -n panel rollout status deployment/m5paper-aqua --timeout=300s
+      docker:
+          template: standard
+          cjk_fonts: false
+          expose:
+              - 5555
+          cmd: ["./flask/src/app.py"]
+      gitignore:
+          extra_lines:
+              - ""
+              - "# テスト実行時に生成される liveness ファイル"
+              - "/flask/liveness/"
+      pyproject:
+          # Python コードは flask/src/ 配下
+          pytest_cov_target: flask/src
+
     - name: unit-cooler
       path: ~/github/unit-cooler
       configs:
@@ -580,6 +621,31 @@ projects:
       pyproject:
           preserve_fields:
               - requires-python # 3.12 指定を維持
+
+    - name: rasp-aqua
+      path: ~/github/rasp-aqua
+      configs:
+          - dockerfile
+          - gitlab-ci-gen
+      exclude_configs:
+          - gitlab-ci
+      ci:
+          template: docker
+          frontend: false
+          pyright_target: ""
+          pytest_config_script: false
+          # Raspberry Pi でも動かすためマルチアーキビルド
+          build_platforms: linux/amd64,linux/arm64/v8
+          config_script:
+              - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.green-rabbit.net/kimata/aqua-config.git
+              - mv aqua-config/rasp-aqua.yaml config.yaml
+          deploy_script:
+              # NOTE: DaemonSet なので何もしない
+              - 'echo "OK. The DaemonSet references latest, so no action is needed."'
+      docker:
+          template: hardware
+          lgpio: true
+          cmd: ["./src/app.py"]
 
     - name: modes-sensing
       path: ~/github/modes-sensing
