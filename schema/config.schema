@@ -484,10 +484,6 @@
             "type": "string"
           }
         },
-        "tag_timestamp": {
-          "type": "boolean",
-          "description": "イメージタグに時分秒を含めるか (config リポジトリ変更による同一コミット再ビルドでも一意なタグにする)"
-        },
         "build_platforms": {
           "type": "string",
           "description": "docker buildx build の --platform 指定",

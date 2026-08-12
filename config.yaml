@@ -542,8 +542,6 @@ projects:
           pytest_config_script: false
           extra_artifacts:
               - htmlcov/**
-          # hems-config の変更で同一コミットが再ビルドされるため一意タグが必要
-          tag_timestamp: true
           # Raspberry Pi (actuator) でも動かすためマルチアーキビルド
           build_platforms: linux/amd64,linux/arm64/v8
           config_script:
@@ -640,8 +638,9 @@ projects:
               - git clone https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.green-rabbit.net/kimata/aqua-config.git
               - mv aqua-config/rasp-aqua.yaml config.yaml
           deploy_script:
-              # NOTE: DaemonSet なので何もしない
-              - 'echo "OK. The DaemonSet references latest, so no action is needed."'
+              - kubectl config use-context kimata/rasp-aqua:pod-rollout
+              - kubectl -n hems set image daemonset/rasp-aqua rasp-aqua=${IMAGE}
+              - kubectl -n hems rollout status daemonset/rasp-aqua --timeout=300s
       docker:
           template: hardware
           lgpio: true

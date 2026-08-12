@@ -2,6 +2,7 @@
 
 import dataclasses
 import pathlib
+import re
 import typing
 
 import dacite
@@ -202,12 +203,22 @@ class CiOptions:
     extra_test_jobs: list[str] = dataclasses.field(default_factory=list)
     extra_build_args: list[str] = dataclasses.field(default_factory=list)
     include_local: bool = False
-    tag_timestamp: bool = False
     build_platforms: str = "linux/amd64"
     typecheck_allow_failure: bool = False
     typecheck_target: str = "src/"
     extra_build_needs: list[str] = dataclasses.field(default_factory=list)
     test_needs: list[str] = dataclasses.field(default_factory=list)
+
+    def input_repo_urls(self) -> list[str]:
+        """config_script が clone するリポジトリ URL の一覧
+
+        イメージ内容の入力となるリポジトリ (設定・font 等) を generate-tag ジョブの
+        タグ計算に含めるため、config_script の git clone 行から URL を抽出する。
+        """
+        urls = []
+        for line in self.config_script:
+            urls.extend(re.findall(r"git clone (\S+?\.git)", line))
+        return urls
 
 
 @dataclasses.dataclass
