@@ -32,14 +32,16 @@ generate-tag:
             INPUT_SHAS="${CI_COMMIT_SHA}"
             NEWEST_EPOCH=$(date -d "${CI_COMMIT_TIMESTAMP}" +%s)
 {%- for url in project.ci.input_repo_urls() %}
-            git clone --quiet --depth 1 {{ url }} .input-repo-{{ loop.index }}
+            INPUT_REPO="{{ url }}"
+            git clone --quiet --depth 1 "${INPUT_REPO}" .input-repo-{{ loop.index }}
             INPUT_SHAS="${INPUT_SHAS} $(git -C .input-repo-{{ loop.index }} rev-parse HEAD)"
             REPO_EPOCH=$(git -C .input-repo-{{ loop.index }} log -1 --format=%ct)
             if [ "${REPO_EPOCH}" -gt "${NEWEST_EPOCH}" ]; then NEWEST_EPOCH="${REPO_EPOCH}"; fi
             rm -rf .input-repo-{{ loop.index }}
 {%- endfor %}
             INPUT_HASH=$(echo "${INPUT_SHAS}" | sha1sum | cut -c1-7)
-            echo "TAG=$(date -d "@${NEWEST_EPOCH}" +%y%m%d-%H%M)_${CI_COMMIT_SHORT_SHA}_i${INPUT_HASH}" > tag.env
+            TAG_DATE=$(date -d "@${NEWEST_EPOCH}" +%y%m%d-%H%M)
+            echo "TAG=${TAG_DATE}_${CI_COMMIT_SHORT_SHA}_i${INPUT_HASH}" > tag.env
             echo "IMAGE_BUILD_DATE=$(date -d "@${NEWEST_EPOCH}" --iso-8601=seconds)" >> tag.env
             cat tag.env
     artifacts:
