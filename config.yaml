@@ -466,11 +466,13 @@ projects:
           # NOTE: Chrome 143 でレンダラープロセスが約20分後に切断される問題があるため固定
           chrome_version: "142.0.7444.175-1"
           fonts: true
+          # NOTE: Patchright は素の Chrome を headful で使うため Xvfb 上で起動する
           extra_apt:
               - smem
+              - xvfb
           extra_mkdir:
               - data/chrome
-          cmd: ["amazon-vine"]
+          cmd: ["xvfb-run", "-a", "--server-args=-screen 0 1920x1080x24", "amazon-vine"]
 
     - name: eink-weather-panel
       path: ~/github/eink-weather-panel
