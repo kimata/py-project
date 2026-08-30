@@ -387,7 +387,11 @@ projects:
           app_name: amazhist
           chrome: true
           fonts: true
-          cmd: ["amazhist"]
+          # NOTE: Patchright は素の Chrome を headful で使うため Xvfb 上で起動する
+          extra_apt:
+              - xvfb
+          cmd: ["xvfb-run", "-a", "--server-args=-screen 0 1920x1080x24", "amazhist"]
+          install_project: true
 
     - name: amazon-bot
       path: ~/github/amazon-bot
