@@ -362,8 +362,12 @@ projects:
           app_name: merhist
           chrome: true
           fonts: true
-          cmd: ["./src/app.py"]
-          install_project: false
+          # NOTE: Patchright は素の Chrome を headful で使うため Xvfb 上で起動する
+          #       （bot 検出回避のため headless 不可）。xvfb-run で merhist を包む。
+          extra_apt:
+              - xvfb
+          cmd: ["xvfb-run", "-a", "--server-args=-screen 0 1920x1080x24", "merhist"]
+          install_project: true
 
     - name: amazhist-python
       path: ~/github/amazhist-python
