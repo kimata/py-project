@@ -175,6 +175,9 @@ class CiOptions:
         smoke_config: test-smoke ジョブで bot-config から取得する設定ファイル名
             （smoke_command と両方指定で smoke ジョブが有効になる）
         smoke_command: test-smoke ジョブで実行するコマンド名
+        smoke_xvfb: test-smoke のコマンドを xvfb-run で包むか
+            （Patchright を headful で起動するプロジェクト向け。CI ランナーには
+            X ディスプレイが無いため、headful 起動には Xvfb が必須）
         lint: ruff の test-lint ジョブを含めるか
         update_cache: update-cache ジョブを含めるか
 
@@ -189,6 +192,7 @@ class CiOptions:
     extra_artifacts: list[str] = dataclasses.field(default_factory=list)
     smoke_config: str = ""
     smoke_command: str = ""
+    smoke_xvfb: bool = False
     lint: bool = False
     update_cache: bool = False
     # docker 系統テンプレート用

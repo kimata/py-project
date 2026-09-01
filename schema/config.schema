@@ -413,6 +413,10 @@
           "type": "string",
           "description": "test-smoke の実行コマンド名"
         },
+        "smoke_xvfb": {
+          "type": "boolean",
+          "description": "test-smoke のコマンドを xvfb-run で包むか（Patchright headful 用）"
+        },
         "lint": {
           "type": "boolean",
           "description": "ruff の test-lint ジョブを含めるか"

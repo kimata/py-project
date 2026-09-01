@@ -129,7 +129,11 @@ test-smoke:
         - export LC_ALL=ja_JP.UTF-8
         - export TERM=xterm-256color
 
+{%- if project.ci.smoke_xvfb %}
+        - xvfb-run -a --server-args="-screen 0 1920x1080x24" uv run {{ project.ci.smoke_command }} -D -R
+{%- else %}
         - uv run {{ project.ci.smoke_command }} -D -R
+{%- endif %}
         - sync
 
     cache:

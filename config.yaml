@@ -68,6 +68,8 @@ projects:
               - pytest-forked>=1.6.0
               - pytest-rerunfailures>=16.1
               - undetected-chromedriver>=3.5.5
+              # my_lib.browser の Patchright バックエンドで使用（型解決に必須）
+              - patchright>=1.62.0
               - types-requests>=2.32.4
 
     - name: price-platform
@@ -350,6 +352,8 @@ projects:
           template: library
           smoke_config: merhist.yaml
           smoke_command: merhist
+          # NOTE: Patchright を headful 起動するため CI では Xvfb が必須
+          smoke_xvfb: true
           extra_artifacts:
               - data/debug/**
       configs:
@@ -375,6 +379,8 @@ projects:
           template: library
           smoke_config: amazhist.yaml
           smoke_command: amazhist
+          # NOTE: Patchright を headful 起動するため CI では Xvfb が必須
+          smoke_xvfb: true
           extra_artifacts:
               - data/debug/**
       configs:
@@ -399,6 +405,8 @@ projects:
           template: library
           smoke_config: yahist.yaml
           smoke_command: yahist
+          # NOTE: Patchright を headful 起動するため CI では Xvfb が必須
+          smoke_xvfb: true
           extra_artifacts:
               - data/debug/**
       configs:
