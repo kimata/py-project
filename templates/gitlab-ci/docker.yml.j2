@@ -13,6 +13,15 @@ default:
     before_script:
         - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
 
+# NOTE: インフラ起因の一時的な失敗 (PyPI プロキシの 503 応答、runner の Pod 起動失敗、
+# タイムアウト等) でパイプラインが落ちないよう、依存解決を伴うジョブは自動リトライする
+.retry-transient: &retry-transient
+    max: 2
+    when:
+        - script_failure
+        - runner_system_failure
+        - stuck_or_timeout_failure
+
 stages:
     - generate-tag
     - build
@@ -128,6 +137,7 @@ build-image:
 
 test-typecheck:
     stage: test
+    retry: *retry-transient
 {%- if project.ci.test_needs %}
 
     needs:
@@ -166,6 +176,7 @@ test-typecheck:
 
 test-pytest:
     stage: test
+    retry: *retry-transient
 {%- if project.ci.test_needs %}
 
     needs:
@@ -218,6 +229,7 @@ test-pytest:
 
 test-webui:
     stage: test
+    retry: *retry-transient
     needs:
         - generate-tag
         - build-image
@@ -379,6 +391,7 @@ deploy:
 
 renovate:
     stage: renovate
+    retry: *retry-transient
     dependencies: []
     resource_group: renovate
     image:
@@ -402,7 +415,10 @@ renovate:
         - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
           when: never
         - if: $CI_PIPELINE_SOURCE == "schedule"
-        - changes:
+        # NOTE: trigger 起動 (多プロジェクトパイプライン等) では changes が常に true と
+        # 評価されるため、push 起動に限定する
+        - if: $CI_PIPELINE_SOURCE == "push"
+          changes:
               - renovate.json
 {%- if project.ci.include_local %}
 
