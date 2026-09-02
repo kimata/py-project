@@ -425,6 +425,31 @@ projects:
           cmd: ["xvfb-run", "-a", "--server-args=-screen 0 1920x1080x24", "yahist"]
           install_project: true
 
+    - name: auchist-python
+      path: ~/github/auchist-python
+      ci:
+          template: library
+          # NOTE: smoke はログイン済みセッションが必要なため未設定
+          # (追加する場合は bot-config に auchist.yaml を用意し、
+          #  smoke_config / smoke_command / smoke_xvfb を yahist-python に倣って設定する)
+          extra_artifacts:
+              - data/debug/**
+      configs:
+          - dockerfile
+          - gitlab-ci-gen
+      exclude_configs:
+          - gitlab-ci
+      docker:
+          template: standard
+          app_name: auchist
+          chrome: true
+          fonts: true
+          # NOTE: Patchright は素の Chrome を headful で使うため Xvfb 上で起動する
+          extra_apt:
+              - xvfb
+          cmd: ["xvfb-run", "-a", "--server-args=-screen 0 1920x1080x24", "auchist"]
+          install_project: true
+
     - name: amazon-bot
       path: ~/github/amazon-bot
       configs:
