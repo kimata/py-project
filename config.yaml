@@ -25,7 +25,7 @@ defaults:
         ubuntu_image: "ubuntu:24.04@sha256:4fbb8e6a8395de5a7550b33509421a2bafbc0aab6c06ba2cef9ebffbc7092d90"
         node_image: "node:20-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0"
         # CI の build-react ジョブ用 node イメージ
-        ci_node_image: "node:24.17@sha256:733e1c06ada118ed9f6133a31aa1290be6929664026fb28821500437c61f2c6f"
+        ci_node_image: "node:24.18@sha256:19cd848a0e073d34bd8cd5545a1b6b4d28489b3e3b607366621ced442bd5f6b4"
         kubectl_tag: "250715_c88f3965"
     gitlab_ci:
         edits:
