@@ -15,12 +15,14 @@ default:
 
 # NOTE: インフラ起因の一時的な失敗 (PyPI プロキシの 503 応答、runner の Pod 起動失敗、
 # タイムアウト等) でパイプラインが落ちないよう、依存解決を伴うジョブは自動リトライする
-.retry-transient: &retry-transient
-    max: 2
-    when:
-        - script_failure
-        - runner_system_failure
-        - stuck_or_timeout_failure
+# ジョブ側では extends: .retry-transient で利用する (include したファイルからも参照可)
+.retry-transient:
+    retry:
+        max: 2
+        when:
+            - script_failure
+            - runner_system_failure
+            - stuck_or_timeout_failure
 
 stages:
     - generate-tag
@@ -137,7 +139,7 @@ build-image:
 
 test-typecheck:
     stage: test
-    retry: *retry-transient
+    extends: .retry-transient
 {%- if project.ci.test_needs %}
 
     needs:
@@ -176,7 +178,7 @@ test-typecheck:
 
 test-pytest:
     stage: test
-    retry: *retry-transient
+    extends: .retry-transient
 {%- if project.ci.test_needs %}
 
     needs:
@@ -229,7 +231,7 @@ test-pytest:
 
 test-webui:
     stage: test
-    retry: *retry-transient
+    extends: .retry-transient
     needs:
         - generate-tag
         - build-image
@@ -391,7 +393,7 @@ deploy:
 
 renovate:
     stage: renovate
-    retry: *retry-transient
+    extends: .retry-transient
     dependencies: []
     resource_group: renovate
     image:
