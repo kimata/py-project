@@ -155,6 +155,13 @@
             "pytest_cov_target": {
               "type": "string",
               "description": "pytest のカバレッジ計測対象（addopts の --cov=src を置き換える）"
+            },
+            "pyright_include": {
+              "type": "array",
+              "description": "pyright の検査対象ディレクトリ（tool.pyright.include を置き換える）",
+              "items": {
+                "type": "string"
+              }
             }
           },
           "additionalProperties": false

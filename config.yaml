@@ -565,8 +565,6 @@ projects:
           pyright_target: ""
           # Python コードは flask/src/ 配下 (viewer/ は M5Paper ファームウェア)
           typecheck_target: flask/src/
-          # 型チェックは未整備のため allow_failure で段階導入
-          typecheck_allow_failure: true
           pytest_config_script: false
           # arm64 ノードでも動かすためマルチアーキビルド
           build_platforms: linux/amd64,linux/arm64/v8
@@ -592,6 +590,17 @@ projects:
       pyproject:
           # Python コードは flask/src/ 配下
           pytest_cov_target: flask/src
+          pyright_include:
+              - flask/src
+              - tests
+      ruff:
+          extra_lines:
+              - ""
+              - "[lint.isort]"
+              - "# NOTE: コードが flask/src/ 配下にあり ruff が first-party を自動検出できないため明示する。"
+              - "# ルートに flask/ ディレクトリがあるので、flask が first-party と誤認されるのも防ぐ。"
+              - 'known-first-party = ["aqua_display"]'
+              - 'known-third-party = ["flask"]'
 
     - name: unit-cooler
       path: ~/github/unit-cooler

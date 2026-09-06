@@ -5,6 +5,17 @@
 このファイルのフォーマットは [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に基づいており、
 このプロジェクトは [Semantic Versioning](https://semver.org/spec/v2.0.0.html) に準拠しています。
 
+## [Unreleased]
+
+### ✨ Added
+
+- `pyproject.pyright_include` オプションを追加
+    - コードを `src/` 以外に置くプロジェクト向けに `tool.pyright.include` を置き換える (`pytest_cov_target` と同様の位置づけ)
+
+### 🔄 Changed
+
+- m5paper-aqua: pyright の検査対象を `flask/src`・`tests` に設定し、型チェックジョブの `allow_failure` を解除。ruff の isort に `aqua_display` (first-party) と `flask` (third-party) を明示
+
 ## [v0.1.1] - 2026-01-24
 
 ### ✨ Added

@@ -187,6 +187,11 @@ projects:
           # 追加の開発依存
           extra_dev_deps:
               - some-package>=1.0
+          # コードを src/ 以外に置くプロジェクト用
+          pytest_cov_target: flask/src
+          pyright_include:
+              - flask/src
+              - tests
 ```
 
 ## 📚 ドキュメント

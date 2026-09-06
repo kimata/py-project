@@ -461,6 +461,59 @@ class TestMergePyprojectAdvanced:
         dev_deps = result["dependency-groups"]["dev"]
         assert "custom-package>=1.0" in dev_deps
 
+    def test_merge_with_pyright_include(self, tmp_templates, tmp_project):
+        """pyright_include で tool.pyright.include が置き換わることを確認"""
+        handler = pyproject_handler.PyprojectHandler()
+        project = py_project.config.Project(
+            name="test-project",
+            path=str(tmp_project),
+            pyproject=py_project.config.PyprojectOptions(
+                pyright_include=["flask/src", "tests"],
+            ),
+        )
+
+        current = tomlkit.parse((tmp_project / "pyproject.toml").read_text())
+        template = tomlkit.parse(
+            (tmp_templates / "pyproject" / "sections.toml").read_text()
+            + '\n[tool.pyright]\ninclude = ["src", "tests"]\n'
+        )
+
+        result = handler.merge_pyproject(current, template, project)
+
+        assert list(result["tool"]["pyright"]["include"]) == ["flask/src", "tests"]
+
+    def test_merge_without_pyright_include(self, tmp_templates, tmp_project):
+        """pyright_include が空ならテンプレートの include をそのまま使うことを確認"""
+        handler = pyproject_handler.PyprojectHandler()
+        project = py_project.config.Project(name="test-project", path=str(tmp_project))
+
+        current = tomlkit.parse((tmp_project / "pyproject.toml").read_text())
+        template = tomlkit.parse(
+            (tmp_templates / "pyproject" / "sections.toml").read_text()
+            + '\n[tool.pyright]\ninclude = ["src", "tests"]\n'
+        )
+
+        result = handler.merge_pyproject(current, template, project)
+
+        assert list(result["tool"]["pyright"]["include"]) == ["src", "tests"]
+
+    def test_merge_with_pyright_include_without_pyright_section(self, tmp_templates, tmp_project, caplog):
+        """tool.pyright が無い場合は警告を出して何もしないことを確認"""
+        handler = pyproject_handler.PyprojectHandler()
+        project = py_project.config.Project(
+            name="test-project",
+            path=str(tmp_project),
+            pyproject=py_project.config.PyprojectOptions(pyright_include=["flask/src"]),
+        )
+
+        current = tomlkit.parse((tmp_project / "pyproject.toml").read_text())
+        template = tomlkit.parse((tmp_templates / "pyproject" / "sections.toml").read_text())
+
+        result = handler.merge_pyproject(current, template, project)
+
+        assert "pyright" not in result.get("tool", {})
+        assert "pyright_include" in caplog.text
+
     def test_merge_with_extra_dev_deps_already_exists(self, tmp_templates, tmp_project):
         """extra_dev_deps が既に存在する場合は重複しない（完全一致）"""
         handler = pyproject_handler.PyprojectHandler()

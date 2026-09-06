@@ -214,6 +214,15 @@ class PyprojectHandler(handlers_base.ConfigHandler):
                     "pytest_cov_target が指定されていますが、tool.pytest.ini_options.addopts が存在しません"
                 )
 
+        # pyright の検査対象の書き換え（コードを src/ 以外に置くプロジェクト用）
+        pyright_include = project.pyproject.pyright_include
+        if pyright_include:
+            pyright_section = self.get_nested_value(result, "tool.pyright")
+            if pyright_section is not None:
+                pyright_section["include"] = pyright_include.copy()
+            else:
+                logger.warning("pyright_include が指定されていますが、tool.pyright が存在しません")
+
         # 追加の開発依存をマージ
         if extra_dev_deps:
             dev_deps = self.get_nested_value(result, "dependency-groups.dev")

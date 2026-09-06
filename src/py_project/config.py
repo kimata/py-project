@@ -83,6 +83,8 @@ class PyprojectOptions:
         extra_dev_deps: 追加の開発依存
         pytest_cov_target: pytest のカバレッジ計測対象
             （コードを src/ 以外に置くプロジェクト用。addopts の --cov=src を置き換える）
+        pyright_include: pyright の検査対象ディレクトリ
+            （コードを src/ 以外に置くプロジェクト用。tool.pyright.include を置き換える）
 
     """
 
@@ -90,6 +92,7 @@ class PyprojectOptions:
     preserve_fields: list[str] = dataclasses.field(default_factory=list)
     extra_dev_deps: list[str] = dataclasses.field(default_factory=list)
     pytest_cov_target: str = ""
+    pyright_include: list[str] = dataclasses.field(default_factory=list)
 
 
 @dataclasses.dataclass
