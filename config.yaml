@@ -44,8 +44,6 @@ template_dir: ./templates
 projects:
     - name: my-py-lib
       path: ~/github/my-py-lib
-      vars:
-          python_version: "3.14" # Patchright 利用: 3.14.0〜3.14.6 の asyncio.wait リーク (CPython gh-152569) を避けるため 3.14 系
       configs:
           - gitlab-ci-gen
       ci:
