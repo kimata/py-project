@@ -27,6 +27,9 @@ defaults:
         # CI の build-react ジョブ用 node イメージ
         ci_node_image: "node:24.18@sha256:19cd848a0e073d34bd8cd5545a1b6b4d28489b3e3b607366621ced442bd5f6b4"
         kubectl_tag: "250715_c88f3965"
+        # Dockerfile で入れる uv のバージョン。未固定だと install 層がキャッシュされ古い uv のまま
+        # (Python の patch 版が更新されない) になるため固定する。上げるとその層から再ビルドされる。
+        uv_version: "0.12.13"
     gitlab_ci:
         edits:
             - path: /image
@@ -41,6 +44,8 @@ template_dir: ./templates
 projects:
     - name: my-py-lib
       path: ~/github/my-py-lib
+      vars:
+          python_version: "3.14" # Patchright 利用: 3.14.0〜3.14.6 の asyncio.wait リーク (CPython gh-152569) を避けるため 3.14 系
       configs:
           - gitlab-ci-gen
       ci:
@@ -74,6 +79,8 @@ projects:
 
     - name: price-platform
       path: ~/github/price-platform
+      vars:
+          python_version: "3.14" # Patchright 利用: 3.14.0〜3.14.6 の asyncio.wait リーク (CPython gh-152569) を避けるため 3.14 系
       configs:
           - gitlab-ci-gen
       exclude_configs:
@@ -108,6 +115,7 @@ projects:
           - gitlab-ci
           - my-py-lib # my_lib は price-platform 経由の推移的依存 (pin 同時更新制約の解消)
       vars:
+          python_version: "3.14" # Patchright 利用: 3.14.0〜3.14.6 の asyncio.wait リーク (CPython gh-152569) を避けるため 3.14 系
           ci_npm_build_script: "build:ssr"
           ci_test_db_file: "price.duckdb"
       ci:
@@ -142,6 +150,7 @@ projects:
           - gitlab-ci
           - my-py-lib # my_lib は price-platform 経由の推移的依存 (pin 同時更新制約の解消)
       vars:
+          python_version: "3.14" # Patchright 利用: 3.14.0〜3.14.6 の asyncio.wait リーク (CPython gh-152569) を避けるため 3.14 系
           ci_npm_build_script: "build"
           ci_test_db_file: "price.db"
       ci:
@@ -175,6 +184,7 @@ projects:
           - gitlab-ci
           - my-py-lib # my_lib は price-platform 経由の推移的依存 (pin 同時更新制約の解消)
       vars:
+          python_version: "3.14" # Patchright 利用: 3.14.0〜3.14.6 の asyncio.wait リーク (CPython gh-152569) を避けるため 3.14 系
           ci_npm_build_script: "build"
           ci_test_db_file: "price.duckdb"
       ci:
@@ -199,6 +209,8 @@ projects:
 
     - name: price-watch
       path: ~/github/price-watch
+      vars:
+          python_version: "3.14" # Patchright 利用: 3.14.0〜3.14.6 の asyncio.wait リーク (CPython gh-152569) を避けるため 3.14 系
       configs:
           - dockerfile
           - gitlab-ci-gen
@@ -348,6 +360,8 @@ projects:
 
     - name: merhist-python
       path: ~/github/merhist-python
+      vars:
+          python_version: "3.14" # Patchright 利用: 3.14.0〜3.14.6 の asyncio.wait リーク (CPython gh-152569) を避けるため 3.14 系
       ci:
           template: library
           smoke_config: merhist.yaml
@@ -375,6 +389,8 @@ projects:
 
     - name: amazhist-python
       path: ~/github/amazhist-python
+      vars:
+          python_version: "3.14" # Patchright 利用: 3.14.0〜3.14.6 の asyncio.wait リーク (CPython gh-152569) を避けるため 3.14 系
       ci:
           template: library
           smoke_config: amazhist.yaml
@@ -401,6 +417,8 @@ projects:
 
     - name: yahist-python
       path: ~/github/yahist-python
+      vars:
+          python_version: "3.14" # Patchright 利用: 3.14.0〜3.14.6 の asyncio.wait リーク (CPython gh-152569) を避けるため 3.14 系
       ci:
           template: library
           smoke_config: yahist.yaml
@@ -427,6 +445,8 @@ projects:
 
     - name: auchist-python
       path: ~/github/auchist-python
+      vars:
+          python_version: "3.14" # Patchright 利用: 3.14.0〜3.14.6 の asyncio.wait リーク (CPython gh-152569) を避けるため 3.14 系
       ci:
           template: library
           # NOTE: smoke はログイン済みセッションが必要なため未設定
@@ -452,6 +472,8 @@ projects:
 
     - name: amazon-bot
       path: ~/github/amazon-bot
+      vars:
+          python_version: "3.14" # Patchright 利用: 3.14.0〜3.14.6 の asyncio.wait リーク (CPython gh-152569) を避けるため 3.14 系
       configs:
           - dockerfile
           - gitlab-ci-gen
@@ -509,6 +531,8 @@ projects:
 
     - name: eink-weather-panel
       path: ~/github/eink-weather-panel
+      vars:
+          python_version: "3.14" # Patchright 利用: 3.14.0〜3.14.6 の asyncio.wait リーク (CPython gh-152569) を避けるため 3.14 系
       configs:
           - dockerfile
           - gitlab-ci-gen

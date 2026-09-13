@@ -15,7 +15,7 @@ ENV PATH="/root/.local/bin/:$PATH"
 ENV UV_SYSTEM_PYTHON=1 \
     UV_LINK_MODE=copy
 
-ADD https://astral.sh/uv/install.sh /uv-installer.sh
+ADD https://astral.sh/uv/{{ vars.uv_version }}/install.sh /uv-installer.sh
 
 RUN sh /uv-installer.sh && rm /uv-installer.sh
 {%- if project.docker.lgpio %}
