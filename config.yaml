@@ -121,8 +121,6 @@ projects:
       docker:
           template: supervisor
           chrome: true
-          # NOTE: Chrome 143 でレンダラープロセスが約20分後に切断される問題があるため固定
-          chrome_version: "142.0.7444.175-1"
       gitignore:
           extra_lines:
               - ""
@@ -156,8 +154,6 @@ projects:
       docker:
           template: supervisor
           chrome: true
-          # NOTE: Chrome 143 でレンダラープロセスが約20分後に切断される問題があるため固定
-          chrome_version: "142.0.7444.175-1"
       gitignore:
           extra_lines:
               - ""
@@ -190,8 +186,6 @@ projects:
       docker:
           template: supervisor
           chrome: true
-          # NOTE: Chrome 143 でレンダラープロセスが約20分後に切断される問題があるため固定
-          chrome_version: "142.0.7444.175-1"
       gitignore:
           extra_lines:
               - ""
@@ -252,8 +246,6 @@ projects:
       docker:
           template: standard
           chrome: true
-          # NOTE: Chrome 143 でレンダラープロセスが約20分後に切断される問題があるため固定
-          chrome_version: "142.0.7444.175-1"
           fonts: true
           extra_apt:
               - ffmpeg
@@ -516,8 +508,6 @@ projects:
       docker:
           template: standard
           chrome: true
-          # NOTE: Chrome 143 でレンダラープロセスが約20分後に切断される問題があるため固定
-          chrome_version: "142.0.7444.175-1"
           fonts: true
           # NOTE: Patchright は素の Chrome を headful で使うため Xvfb 上で起動する
           extra_apt:
