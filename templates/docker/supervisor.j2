@@ -59,6 +59,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs && \
     rm -rf /var/lib/apt/lists/*
 
+{%- if project.docker.chrome_version %}
 # NOTE: 新しい Chrome の不具合回避のためバージョンを固定する
 # （固定バージョンは py-project の config.yaml で管理）
 RUN curl -O https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_{{ project.docker.chrome_version }}_amd64.deb
@@ -68,6 +69,17 @@ RUN --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && apt-get install --no-install-recommends --assume-yes \
     ./google-chrome-stable_{{ project.docker.chrome_version }}_amd64.deb && \
     rm -f google-chrome-stable_{{ project.docker.chrome_version }}_amd64.deb
+{%- else %}
+# NOTE: Chromeは頻繁に更新されるため、キャッシュバスターを使用して最新版を取得する
+ARG CHROME_CACHE_BUSTER
+RUN curl -O https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+
+RUN --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    apt-get update && apt-get install --no-install-recommends --assume-yes \
+    ./google-chrome-stable_current_amd64.deb && \
+    rm -f google-chrome-stable_current_amd64.deb
+{%- endif %}
 
 USER ubuntu
 
