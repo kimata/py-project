@@ -337,6 +337,8 @@ projects:
           extra_test_jobs:
               - test-smoke
               - test-docker
+          # NOTE: Patchright を headful 起動するため CI では Xvfb が必須
+          smoke_xvfb: true
           include_local: true
           deploy_script:
               - 'echo "OK. The CronJob references latest, so no action is needed."'
@@ -344,9 +346,12 @@ projects:
           template: standard
           chrome: true
           fonts: true
+          # NOTE: Patchright は素の Chrome を headful で使うため Xvfb 上で起動する
+          #       （メルカリは bot 検出があり headless 不可）。xvfb-run で mercari-bot を包む。
           extra_apt:
               - smem
-          cmd: ["mercari-bot", "-l"]
+              - xvfb
+          cmd: ["xvfb-run", "-a", "--server-args=-screen 0 1920x1080x24", "mercari-bot", "-l"]
 
     - name: merhist-python
       path: ~/github/merhist-python
