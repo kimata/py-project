@@ -514,13 +514,16 @@ projects:
           template: standard
           chrome: true
           fonts: true
-          # NOTE: Patchright は素の Chrome を headful で使うため Xvfb 上で起動する
+          # NOTE: Patchright は素の Chrome を headful で使うため Xvfb 上で起動する。
+          #       xvfb-run(シェルスクリプト)を挟むと SIGTERM が Python まで届かず
+          #       graceful shutdown が走らないため、Xvfb を起動して exec する
+          #       リポジトリ内スクリプト経由で実行する
           extra_apt:
               - smem
               - xvfb
           extra_mkdir:
               - data/chrome
-          cmd: ["xvfb-run", "-a", "--server-args=-screen 0 1920x1080x24", "amazon-vine"]
+          cmd: ["scripts/xvfb-exec.sh", "amazon-vine"]
 
     - name: eink-weather-panel
       path: ~/github/eink-weather-panel
