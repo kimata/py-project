@@ -14,6 +14,8 @@
 
 ### 🔄 Changed
 
+- gitlab-ci テンプレート (fleama / docker / library) に `PYRIGHT_PYTHON_NODE_VERSION: lts` を追加
+    - nodejs.org の配布一覧にプレリリース (v27.0.0-alpha) が載り、nodeenv 1.10 系が「最新版」のパースに失敗して型チェックジョブが落ちる問題を回避
 - m5paper-aqua: pyright の検査対象を `flask/src`・`tests` に設定し、型チェックジョブの `allow_failure` を解除。ruff の isort に `aqua_display` (first-party) と `flask` (third-party) を明示
 
 ## [v0.1.1] - 2026-01-24
